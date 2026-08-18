@@ -113,9 +113,7 @@ def main() -> None:
         commit_message_match = COMMIT_MESSAGE_RE.search(section)
         expected_commit_message = f"PR-{pr_code} — {title}"
         if commit_message_match is None or commit_message_match.group(1) != expected_commit_message:
-            _fail(
-                f"PR-{pr_code} Commit message must be exactly {expected_commit_message!r}."
-            )
+            _fail(f"PR-{pr_code} Commit message must be exactly {expected_commit_message!r}.")
 
         files_match = FILES_RE.search(section)
         if files_match is None:
