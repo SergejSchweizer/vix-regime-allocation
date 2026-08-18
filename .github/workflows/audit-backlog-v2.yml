@@ -1,0 +1,349 @@
+name: One-shot backlog completeness audit v2
+
+on:
+  push:
+    branches:
+      - audit/backlog-completeness-v2
+
+permissions:
+  contents: write
+
+jobs:
+  patch-and-validate:
+    if: github.event.head_commit.message == 'Trigger backlog completeness audit v2'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Apply audited backlog improvements
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          def replace_one(text: str, old: str, new: str, label: str) -> str:
+              count = text.count(old)
+              if count != 1:
+                  raise SystemExit(f"{label}: expected exactly one match, found {count}")
+              return text.replace(old, new, 1)
+
+          backlog_path = Path('BACKLOG.md')
+          text = backlog_path.read_text(encoding='utf-8')
+
+          text = replace_one(
+              text,
+              'PR-33 through PR-47 cover complete Step 5 backtesting/evaluation and final Steps 1–5 sidecar parity.',
+              'PR-33 through PR-47 cover complete Step 5 backtesting/evaluation and final Steps 1–5 sidecar parity. PR-48 through PR-49 cover deterministic final submission packaging and release validation.',
+              'header PR range',
+          )
+
+          anchor = '''The backlog has been audited against the assignment brief, submission instructions, report template, and grading rubric. It is intentionally optimized for **two weak coding agents working in parallel**: PRs have explicit dependencies, fixed file ownership, deterministic interfaces, numbered tasks, and one-to-one matching acceptance criteria.\n\n---\n'''
+          replacement = '''The backlog has been audited against the assignment brief, submission instructions, report template, and grading rubric. It is intentionally optimized for **two weak coding agents working in parallel**: PRs have explicit dependencies, fixed file ownership, deterministic interfaces, numbered tasks, and one-to-one matching acceptance criteria.\n\n## Global PR authoring contract\n\nThese rules apply to every implementation PR in this backlog and are deliberately strict so a weak coding agent does not have to infer intent.\n\n1. Every PR contains exactly one `Agent lane`, one explicit `Dependencies` line, one `Files owned` section, one numbered `Tasks` section and one numbered `Acceptance criteria` section.\n2. `Dependencies` names only lower-numbered PRs or explicitly declares `none`; prose-only dependencies such as “the Step 1 contract” are forbidden.\n3. Every task ID is `Txx.n` where `xx` is the PR number, task suffixes are contiguous from 1, and every task has exactly one acceptance criterion `ACxx.n` linking back to that exact task.\n4. A task describes one implementation responsibility. An acceptance criterion verifies the same responsibility with observable evidence; it must not introduce a new requirement absent from the task.\n5. `Files owned` is the complete write set for the PR. An agent must not edit a file outside that set. Generated artifacts committed by the PR are also listed explicitly.\n6. Parallel PRs in the published execution schedule must have disjoint write sets. If a newly discovered conflict exists, stop and serialize the PRs rather than resolving it ad hoc.\n7. Public function names, schemas, artifact paths, tie rules, numerical tolerances and model-selection rules are immutable once specified here unless a later backlog-audit PR explicitly changes the contract.\n8. Tasks must not use ambiguous phrases such as “as needed”, “relevant files”, “etc.” or “appropriate logic” when an exact behavior can be stated.\n9. Tests for source-code PRs are deterministic and offline unless the PR explicitly owns a live-data execution step.\n10. Notebook PRs are serialized. A notebook PR starts from the fully executed notebook on current `main`, executes it top-to-bottom, and commits stored outputs.\n11. Sidecar builders read canonical artifacts; they do not independently refit models, recreate state sequences or recompute an alternate analysis.\n12. If an agent cannot satisfy a task without changing an unowned file, changing a fixed interface, or making an unstated modeling choice, it must stop rather than guess.\n\nThe repository-level `scripts/check_backlog_contract.py` statically enforces PR numbering, required sections, explicit backward-only dependencies, contiguous task IDs, and one-to-one task/acceptance coverage.\n\n---\n'''
+          text = replace_one(text, anchor, replacement, 'global PR contract insertion')
+
+          dep_replacements = {
+              '**Dependencies:** repository scaffold only': '**Dependencies:** none (current repository scaffold is the starting point)',
+              '**Dependencies:** fixed clean-data contract': '**Dependencies:** PR-02',
+              '**Dependencies:** repository scaffold': '**Dependencies:** none (current repository scaffold is the starting point)',
+              '**Dependencies:** Step 1 data contract; independent of PR-17 implementation': '**Dependencies:** PR-02',
+              '**Dependencies:** completed Step 1 notebook/data, PR-12, PR-14': '**Dependencies:** PR-05, PR-12, PR-14',
+              '**Dependencies:** Step 1 clean-data contract only': '**Dependencies:** PR-02',
+              '**Dependencies:** PR-33 through PR-38': '**Dependencies:** PR-33, PR-34, PR-35, PR-36, PR-37, PR-38',
+              '**Dependencies:** PR-39 and PR-25 canonical Steps 1–4 notebook': '**Dependencies:** PR-25, PR-39',
+          }
+          for old, new in dep_replacements.items():
+              text = replace_one(text, old, new, f'dependency {old}')
+
+          state_anchor = '''```text\nreports/tables/step2_hmm_2_parameters.csv\nreports/tables/step2_hmm_3_parameters.csv\n```\n\n### Model comparison CSV\n'''
+          state_insert = '''```text\nreports/tables/step2_hmm_2_parameters.csv\nreports/tables/step2_hmm_3_parameters.csv\n```\n\n### Candidate state-sequence CSVs\n\nEach fitted/discretized candidate persists the exact state sequence used by later steps. Schema:\n\n```text\nDate\nstate\n```\n\nCanonical paths:\n\n```text\nreports/tables/step2_markov_2_states.csv\nreports/tables/step2_markov_3_states.csv\nreports/tables/step2_hmm_2_states.csv\nreports/tables/step2_hmm_3_states.csv\n```\n\nRequirements:\n\n- `Date` is byte-for-byte the Step 1 date sequence when serialized in the canonical CSV format;\n- `state` is integer-valued and contains only `0..K-1`;\n- each file has exactly one row per Step 1 observation;\n- these files are canonical provenance artifacts and later steps load them rather than refitting/redecoding merely to recover an already-produced state sequence.\n\n### Model comparison CSV\n'''
+          text = replace_one(text, state_anchor, state_insert, 'candidate state artifact insertion')
+
+          selected_json_old = '''Exact keys:\n\n```text\nfamily\nn_states\nstate_source\nselection_reason\nmarkov_best_n_states\nhmm_best_n_states\ninput_data_sha256\n```\n\n`state_source` is exactly `quantile_states` or `viterbi_states`.\n\n### Manifest JSON\n'''
+          selected_json_new = '''Exact keys:\n\n```text\nfamily\nn_states\nstate_source\nselection_reason\nmarkov_best_n_states\nhmm_best_n_states\ninput_data_sha256\nselected_states_path\n```\n\n`state_source` is exactly `quantile_states` or `viterbi_states`. `selected_states_path` is exactly `reports/tables/step3_selected_states.csv`.\n\n### Preferred-state sequence CSV\n\nPath: `reports/tables/step3_selected_states.csv`.\n\nExact schema:\n\n```text\nDate\nstate\n```\n\nIt is an exact copy of the selected candidate state sequence, not a newly estimated or decoded sequence. Its `Date` rows equal the Step 1 date sequence exactly.\n\n### Manifest JSON\n'''
+          text = replace_one(text, selected_json_old, selected_json_new, 'selected state artifact insertion')
+
+          manifest_req_old = '''- `tables` lists every canonical Step 2-4 CSV exactly once;\n- `figures` lists every canonical Step 2-4 PNG exactly once;'''
+          manifest_req_new = '''- `tables` lists every canonical Step 2-4 CSV exactly once, including all four candidate state-sequence CSVs and `step3_selected_states.csv`;\n- `figures` lists every canonical Step 2-4 PNG exactly once;'''
+          text = replace_one(text, manifest_req_old, manifest_req_new, 'steps 2-4 manifest tables')
+
+          pr21_files_old = '''reports/tables/step2_markov_3_transition.csv\nreports/tables/step2_markov_3_stationary.csv\nreports/figures/step2_markov_vix_states.png'''
+          pr21_files_new = '''reports/tables/step2_markov_3_transition.csv\nreports/tables/step2_markov_3_stationary.csv\nreports/tables/step2_markov_2_states.csv\nreports/tables/step2_markov_3_states.csv\nreports/figures/step2_markov_vix_states.png'''
+          text = replace_one(text, pr21_files_old, pr21_files_new, 'PR21 files')
+          pr21_tasks_old = '''- [ ] T21.7 Serialize all six Markov CSVs using the exact canonical schemas.\n- [ ] T21.8 Execute the complete notebook successfully and store all outputs.\n\n### Acceptance criteria\n\n- [ ] AC21.1 (`T21.1`) Step 2 observation is visibly/exclusively `VIX_change` and assumptions are explicit.\n- [ ] AC21.2 (`T21.2`) all required MC2 numerical/function outputs are visible and internally consistent.\n- [ ] AC21.3 (`T21.3`) all required MC3 numerical/function outputs are visible and internally consistent.\n- [ ] AC21.4 (`T21.4`) equations match project definitions and Greek-letter pronunciation rule is satisfied.\n- [ ] AC21.5 (`T21.5`) methodology/limitations are precise and contain no unsupported interpretation.\n- [ ] AC21.6 (`T21.6`) canonical figure is visible in notebook and exists non-empty at the fixed path.\n- [ ] AC21.7 (`T21.7`) all six Markov CSVs exist, are non-empty and match fixed schemas.\n- [ ] AC21.8 (`T21.8`) notebook has no failed/unexecuted cell and stores outputs.'''
+          pr21_tasks_new = '''- [ ] T21.7 Serialize the six Markov threshold/transition/stationary CSVs using the exact canonical schemas.\n- [ ] T21.8 Serialize both 2-state and 3-state Markov state sequences to the canonical `Date,state` CSV paths without recomputation.\n- [ ] T21.9 Execute the complete notebook successfully and store all outputs.\n\n### Acceptance criteria\n\n- [ ] AC21.1 (`T21.1`) Step 2 observation is visibly/exclusively `VIX_change` and assumptions are explicit.\n- [ ] AC21.2 (`T21.2`) all required MC2 numerical/function outputs are visible and internally consistent.\n- [ ] AC21.3 (`T21.3`) all required MC3 numerical/function outputs are visible and internally consistent.\n- [ ] AC21.4 (`T21.4`) equations match project definitions and Greek-letter pronunciation rule is satisfied.\n- [ ] AC21.5 (`T21.5`) methodology/limitations are precise and contain no unsupported interpretation.\n- [ ] AC21.6 (`T21.6`) canonical figure is visible in notebook and exists non-empty at the fixed path.\n- [ ] AC21.7 (`T21.7`) all six Markov threshold/transition/stationary CSVs exist, are non-empty and match fixed schemas.\n- [ ] AC21.8 (`T21.8`) both Markov state CSVs exist, have exact `Date,state` schema, exact Step 1 row count/index values and states matching the candidate outputs shown in the notebook.\n- [ ] AC21.9 (`T21.9`) notebook has no failed/unexecuted cell and stores outputs.'''
+          text = replace_one(text, pr21_tasks_old, pr21_tasks_new, 'PR21 tasks')
+
+          pr22_files_old = '''reports/tables/step2_hmm_3_parameters.csv\nreports/tables/step2_hmm_3_transition.csv\nreports/figures/step2_hmm_vix_states.png'''
+          pr22_files_new = '''reports/tables/step2_hmm_3_parameters.csv\nreports/tables/step2_hmm_3_transition.csv\nreports/tables/step2_hmm_2_states.csv\nreports/tables/step2_hmm_3_states.csv\nreports/figures/step2_hmm_vix_states.png'''
+          text = replace_one(text, pr22_files_old, pr22_files_new, 'PR22 files')
+          pr22_tasks_old = '''- [ ] T22.8 Serialize four HMM CSVs using the exact canonical schemas.\n- [ ] T22.9 Execute the full notebook successfully and store all outputs.\n\n### Acceptance criteria\n\n- [ ] AC22.1 (`T22.1`) all fixed HMM2 parameters/diagnostics are visibly displayed and consistent with project output.\n- [ ] AC22.2 (`T22.2`) all fixed HMM3 parameters/diagnostics are visibly displayed and consistent with project output.\n- [ ] AC22.3 (`T22.3`) equations/notation are correct and every Greek symbol is introduced/pronounced first.\n- [ ] AC22.4 (`T22.4`) explanation clearly distinguishes estimation, decoded most-likely states and smoothed probabilities.\n- [ ] AC22.5 (`T22.5`) reproducibility/convergence/state-order rules are documented accurately.\n- [ ] AC22.6 (`T22.6`) HMM state figure is visible and canonical file exists non-empty.\n- [ ] AC22.7 (`T22.7`) posterior figure is visible and canonical file exists non-empty.\n- [ ] AC22.8 (`T22.8`) all four HMM CSVs exist/non-empty and match exact schemas.\n- [ ] AC22.9 (`T22.9`) full notebook executes without failed/unexecuted cells and stores outputs.'''
+          pr22_tasks_new = '''- [ ] T22.8 Serialize four HMM parameter/transition CSVs using the exact canonical schemas.\n- [ ] T22.9 Serialize both 2-state and 3-state HMM Viterbi state sequences to the canonical `Date,state` CSV paths without an additional fit or decode.\n- [ ] T22.10 Execute the full notebook successfully and store all outputs.\n\n### Acceptance criteria\n\n- [ ] AC22.1 (`T22.1`) all fixed HMM2 parameters/diagnostics are visibly displayed and consistent with project output.\n- [ ] AC22.2 (`T22.2`) all fixed HMM3 parameters/diagnostics are visibly displayed and consistent with project output.\n- [ ] AC22.3 (`T22.3`) equations/notation are correct and every Greek symbol is introduced/pronounced first.\n- [ ] AC22.4 (`T22.4`) explanation clearly distinguishes estimation, decoded most-likely states and smoothed probabilities.\n- [ ] AC22.5 (`T22.5`) reproducibility/convergence/state-order rules are documented accurately.\n- [ ] AC22.6 (`T22.6`) HMM state figure is visible and canonical file exists non-empty.\n- [ ] AC22.7 (`T22.7`) posterior figure is visible and canonical file exists non-empty.\n- [ ] AC22.8 (`T22.8`) all four HMM parameter/transition CSVs exist/non-empty and match exact schemas.\n- [ ] AC22.9 (`T22.9`) both HMM state CSVs exist, have exact `Date,state` schema, exact Step 1 row count/index values and states identical to the fitted candidate Viterbi outputs.\n- [ ] AC22.10 (`T22.10`) full notebook executes without failed/unexecuted cells and stores outputs.'''
+          text = replace_one(text, pr22_tasks_old, pr22_tasks_new, 'PR22 tasks')
+
+          pr23_files_old = '''notebooks/gwp2_vix_regime_allocation.ipynb\nreports/tables/step3_model_comparison.csv\nreports/generated/step3_selected_model.json'''
+          pr23_files_new = '''notebooks/gwp2_vix_regime_allocation.ipynb\nreports/tables/step3_model_comparison.csv\nreports/tables/step3_selected_states.csv\nreports/generated/step3_selected_model.json'''
+          text = replace_one(text, pr23_files_old, pr23_files_new, 'PR23 files')
+          pr23_tasks_old = '''- [ ] T23.7 Compute SHA-256 of the exact Step 1 CSV bytes and save selected-model JSON with exact required keys.\n- [ ] T23.8 Execute the full notebook successfully and store outputs.\n\n### Acceptance criteria\n\n- [ ] AC23.1 (`T23.1`) formulas/parameter counts are visible, correct and satisfy Greek-symbol pronunciation rules.\n- [ ] AC23.2 (`T23.2`) comparison table has exactly four rows/fixed columns and canonical CSV matches displayed values.\n- [ ] AC23.3 (`T23.3`) cross-family IC non-comparability is explicit and no raw cross-family IC winner is claimed.\n- [ ] AC23.4 (`T23.4`) displayed family winners match code selection exactly.\n- [ ] AC23.5 (`T23.5`) displayed preferred result exactly matches selected-result function output.\n- [ ] AC23.6 (`T23.6`) method-level rationale is scientifically qualified exactly as specified.\n- [ ] AC23.7 (`T23.7`) JSON keys are exact and `input_data_sha256` equals the actual Step 1 file hash.\n- [ ] AC23.8 (`T23.8`) full notebook executes without failed/unexecuted cells and stores outputs.'''
+          pr23_tasks_new = '''- [ ] T23.7 Serialize the exact preferred state Series to `reports/tables/step3_selected_states.csv` with exact `Date,state` schema; copy the selected candidate states rather than refitting or redecoding.\n- [ ] T23.8 Compute SHA-256 of the exact Step 1 CSV bytes and save selected-model JSON with exact required keys, including `selected_states_path`.\n- [ ] T23.9 Execute the full notebook successfully and store outputs.\n\n### Acceptance criteria\n\n- [ ] AC23.1 (`T23.1`) formulas/parameter counts are visible, correct and satisfy Greek-symbol pronunciation rules.\n- [ ] AC23.2 (`T23.2`) comparison table has exactly four rows/fixed columns and canonical CSV matches displayed values.\n- [ ] AC23.3 (`T23.3`) cross-family IC non-comparability is explicit and no raw cross-family IC winner is claimed.\n- [ ] AC23.4 (`T23.4`) displayed family winners match code selection exactly.\n- [ ] AC23.5 (`T23.5`) displayed preferred result exactly matches selected-result function output.\n- [ ] AC23.6 (`T23.6`) method-level rationale is scientifically qualified exactly as specified.\n- [ ] AC23.7 (`T23.7`) selected-state CSV exists, matches the selected candidate state Series exactly and has the same dates/row count as Step 1.\n- [ ] AC23.8 (`T23.8`) JSON keys are exact, `selected_states_path` points to the canonical selected-state CSV and `input_data_sha256` equals the actual Step 1 file hash.\n- [ ] AC23.9 (`T23.9`) full notebook executes without failed/unexecuted cells and stores outputs.'''
+          text = replace_one(text, pr23_tasks_old, pr23_tasks_new, 'PR23 tasks')
+
+          text = replace_one(
+              text,
+              '- [ ] T24.1 Retrieve exactly the preferred state sequence from the selected candidate; do not recompute an alternative state sequence.',
+              '- [ ] T24.1 Load exactly `reports/tables/step3_selected_states.csv`, validate its dates against Step 1 and its path/source against `step3_selected_model.json`, and use that Series without refitting or redecoding.',
+              'PR24 task1',
+          )
+          text = replace_one(
+              text,
+              '- [ ] AC24.1 (`T24.1`) state Series identity/source matches `step3_selected_model.json` and selected candidate exactly.',
+              '- [ ] AC24.1 (`T24.1`) loaded state Series has exact Step 1 dates, matches the selected candidate sequence and is the file referenced by `step3_selected_model.json`; no model fit/decode occurs in this step.',
+              'PR24 ac1',
+          )
+
+          lookahead_old = '''Do not implement Step 5 backtesting here. The notebook must note that Step 5 applies a one-trading-day lag to the state-driven position. It must also explicitly identify the in-sample allocation-map/lookahead limitation: state-conditional means are estimated using the analysis sample, so a truly out-of-sample trading evaluation would require a rolling/expanding estimation design.'''
+          lookahead_new = '''Do not implement Step 5 backtesting here. The notebook must note that Step 5 applies a one-trading-day lag to the state-driven position. It must also identify **all** remaining in-sample/lookahead limitations: quantile thresholds or HMM parameters are estimated on the full analysis sample; an HMM Viterbi path is a full-sequence decode and therefore can use future observations relative to an earlier date; and state-conditional allocation means are estimated on the full analysis sample. The assignment backtest is therefore pedagogical/in-sample rather than a causal out-of-sample strategy test. A stronger validation would require rolling/expanding re-estimation plus one-sided/filtered state inference and allocation estimation using information available only up to each decision date.'''
+          text = replace_one(text, lookahead_old, lookahead_new, 'Step4 lookahead caveat')
+          text = replace_one(
+              text,
+              '- [ ] T25.5 Explain the in-sample mapping/lookahead limitation and state that Step 5 must lag state-driven positions by one trading day.',
+              '- [ ] T25.5 Explain that the required one-day Step 5 lag only delays execution; separately document full-sample regime estimation/thresholds, full-sequence HMM Viterbi decoding when applicable, and full-sample state-conditional allocation means as remaining in-sample/lookahead limitations.',
+              'PR25 task5',
+          )
+          text = replace_one(
+              text,
+              '- [ ] AC25.5 (`T25.5`) both in-sample-lookahead limitation and future one-day execution lag are explicit; no Step 5 backtest is implemented.',
+              '- [ ] AC25.5 (`T25.5`) one-day execution lag and all three stated full-sample/full-sequence limitations are explicit, the analysis is not called out-of-sample, and no Step 5 backtest is implemented.',
+              'PR25 ac5',
+          )
+
+          text = replace_one(
+              text,
+              '- [ ] HMM fitted parameters, Viterbi states and smoothed probabilities are displayed.',
+              '- [ ] HMM fitted parameters, Viterbi states and smoothed probabilities are displayed.\n- [ ] All four candidate state sequences and the preferred selected-state sequence are persisted as canonical `Date,state` CSVs and included in the Steps 2–4 manifest.',
+              'Steps1-4 DoD state provenance',
+          )
+
+          step5_rule_old = '''13. No result may be described as out-of-sample. The one-day lag removes same-day signal execution, but Step 4 state-conditional mean mappings are still estimated in-sample unless a later, separately scoped walk-forward study is added.'''
+          step5_rule_new = '''13. No result may be described as out-of-sample. The one-day lag removes same-day signal execution only. The regime model/quantile thresholds are estimated on the full sample, HMM Viterbi states (when used) are full-sequence decoded, and Step 4 state-conditional mean mappings are full-sample estimates. A causal study would require rolling/expanding re-estimation, one-sided/filtered state inference and decision-time-only allocation estimation.'''
+          text = replace_one(text, step5_rule_old, step5_rule_new, 'Step5 causal caveat')
+
+          step5_input_old = '''reports/generated/step3_selected_model.json\nreports/tables/step4_allocation_mapping.csv\n```\n\nThe executable notebook may reconstruct the preferred state Series by rerunning the deterministic project model functions on the unchanged Step 1 data. Sidecars may not refit models.'''
+          step5_input_new = '''reports/generated/step3_selected_model.json\nreports/tables/step3_selected_states.csv\nreports/tables/step4_allocation_mapping.csv\n```\n\nThe Step 5 notebook **loads the canonical selected-state CSV** produced in Step 3; it does not refit/redecode the preferred model merely to recover an already-produced state sequence. The `selected_states_path` in `step3_selected_model.json` must point to that exact file. Sensitivity likewise loads the canonical 2-state and 3-state candidate state CSVs from Step 2. Sidecars may never refit or redecode models.'''
+          text = replace_one(text, step5_input_old, step5_input_new, 'Step5 input state provenance')
+
+          sensitivity_old = '''1. use that family's already-defined K-state candidate state sequence on the same Step 1 sample;'''
+          sensitivity_new = '''1. load that family's canonical K-state candidate `Date,state` CSV produced in Step 2 on the same Step 1 sample; do not refit or redecode the candidate merely for sensitivity;'''
+          text = replace_one(text, sensitivity_old, sensitivity_new, 'sensitivity state loading')
+
+          perf_old = '''For a return series `r_1, ..., r_N`, wealth is:\n\n```text\nW_t = product_(j=1..t) (1 + r_j)\n```\n\nRequired metrics are fixed as:\n\n```text\nCumulative Return     = W_N - 1\nAnnualized Return     = W_N^(252/N) - 1\nAnnualized Volatility = sample_std(r_t, ddof=1) * sqrt(252)\nSharpe Ratio          = mean(r_t) / sample_std(r_t, ddof=1) * sqrt(252)\nMax Drawdown          = min_t(W_t / max_(u<=t) W_u - 1)\n```'''
+          perf_new = '''For a return series `r_1, ..., r_N`, define initial wealth and the wealth path as:\n\n```text\nW_0 = 1\nW_t = product_(j=1..t) (1 + r_j),  t = 1,...,N\nM_t = max(W_0, W_1, ..., W_t)\n```\n\nRequired metrics are fixed as:\n\n```text\nCumulative Return     = W_N - 1\nAnnualized Return     = W_N^(252/N) - 1\nAnnualized Volatility = sample_std(r_t, ddof=1) * sqrt(252)\nSharpe Ratio          = mean(r_t) / sample_std(r_t, ddof=1) * sqrt(252)\nMax Drawdown          = min(0, min_t(W_t / M_t - 1))\n```\n\nIncluding `W_0 = 1` in the running peak is mandatory: a loss on the first comparison date is a drawdown from initial capital and must not be incorrectly reported as zero.'''
+          text = replace_one(text, perf_old, perf_new, 'max drawdown formula')
+
+          manifest5_old = '''selected_model_path\nallocation_path\nnotebook_path'''
+          manifest5_new = '''selected_model_path\nselected_states_path\nallocation_path\nnotebook_path'''
+          text = replace_one(text, manifest5_old, manifest5_new, 'Step5 manifest selected states')
+
+          text = replace_one(
+              text,
+              '- [ ] T35.6 Implement max drawdown as the minimum wealth/running-peak minus one, returning a value in `[-1,0]`.',
+              '- [ ] T35.6 Implement max drawdown with initial wealth `W_0=1` included in the running peak, returning `min(0, min_t(W_t/M_t-1))` in `[-1,0]`.',
+              'PR35 task6',
+          )
+          text = replace_one(
+              text,
+              '- [ ] T35.8 Add exact hand-calculated tests for all metrics and invalid/zero-volatility cases.',
+              '- [ ] T35.8 Add exact hand-calculated tests for all metrics and invalid/zero-volatility cases, including a series whose first return is negative to prove drawdown is measured from initial wealth.',
+              'PR35 task8',
+          )
+          text = replace_one(
+              text,
+              '- [ ] AC35.6 (`T35.6`) max drawdown equals a manually identified peak-to-trough drawdown and is non-positive.',
+              '- [ ] AC35.6 (`T35.6`) max drawdown equals manual calculations with `W_0=1` as an eligible running peak, including the first-period-loss case, and is non-positive.',
+              'PR35 ac6',
+          )
+          text = replace_one(
+              text,
+              '- [ ] AC35.8 (`T35.8`) all performance tests pass offline.',
+              '- [ ] AC35.8 (`T35.8`) all performance tests, including first-period drawdown and zero-volatility failure, pass offline.',
+              'PR35 ac8',
+          )
+
+          text = replace_one(
+              text,
+              '- [ ] T37.2 Compute each cumulative-return curve as `(1+r).cumprod()-1` using shared wealth semantics.',
+              '- [ ] T37.2 Compute each cumulative-return curve by delegating to `cumulative_wealth()` and subtracting `1`; do not duplicate a second compounding implementation.',
+              'PR37 task2',
+          )
+          text = replace_one(
+              text,
+              '- [ ] AC37.2 (`T37.2`) plotted y-values equal hand-compounded cumulative returns.',
+              '- [ ] AC37.2 (`T37.2`) plotted y-values equal hand-compounded cumulative returns and a mock/spying test proves the shared wealth helper is used.',
+              'PR37 ac2',
+          )
+
+          text = replace_one(
+              text,
+              '- [ ] T40.2 Load/validate the unchanged Step 1 data, reconstruct exactly the Step 3 preferred state sequence, and load the canonical Step 4 allocation mapping.',
+              '- [ ] T40.2 Load/validate the unchanged Step 1 data, `step3_selected_model.json`, canonical `step3_selected_states.csv`, and the canonical Step 4 allocation mapping; verify hashes/paths/indexes and do not refit or redecode the preferred model.',
+              'PR40 task2',
+          )
+          text = replace_one(
+              text,
+              '- [ ] AC40.2 (`T40.2`) selected family/state count/state source match Step 3 JSON and allocation matches canonical Step 4 CSV.',
+              '- [ ] AC40.2 (`T40.2`) selected family/state count/state source/path match Step 3 JSON, selected-state dates/values match the canonical CSV, allocation matches Step 4 CSV, and no model fit/decode occurs.',
+              'PR40 ac2',
+          )
+          text = replace_one(
+              text,
+              '- [ ] T40.9 State explicitly that returns are gross of transaction costs/slippage/taxes and that the allocation mapping remains in-sample despite the one-day execution lag.',
+              '- [ ] T40.9 State explicitly that returns are gross of transaction costs/slippage/taxes and that full-sample regime estimation/thresholds, full-sequence HMM Viterbi decoding when applicable, and full-sample allocation mapping remain in-sample/lookahead limitations despite the one-day execution lag.',
+              'PR40 task9',
+          )
+          text = replace_one(
+              text,
+              '- [ ] AC40.9 (`T40.9`) gross-cost and in-sample-mapping limitations are explicit.',
+              '- [ ] AC40.9 (`T40.9`) gross-cost assumption plus all specified full-sample/full-sequence limitations are explicit and the backtest is not described as causal or out-of-sample.',
+              'PR40 ac9',
+          )
+
+          text = replace_one(
+              text,
+              '- [ ] T41.6 State whether the displayed evidence supports or does not support an improvement in risk-adjusted performance, qualified as in-sample evidence.',
+              '- [ ] T41.6 State whether the displayed evidence supports or does not support an improvement in risk-adjusted performance, qualified as a full-sample descriptive/in-sample backtest rather than a causal out-of-sample test.',
+              'PR41 task6',
+          )
+          text = replace_one(
+              text,
+              '- [ ] AC41.6 (`T41.6`) risk-adjusted conclusion is evidence-based and explicitly limited to the in-sample experiment.',
+              '- [ ] AC41.6 (`T41.6`) risk-adjusted conclusion is evidence-based and explicitly limited to the full-sample descriptive/in-sample experiment.',
+              'PR41 ac6',
+          )
+
+          text = replace_one(
+              text,
+              '- [ ] T42.1 Reconstruct 2- and 3-state candidate state sequences **within the Step 3 preferred family only** and verify both use the unchanged Step 1 input.',
+              '- [ ] T42.1 Load the canonical 2-state and 3-state candidate state CSVs **within the Step 3 preferred family only**, verify exact Step 1 dates/hash, and do not refit/redecode either candidate.',
+              'PR42 task1',
+          )
+          text = replace_one(
+              text,
+              '- [ ] T42.4 State explicitly that state-count sensitivity is not an out-of-sample test and does not test alternative sample windows.',
+              '- [ ] T42.4 State explicitly that state-count sensitivity is not out-of-sample, does not test alternative sample windows, and retains the same full-sample estimation/full-sequence-decoding limitations as the main backtest.',
+              'PR42 task4',
+          )
+          text = replace_one(
+              text,
+              '- [ ] AC42.1 (`T42.1`) sensitivity uses exactly K=2/3 states from the preferred family and the same Step 1 data hash.',
+              '- [ ] AC42.1 (`T42.1`) sensitivity loads exactly the canonical K=2/3 state files from the preferred family, uses the same Step 1 dates/hash and performs no model fit/decode.',
+              'PR42 ac1',
+          )
+          text = replace_one(
+              text,
+              '- [ ] AC42.4 (`T42.4`) robustness scope and non-out-of-sample limitation are explicit.',
+              '- [ ] AC42.4 (`T42.4`) robustness scope, unchanged full-sample/full-sequence limitations and non-out-of-sample status are explicit.',
+              'PR42 ac4',
+          )
+          text = replace_one(
+              text,
+              '- [ ] T42.7 Create exact `step5_manifest.json`, including Step 1 SHA-256 matching Step 3 metadata and all Step 5 canonical artifacts exactly once.',
+              '- [ ] T42.7 Create exact `step5_manifest.json`, including `selected_states_path`, Step 1 SHA-256 matching Step 3 metadata and all Step 5 canonical artifacts exactly once.',
+              'PR42 task7',
+          )
+          text = replace_one(
+              text,
+              '- [ ] AC42.7 (`T42.7`) manifest keys/paths/hash are exact and every canonical Step 5 table/figure appears exactly once.',
+              '- [ ] AC42.7 (`T42.7`) manifest keys/paths/hash are exact, `selected_states_path` points to the canonical preferred-state CSV and every canonical Step 5 table/figure appears exactly once.',
+              'PR42 ac7',
+          )
+
+          text = replace_one(
+              text,
+              '- [ ] T45.4 Include practical recommendation, sensitivity conclusion, gross-cost assumption, in-sample limitation and factors affecting the three portfolios.',
+              '- [ ] T45.4 Include practical recommendation, sensitivity conclusion, gross-cost assumption, full-sample regime/state/allocation limitations, non-out-of-sample qualification and factors affecting the three portfolios.',
+              'PR45 task4',
+          )
+          text = replace_one(
+              text,
+              '- [ ] AC45.4 (`T45.4`) recommendation/sensitivity/cost/in-sample/portfolio-factor discussion is complete and evidence-based.',
+              '- [ ] AC45.4 (`T45.4`) recommendation/sensitivity/cost/full-sample/non-out-of-sample/portfolio-factor discussion is complete and evidence-based.',
+              'PR45 ac4',
+          )
+
+          text = replace_one(
+              text,
+              'For every PR from PR-01 through PR-47:',
+              'For every PR from PR-01 through PR-49:',
+              'global merge range',
+          )
+
+          appendix = r'''\n\n---\n\n# Part IV — Final Submission Packaging and Release Validation\n\nThe assignment requires **one zipped folder** containing an executable Jupyter notebook and a duplicate notebook in PDF or HTML form, while the no-code PDF report is uploaded **separately**. Because the notebook delegates numerical logic to the repository package, the submission ZIP must also include the minimal source/package files required to keep the notebook executable rather than shipping an orphaned notebook that imports missing local modules.\n\n## Fixed submission-package contract\n\nCanonical outputs:\n\n```text\ndist/MScFE_622_GWP2_submission.zip\nreports/generated/submission_manifest.json\n```\n\nThe ZIP contains exactly the following classes of files, stored under repository-relative POSIX paths:\n\n```text\nnotebooks/gwp2_vix_regime_allocation.ipynb\nreports/gwp2_vix_regime_allocation.html\nREADME.md\npyproject.toml\ndata/processed/step1_data.csv\nsrc/vix_regime_allocation/**/*.py\n```\n\nThe ZIP **must not** contain:\n\n```text\nreports/Stochastic_Modeling_GWP2_Report.pdf\nreports/rendered/**\n.git/**\n.github/**\ntests/**\n__pycache__/**\n.pytest_cache/**\n.mypy_cache/**\n.ruff_cache/**\n.coverage*\n.env*\n*.key\n*.pem\n```\n\nThe standalone report remains at `reports/Stochastic_Modeling_GWP2_Report.pdf` and is intentionally outside the ZIP to match the submission instructions.\n\nZIP generation is deterministic: archive member order is lexicographically sorted, member paths are POSIX relative paths, no path traversal or symlinks are permitted, and member timestamps are normalized to `1980-01-01 00:00:00` so identical inputs produce identical bytes.\n\n`reports/generated/submission_manifest.json` has exact top-level keys:\n\n```text\nschema_version\nzip_path\nzip_sha256\nstandalone_pdf_path\nstandalone_pdf_sha256\nincluded_files\nmember_sha256\n```\n\nRequirements:\n\n- `schema_version = 1`;\n- `zip_path = "dist/MScFE_622_GWP2_submission.zip"`;\n- `standalone_pdf_path = "reports/Stochastic_Modeling_GWP2_Report.pdf"`;\n- `included_files` is the exact sorted archive-member list;\n- `member_sha256` maps every archive member to the SHA-256 of its uncompressed repository bytes;\n- `zip_sha256` and `standalone_pdf_sha256` match the actual final files;\n- no timestamps are stored in the JSON.\n\n---\n\n## PR-48 — Implement deterministic final submission bundle builder\n\n**Agent lane:** A\n\n**Dependencies:** PR-47\n\n**Files owned:**\n\n```text\nscripts/build_submission_bundle.py\ntests/test_submission_bundle.py\n```\n\n### Public interface\n\n```python\ndef build_submission_bundle(\n    repository_root: pathlib.Path,\n    output_zip: pathlib.Path,\n    manifest_path: pathlib.Path,\n) -> None: ...\n```\n\n### Tasks\n\n- [ ] T48.1 Resolve the exact fixed archive allowlist: canonical notebook, canonical HTML duplicate, README, pyproject, Step 1 processed CSV and every Python file under `src/vix_regime_allocation/`, all as repository-relative POSIX paths.\n- [ ] T48.2 Validate every required input exists, is a regular non-symlink file and is non-empty; reject absolute paths, `..` traversal and any member matching the fixed exclusion classes.\n- [ ] T48.3 Build the ZIP in lexicographic member order with normalized `1980-01-01 00:00:00` timestamps and deterministic compression metadata.\n- [ ] T48.4 Explicitly reject/exclude the standalone no-code PDF and verify it exists separately and is non-empty before finalizing the bundle.\n- [ ] T48.5 Compute SHA-256 for every uncompressed archive member, the final ZIP and the standalone PDF; write the exact manifest schema with no timestamp.\n- [ ] T48.6 Reopen the produced ZIP and verify archive member names/content hashes equal the allowlist/manifest exactly and that no duplicate member exists.\n- [ ] T48.7 Add deterministic offline tests covering allowlist expansion, byte-identical repeated builds, path traversal/symlink rejection, forbidden-file exclusion, missing input, manifest hashes and archive reinspection.\n\n### Acceptance criteria\n\n- [ ] AC48.1 (`T48.1`) fixture expansion returns exactly the required fixed files plus sorted package Python files and no unrelated repository file.\n- [ ] AC48.2 (`T48.2`) missing/empty/symlink/absolute/traversal/forbidden inputs fail clearly before archive completion.\n- [ ] AC48.3 (`T48.3`) two builds from byte-identical inputs produce byte-identical ZIPs with sorted members and normalized timestamps.\n- [ ] AC48.4 (`T48.4`) the standalone report is required to exist but never appears as an archive member.\n- [ ] AC48.5 (`T48.5`) manifest keys are exact and every member/ZIP/PDF SHA-256 equals independently recomputed fixture hashes.\n- [ ] AC48.6 (`T48.6`) post-build archive inspection proves exact member set, no duplicates and byte-for-byte member parity with repository inputs.\n- [ ] AC48.7 (`T48.7`) all submission-bundle tests pass offline.\n\n---\n\n## PR-49 — Generate and validate final submission release artifacts\n\n**Agent lane:** B\n\n**Dependencies:** PR-48\n\n**Files owned:**\n\n```text\ndist/MScFE_622_GWP2_submission.zip\nreports/generated/submission_manifest.json\nREADME.md\nscripts/check_readme_sidecar.py\n```\n\n### Tasks\n\n- [ ] T49.1 Run the canonical submission-bundle builder against current `main` artifacts after the final Steps 1–5 parity gate has passed.\n- [ ] T49.2 Inspect the generated ZIP and verify the notebook and HTML members are byte-identical to the canonical repository files and the package/source members satisfy the fixed allowlist.\n- [ ] T49.3 Verify the standalone PDF exists, is non-empty, has the manifest SHA-256 and is absent from the ZIP.\n- [ ] T49.4 Verify no tests, Git metadata, CI files, caches, coverage data, rendered QA pages, environment files or key material are present in the ZIP.\n- [ ] T49.5 Update README final-submission instructions with the exact ZIP path, separately uploaded PDF path, archive contents and reproducible rebuild command.\n- [ ] T49.6 Extend `check_readme_sidecar.py` to require the final ZIP/manifest/separate-PDF paths and final submission-separation wording without weakening any existing quality/parity checks.\n- [ ] T49.7 Run `scripts/check_backlog_contract.py`, the README checker and the complete repository `quality-gate` on the final release commit.\n\n### Acceptance criteria\n\n- [ ] AC49.1 (`T49.1`) final ZIP and submission manifest exist/non-empty and were generated from the current post-PR-47 canonical artifacts.\n- [ ] AC49.2 (`T49.2`) archive notebook/HTML/package members are byte-identical to canonical repository inputs and the member set equals the fixed allowlist exactly.\n- [ ] AC49.3 (`T49.3`) standalone PDF hash matches the manifest, the file exists separately and its path is absent from all ZIP members.\n- [ ] AC49.4 (`T49.4`) archive inspection finds none of the fixed forbidden file classes.\n- [ ] AC49.5 (`T49.5`) README gives exact, actionable final upload/rebuild instructions and does not imply the standalone PDF belongs inside the ZIP.\n- [ ] AC49.6 (`T49.6`) README checker fails when final submission paths/separation wording are removed and passes the valid final repository.\n- [ ] AC49.7 (`T49.7`) backlog contract checker, README checker and aggregate quality gate all pass on the final release commit.\n\n---\n\n## Final packaging execution schedule\n\n```text\nWave 29\nAgent A: PR-48 deterministic submission bundle builder\n\nWave 30\nAgent B: PR-49 final release generation and validation\n```\n\nPR-49 starts only after PR-48 is merged.\n\n---\n\n# Final Project Definition of Done\n\nThe project is submission-ready only when all conditions are true:\n\n- [ ] PR-01 through PR-49 are merged to `main`.\n- [ ] Steps 1–5 Definitions of Done are satisfied.\n- [ ] `scripts/check_backlog_contract.py` passes and proves 49 contiguous PR definitions with exact one-to-one task/acceptance coverage and backward-only explicit dependencies.\n- [ ] `dist/MScFE_622_GWP2_submission.zip` exists, is deterministic, contains the executable notebook plus HTML duplicate and the minimal local package/runtime files required by the notebook, and contains no forbidden files.\n- [ ] `reports/Stochastic_Modeling_GWP2_Report.pdf` exists separately, is non-empty, is excluded from the ZIP and has the hash recorded in the submission manifest.\n- [ ] `reports/generated/submission_manifest.json` matches the final ZIP/PDF bytes and exact archive member hashes.\n- [ ] README gives exact final upload and rebuild instructions.\n- [ ] Final `analysis-sidecars`, `backlog-contract`, coverage and aggregate `quality-gate` checks pass on `main`.\n'''
+          if '# Part IV — Final Submission Packaging and Release Validation' in text:
+              raise SystemExit('Part IV already present')
+          text += appendix
+
+          backlog_path.write_text(text, encoding='utf-8')
+
+          readme = Path('README.md')
+          r = readme.read_text(encoding='utf-8')
+          r = r.replace('| Canonical Steps 1-4 backlog | Audited, consolidated and defined in [`BACKLOG.md`](BACKLOG.md) |', '| Canonical Steps 1-5 backlog | Audited, consolidated and defined in [`BACKLOG.md`](BACKLOG.md) |', 1)
+          r = r.replace('| Steps 2-4 implementation | Planned as atomic PR-06 through PR-32; not started |', '| Steps 2-4 implementation | Planned as atomic PR-06 through PR-32; not started |\n| Step 5 implementation | Planned as atomic PR-33 through PR-47; not started |\n| Final submission package | Planned as PR-48 through PR-49; deterministic ZIP plus separate PDF validation |', 1)
+          r = r.replace('All PR definitions, dependencies, file ownership, tasks, acceptance criteria, schedules and Definitions of Done for Steps 1-4 now live in **one file: [`BACKLOG.md`](BACKLOG.md)**.', 'All PR definitions, dependencies, file ownership, tasks, acceptance criteria, schedules and Definitions of Done for Steps 1-5 plus final submission packaging now live in **one file: [`BACKLOG.md`](BACKLOG.md)**.', 1)
+          step4_tail = '''The complete atomic Step 2-4 contracts are in [`BACKLOG.md`](BACKLOG.md), PR-06 through PR-32.\n\n## Canonical technical notebook'''
+          step5_readme = '''The complete atomic Step 2-4 contracts are in [`BACKLOG.md`](BACKLOG.md), PR-06 through PR-32.\n\n### Step 5 - Backtesting and Evaluation\n\nStep 5 is fully specified as PR-33 through PR-47. The fixed backtest applies the Step 4 allocation with a one-observed-trading-day execution lag, compares against monthly rebalanced 1/3 TLT + 1/3 GLD + 1/3 SPY and buy-and-hold SPY, and reports cumulative return, annualized return, annualized volatility, zero-risk-free Sharpe ratio and maximum drawdown. Maximum drawdown explicitly includes initial wealth `W_0 = 1` in the running peak.\n\nThe backlog persists all candidate and preferred state sequences as canonical `Date,state` CSVs. Step 5 loads those files rather than refitting simply to recover state paths. The notebook/report must also state that the assignment backtest remains in-sample: regime parameters/quantile thresholds are full-sample estimates, HMM Viterbi paths are full-sequence decodes when applicable, and allocation means are estimated on the full sample. The one-day lag delays execution but does not make those signals causal or out-of-sample.\n\n### Final submission packaging\n\nPR-48 and PR-49 implement and generate the deterministic final bundle at `dist/MScFE_622_GWP2_submission.zip`. The ZIP contains the executable notebook, its HTML duplicate and the minimal local package/runtime files needed by the notebook. The no-code report remains `reports/Stochastic_Modeling_GWP2_Report.pdf` and is explicitly excluded from the ZIP because the assignment requires that PDF to be uploaded separately. `reports/generated/submission_manifest.json` records the exact archive member list and SHA-256 hashes.\n\n## Canonical technical notebook'''
+          if step4_tail not in r:
+              raise SystemExit('README Step4 insertion anchor missing')
+          r = r.replace(step4_tail, step5_readme, 1)
+          r = r.replace('Notebook edits for Steps 2-4 are deliberately serialized across PR-21 through PR-25 because parallel edits to one `.ipynb` file are unsafe for weak agents.', 'Notebook edits for Steps 2-4 are deliberately serialized across PR-21 through PR-25 because parallel edits to one `.ipynb` file are unsafe for weak agents. Step 5 notebook edits are likewise serialized across PR-40 through PR-42.', 1)
+          r = r.replace('The final Steps 1-4 CI work adds an `analysis-sidecars` job that validates those contracts.', 'PR-32 adds the initial Steps 1-4 `analysis-sidecars` gate and PR-47 extends it through Step 5. A separate `backlog-contract` job validates PR numbering, explicit dependencies and exact task/acceptance coverage.', 1)
+          artifact_anchor = '''reports/generated/step3_selected_model.json\nreports/generated/steps_2_4_manifest.json\n```'''
+          artifact_new = '''reports/tables/step2_markov_2_states.csv\nreports/tables/step2_markov_3_states.csv\nreports/tables/step2_hmm_2_states.csv\nreports/tables/step2_hmm_3_states.csv\nreports/tables/step3_selected_states.csv\nreports/generated/step3_selected_model.json\nreports/generated/steps_2_4_manifest.json\n```\n\nPlanned Step 5/final-release outputs include:\n\n```text\nreports/tables/step5_daily_returns.csv\nreports/tables/step5_performance_summary.csv\nreports/tables/step5_state_count_sensitivity.csv\nreports/figures/step5_cumulative_performance.png\nreports/generated/step5_manifest.json\ndist/MScFE_622_GWP2_submission.zip\nreports/generated/submission_manifest.json\n```'''
+          if artifact_anchor not in r:
+              raise SystemExit('README artifact anchor missing')
+          r = r.replace(artifact_anchor, artifact_new, 1)
+          quality_table_anchor = '| Integration tests | `coverage run -m pytest -m integration` | Must pass |'
+          r = r.replace(quality_table_anchor, quality_table_anchor + '\n\nThe independent `backlog-contract` job runs `python scripts/check_backlog_contract.py` and must pass before the aggregate quality gate can succeed.', 1)
+          r = r.replace('- `readme-sidecar`\n- `coverage`', '- `readme-sidecar`\n- `backlog-contract`\n- `coverage`', 1)
+          r = r.replace('python scripts/check_readme_sidecar.py\n```', 'python scripts/check_readme_sidecar.py\npython scripts/check_backlog_contract.py\n```', 1)
+          r = r.replace('- satisfy every numbered task and its identically numbered acceptance criterion;', '- satisfy every numbered task and its identically numbered acceptance criterion;\n- keep dependencies explicit and backward-only; `scripts/check_backlog_contract.py` must pass;', 1)
+          readme.write_text(r, encoding='utf-8')
+
+          checker = Path('scripts/check_readme_sidecar.py')
+          c = checker.read_text(encoding='utf-8')
+          c = c.replace('        "quality-gate",\n        "README technical sidecar policy",', '        "quality-gate",\n        "backlog-contract",\n        "README technical sidecar policy",', 1)
+          c = c.replace('        "readme-sidecar",\n        "quality-gate",', '        "readme-sidecar",\n        "backlog-contract",\n        "quality-gate",', 1)
+          checker.write_text(c, encoding='utf-8')
+
+          workflow = Path('.github/workflows/quality-gates.yml')
+          w = workflow.read_text(encoding='utf-8')
+          job_anchor = '''  readme-sidecar:\n    name: readme-sidecar\n'''
+          backlog_job = '''  backlog-contract:\n    name: backlog-contract\n    runs-on: ubuntu-latest\n    steps:\n      - name: Checkout\n        uses: actions/checkout@v4\n      - name: Set up Python\n        uses: actions/setup-python@v5\n        with:\n          python-version: "3.11"\n      - name: Validate canonical backlog contract\n        run: python scripts/check_backlog_contract.py\n\n  readme-sidecar:\n    name: readme-sidecar\n'''
+          if job_anchor not in w:
+              raise SystemExit('quality workflow job anchor missing')
+          w = w.replace(job_anchor, backlog_job, 1)
+          w = w.replace('      - readme-sidecar\n      - coverage', '      - readme-sidecar\n      - backlog-contract\n      - coverage', 1)
+          w = w.replace('          README_SIDECAR: ${{ needs[\'readme-sidecar\'].result }}\n          COVERAGE:', '          README_SIDECAR: ${{ needs[\'readme-sidecar\'].result }}\n          BACKLOG_CONTRACT: ${{ needs[\'backlog-contract\'].result }}\n          COVERAGE:', 1)
+          w = w.replace('          test "$README_SIDECAR" = "success"\n          test "$COVERAGE" = "success"', '          test "$README_SIDECAR" = "success"\n          test "$BACKLOG_CONTRACT" = "success"\n          test "$COVERAGE" = "success"', 1)
+          workflow.write_text(w, encoding='utf-8')
+
+          Path('.github/workflows/audit-backlog-v2.yml').unlink()
+          PY
+
+      - name: Validate backlog and README contracts
+        run: |
+          python scripts/check_backlog_contract.py
+          python scripts/check_readme_sidecar.py
+
+      - name: Commit audited backlog
+        shell: bash
+        run: |
+          git config user.name "SSC"
+          git config user.email "sergej.schweizer@gmail.com"
+          git add BACKLOG.md README.md scripts/check_backlog_contract.py scripts/check_readme_sidecar.py .github/workflows/quality-gates.yml .github/workflows/audit-backlog-v2.yml
+          git commit -m "Audit and complete Steps 1-5 backlog"
+          git push origin HEAD:audit/backlog-completeness-v2
