@@ -30,6 +30,12 @@ def main() -> None:
         "quality-gate",
         "README sidecar policy",
         "BACKLOG.md",
+        "BACKLOG_STEPS_2_4.md",
+        "notebooks/gwp2_vix_regime_allocation.ipynb",
+        "reports/Stochastic_Modeling_GWP2_Report.pdf",
+        "reports/Template_Stochastic_Modeling_Group_Work_Project.pdf",
+        "reports/generated/steps_2_4_manifest.json",
+        "analysis-sidecars",
     )
     missing_fragments = [
         fragment for fragment in required_readme_fragments if fragment not in readme_text
