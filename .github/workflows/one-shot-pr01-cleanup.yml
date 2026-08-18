@@ -29,5 +29,6 @@ jobs:
           git push origin --delete audit/backlog-completeness-v2
           git fetch --prune origin
           git rm .github/workflows/one-shot-pr01-cleanup.yml
+          git rm -f .pr01-cleanup-trigger
           git commit -m "PR-01 — Yahoo adjusted-close loader: finish branch cleanup"
           git push origin HEAD:main
