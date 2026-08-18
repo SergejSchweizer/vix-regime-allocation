@@ -1,0 +1,81 @@
+name: PR-01 backlog git metadata patch
+
+on:
+  push:
+    branches:
+      - pr-01-yahoo-adjusted-close-loader
+
+permissions:
+  contents: write
+
+jobs:
+  patch-backlog:
+    if: ${{ !contains(github.event.head_commit.message, '[metadata-applied]') }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout PR-01 branch
+        uses: actions/checkout@v4
+        with:
+          ref: pr-01-yahoo-adjusted-close-loader
+          fetch-depth: 0
+
+      - name: Add Git branch/status/commit metadata to every backlog PR
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+
+          path = Path('BACKLOG.md')
+          text = path.read_text(encoding='utf-8')
+          header_re = re.compile(r'^## PR-(\d{2}) — (.+)$', re.MULTILINE)
+          headers = list(header_re.finditer(text))
+          if len(headers) != 49:
+              raise SystemExit(f'Expected 49 PR headers, found {len(headers)}')
+
+          for index in range(len(headers) - 1, -1, -1):
+              match = headers[index]
+              start = match.start()
+              end = headers[index + 1].start() if index + 1 < len(headers) else len(text)
+              section = text[start:end]
+              code = match.group(1)
+              title = match.group(2).strip()
+
+              section = re.sub(r'\n\n\*\*Git branch:\*\*.*?(?=\n\n\*\*|\n\n###)', '', section, flags=re.DOTALL)
+              section = re.sub(r'\n\n\*\*Git status:\*\*.*?(?=\n\n\*\*|\n\n###)', '', section, flags=re.DOTALL)
+              section = re.sub(r'\n\n\*\*Commit message:\*\*.*?(?=\n\n\*\*|\n\n###)', '', section, flags=re.DOTALL)
+
+              dep = re.search(r'^\*\*Dependencies:\*\*.*$', section, re.MULTILINE)
+              if dep is None:
+                  raise SystemExit(f'PR-{code} has no Dependencies line')
+
+              slug = re.sub(r'[^a-z0-9]+', '-', title.lower()).strip('-')
+              branch = f'pr-{code}-{slug}'
+              metadata = (
+                  f'\n\n**Git branch:** `{branch}`'
+                  f'\n\n**Git status:** `git status --short --branch` must show `{branch}` '
+                  'and no staged, modified, or untracked files immediately before commit and merge.'
+                  f'\n\n**Commit message:** `PR-{code} — {title}`'
+              )
+              section = section[:dep.end()] + metadata + section[dep.end():]
+              text = text[:start] + section + text[end:]
+
+          if '**Git branch:**' not in text or text.count('**Git branch:**') != 49:
+              raise SystemExit('Git branch metadata count is not 49')
+          if text.count('**Git status:**') != 49 or text.count('**Commit message:**') != 49:
+              raise SystemExit('Git status/commit metadata count is not 49')
+
+          path.write_text(text, encoding='utf-8')
+          PY
+
+      - name: Commit metadata patch
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add BACKLOG.md
+          if git diff --cached --quiet; then
+            exit 0
+          fi
+          git commit -m "PR-01 — Yahoo adjusted-close loader: add backlog git metadata [metadata-applied]"
+          git push origin HEAD:pr-01-yahoo-adjusted-close-loader
