@@ -28,14 +28,19 @@ def main() -> None:
         "integration-tests",
         "coverage",
         "quality-gate",
-        "README sidecar policy",
+        "README technical sidecar policy",
         "BACKLOG.md",
         "BACKLOG_STEPS_2_4.md",
         "notebooks/gwp2_vix_regime_allocation.ipynb",
+        "reports/gwp2_vix_regime_allocation.html",
         "reports/Stochastic_Modeling_GWP2_Report.pdf",
         "reports/Template_Stochastic_Modeling_Group_Work_Project.pdf",
         "reports/generated/steps_2_4_manifest.json",
+        "reports/generated/step3_selected_model.json",
         "analysis-sidecars",
+        "Notebook <-> README: exact technical-result parity",
+        "Notebook <-> HTML: exact executed-notebook duplicate",
+        "Notebook <-> standalone PDF: decision-result parity",
     )
     missing_fragments = [
         fragment for fragment in required_readme_fragments if fragment not in readme_text
