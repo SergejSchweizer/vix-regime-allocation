@@ -29,6 +29,8 @@ def _extract_adjusted_close(raw: pd.DataFrame) -> pd.DataFrame:
             adjusted = raw.xs("Adj Close", axis=1, level=level, drop_level=True)
             if not isinstance(adjusted, pd.DataFrame):
                 raise ValueError("Adjusted-close extraction must produce a DataFrame.")
+            if adjusted.columns.has_duplicates:
+                raise ValueError("Adjusted-close data contains duplicate ticker columns.")
             return adjusted.copy()
 
     raise ValueError("Yahoo download is missing the required 'Adj Close' field.")
@@ -42,6 +44,8 @@ def _normalize_index(frame: pd.DataFrame) -> pd.DataFrame:
     except (TypeError, ValueError) as exc:
         raise ValueError("Yahoo download index must be convertible to DatetimeIndex.") from exc
 
+    if index.hasnans:
+        raise ValueError("Yahoo download index contains an invalid/NaT date.")
     if index.tz is not None:
         index = index.tz_localize(None)
 
@@ -86,6 +90,9 @@ def download_adjusted_close() -> pd.DataFrame:
         raise TypeError("yfinance.download must return a pandas DataFrame.")
 
     adjusted = _extract_adjusted_close(raw)
+    if adjusted.empty:
+        raise ValueError("Yahoo download returned no adjusted-close observations.")
+
     missing_tickers = [ticker for ticker in _YAHOO_TICKERS if ticker not in adjusted.columns]
     if missing_tickers:
         raise ValueError(f"Adjusted-close data missing required tickers: {missing_tickers}.")
