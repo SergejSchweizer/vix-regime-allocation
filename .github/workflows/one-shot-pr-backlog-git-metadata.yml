@@ -1,0 +1,88 @@
+name: PR-BACKLOG-GIT-METADATA one-shot updater
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  update-backlog-metadata:
+    if: startsWith(github.event.head_commit.message, 'PR-BACKLOG-GIT-METADATA:')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Add git status and branch metadata to every PR
+        shell: bash
+        run: |
+          python - <<'PY'
+          from __future__ import annotations
+
+          import re
+          from pathlib import Path
+
+          backlog_path = Path('BACKLOG.md')
+          checker_path = Path('scripts/check_backlog_contract.py')
+          text = backlog_path.read_text(encoding='utf-8')
+
+          header_re = re.compile(r'^(## PR-(\d{2}) — (.+))$', re.MULTILINE)
+          matches = list(header_re.finditer(text))
+          if len(matches) != 49:
+              raise SystemExit(f'Expected 49 PR headings, found {len(matches)}')
+
+          def slugify(title: str) -> str:
+              return re.sub(r'[^a-z0-9]+', '-', title.lower()).strip('-')
+
+          chunks: list[str] = []
+          cursor = 0
+          for index, match in enumerate(matches):
+              chunks.append(text[cursor:match.start()])
+              heading = match.group(1)
+              code = match.group(2)
+              title = match.group(3).strip()
+              end = matches[index + 1].start() if index + 1 < len(matches) else len(text)
+              section = text[match.end():end]
+              section = re.sub(r'^\n\*\*Git status:\*\*.*\n', '\n', section, count=1, flags=re.MULTILINE)
+              section = re.sub(r'^\*\*Git branch:\*\*.*\n', '', section, count=1, flags=re.MULTILINE)
+              metadata = f'\n\n**Git status:** planned\n\n**Git branch:** `pr-{code}-{slugify(title)}`\n'
+              chunks.append(heading + metadata + section)
+              cursor = end
+          if cursor < len(text):
+              chunks.append(text[cursor:])
+
+          backlog_path.write_text(''.join(chunks), encoding='utf-8')
+
+          checker = checker_path.read_text(encoding='utf-8')
+          checker = checker.replace(
+              '            "**Agent lane:**",\n',
+              '            "**Git status:**",\n            "**Git branch:**",\n            "**Agent lane:**",\n',
+              1,
+          )
+          anchor = 'DEPENDENCY_RE = re.compile(r"^\\*\\*Dependencies:\\*\\*\\s*(.+)$", re.MULTILINE)\n'
+          additions = 'GIT_STATUS_RE = re.compile(r"^\\*\\*Git status:\\*\\*\\s*(planned|in_progress|merged)\\s*$", re.MULTILINE)\nGIT_BRANCH_RE = re.compile(r"^\\*\\*Git branch:\\*\\*\\s*`([^`]+)`\\s*$", re.MULTILINE)\n\n\ndef _slugify(title: str) -> str:\n    return re.sub(r"[^a-z0-9]+", "-", title.lower()).strip("-")\n'
+          if 'GIT_STATUS_RE =' not in checker:
+              checker = checker.replace(anchor, anchor + additions, 1)
+          marker = '        dependency_match = DEPENDENCY_RE.search(section)\n'
+          validation = '        title = match.group(2).strip()\n        status_match = GIT_STATUS_RE.search(section)\n        if status_match is None:\n            _fail(f"PR-{pr_code} has missing/invalid Git status; use planned, in_progress, or merged.")\n        branch_match = GIT_BRANCH_RE.search(section)\n        if branch_match is None:\n            _fail(f"PR-{pr_code} has no parseable Git branch line.")\n        expected_branch = f"pr-{pr_code}-{_slugify(title)}"\n        if branch_match.group(1) != expected_branch:\n            _fail(f"PR-{pr_code} Git branch must be {expected_branch!r}; found {branch_match.group(1)!r}.")\n\n'
+          if 'expected_branch = f"pr-{pr_code}-' not in checker:
+              checker = checker.replace(marker, validation + marker, 1)
+          checker_path.write_text(checker, encoding='utf-8')
+          PY
+
+      - name: Validate backlog contract
+        run: python scripts/check_backlog_contract.py
+
+      - name: Commit metadata contract
+        shell: bash
+        run: |
+          git config user.name "SSC"
+          git config user.email "sergej.schweizer@gmail.com"
+          git add BACKLOG.md scripts/check_backlog_contract.py
+          git commit -m "PR-BACKLOG-GIT-METADATA: add branch and status to every backlog PR"
+          git push origin HEAD:main
