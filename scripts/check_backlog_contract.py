@@ -7,11 +7,27 @@ ROOT = Path(__file__).resolve().parents[1]
 BACKLOG = ROOT / "BACKLOG.md"
 EXPECTED_FIRST_PR = 1
 EXPECTED_LAST_PR = 49
+MAX_TASKS_PER_PR = 3
 
 PR_HEADER_RE = re.compile(r"^#{2,3}\s+PR-(\d{2})\s+—\s+.+$", re.MULTILINE)
-TASK_RE = re.compile(r"^- \[ \] T(\d{2})\.(\d+)\s+", re.MULTILINE)
-AC_RE = re.compile(r"^- \[ \] AC(\d{2})\.(\d+)\s+\(`T(\d{2})\.(\d+)`\)\s+", re.MULTILINE)
+TASK_RE = re.compile(r"^- \[ \] T(\d{2})\.(\d+)\s+(.+)$", re.MULTILINE)
+AC_RE = re.compile(
+    r"^- \[ \] AC(\d{2})\.(\d+)\s+\(`T(\d{2})\.(\d+)`\)\s+(.+)$",
+    re.MULTILINE,
+)
 DEPENDENCY_RE = re.compile(r"^\*\*Dependencies:\*\*\s*(.+)$", re.MULTILINE)
+FILES_RE = re.compile(r"\*\*Files owned:\*\*\s*\n\s*```text\n(.*?)\n```", re.DOTALL)
+
+FORBIDDEN_AMBIGUOUS_PHRASES = (
+    "as needed",
+    "relevant files",
+    "etc.",
+    "and so on",
+    "tbd",
+    "todo",
+    "appropriate handling",
+    "similar logic",
+)
 
 
 def _fail(message: str) -> None:
@@ -21,9 +37,6 @@ def _fail(message: str) -> None:
 def main() -> None:
     text = BACKLOG.read_text(encoding="utf-8")
     matches = list(PR_HEADER_RE.finditer(text))
-    if not matches:
-        _fail("BACKLOG.md contains no PR definitions.")
-
     numbers = [int(match.group(1)) for match in matches]
     expected = list(range(EXPECTED_FIRST_PR, EXPECTED_LAST_PR + 1))
     if numbers != expected:
@@ -38,46 +51,58 @@ def main() -> None:
         end = matches[position + 1].start() if position + 1 < len(matches) else len(text)
         section = text[match.start() : end]
 
-        for required_marker in (
+        for marker in (
             "**Agent lane:**",
             "**Dependencies:**",
             "**Files owned:**",
             "### Tasks",
             "### Acceptance criteria",
         ):
-            if required_marker not in section:
-                _fail(f"PR-{pr_code} is missing required marker {required_marker!r}.")
+            if section.count(marker) != 1:
+                _fail(f"PR-{pr_code} must contain exactly one {marker!r} marker.")
 
         dependency_match = DEPENDENCY_RE.search(section)
         if dependency_match is None:
             _fail(f"PR-{pr_code} has no parseable Dependencies line.")
         dependency_text = dependency_match.group(1).strip()
         dependency_refs = [int(value) for value in re.findall(r"PR-(\d{2})", dependency_text)]
-        declares_none = bool(re.search(r"\bnone\b", dependency_text, flags=re.IGNORECASE))
+        declares_none = dependency_text.lower() == "none"
         if not dependency_refs and not declares_none:
             _fail(
-                f"PR-{pr_code} dependencies must name explicit earlier PRs or declare none; "
+                f"PR-{pr_code} dependencies must name explicit earlier PRs or be exactly 'none'; "
                 f"found {dependency_text!r}."
             )
         if declares_none and dependency_refs:
             _fail(f"PR-{pr_code} dependencies cannot mix 'none' with PR references.")
         if any(ref >= pr_number for ref in dependency_refs):
-            _fail(
-                f"PR-{pr_code} has self/forward dependency in {dependency_text!r}; "
-                "all dependencies must be lower-numbered PRs."
-            )
+            _fail(f"PR-{pr_code} has a self/forward dependency: {dependency_text!r}.")
         if len(dependency_refs) != len(set(dependency_refs)):
             _fail(f"PR-{pr_code} repeats a dependency: {dependency_text!r}.")
 
+        files_match = FILES_RE.search(section)
+        if files_match is None:
+            _fail(f"PR-{pr_code} Files owned must be one fenced text block.")
+        files = [line.strip() for line in files_match.group(1).splitlines() if line.strip()]
+        if not files:
+            _fail(f"PR-{pr_code} Files owned is empty.")
+        if len(files) != len(set(files)):
+            _fail(f"PR-{pr_code} Files owned contains duplicate paths.")
+        for path in files:
+            if path.startswith("/") or ".." in Path(path).parts:
+                _fail(f"PR-{pr_code} has non-repository-relative owned path {path!r}.")
+
         tasks = TASK_RE.findall(section)
         acceptances = AC_RE.findall(section)
-        if not tasks:
-            _fail(f"PR-{pr_code} has no tasks.")
-        if not acceptances:
-            _fail(f"PR-{pr_code} has no acceptance criteria.")
+        if not tasks or not acceptances:
+            _fail(f"PR-{pr_code} must contain tasks and acceptance criteria.")
+        if len(tasks) > MAX_TASKS_PER_PR:
+            _fail(
+                f"PR-{pr_code} has {len(tasks)} tasks; maximum is {MAX_TASKS_PER_PR} "
+                "to preserve weak-agent atomicity."
+            )
 
         task_suffixes: list[int] = []
-        for task_pr, suffix in tasks:
+        for task_pr, suffix, task_text in tasks:
             if task_pr != pr_code:
                 _fail(f"PR-{pr_code} contains task T{task_pr}.{suffix} from another PR.")
             task_id = f"T{task_pr}.{suffix}"
@@ -85,9 +110,13 @@ def main() -> None:
                 _fail(f"Duplicate task ID {task_id}.")
             all_task_ids.add(task_id)
             task_suffixes.append(int(suffix))
+            lowered = task_text.lower()
+            for phrase in FORBIDDEN_AMBIGUOUS_PHRASES:
+                if phrase in lowered:
+                    _fail(f"{task_id} contains ambiguous phrase {phrase!r}.")
 
         ac_suffixes: list[int] = []
-        for ac_pr, ac_suffix, linked_pr, linked_suffix in acceptances:
+        for ac_pr, ac_suffix, linked_pr, linked_suffix, ac_text in acceptances:
             if ac_pr != pr_code:
                 _fail(f"PR-{pr_code} contains AC{ac_pr}.{ac_suffix} from another PR.")
             if (ac_pr, ac_suffix) != (linked_pr, linked_suffix):
@@ -100,11 +129,15 @@ def main() -> None:
                 _fail(f"Duplicate acceptance ID {ac_id}.")
             all_ac_ids.add(ac_id)
             ac_suffixes.append(int(ac_suffix))
+            lowered = ac_text.lower()
+            for phrase in FORBIDDEN_AMBIGUOUS_PHRASES:
+                if phrase in lowered:
+                    _fail(f"{ac_id} contains ambiguous phrase {phrase!r}.")
 
-        expected_suffixes = list(range(1, max(task_suffixes) + 1))
+        expected_suffixes = list(range(1, len(tasks) + 1))
         if task_suffixes != expected_suffixes:
             _fail(
-                f"PR-{pr_code} task suffixes must be contiguous and ordered {expected_suffixes}; "
+                f"PR-{pr_code} task suffixes must be contiguous/ordered {expected_suffixes}; "
                 f"found {task_suffixes}."
             )
         if ac_suffixes != expected_suffixes:
@@ -113,15 +146,13 @@ def main() -> None:
                 f"found {ac_suffixes}."
             )
 
-    if len(all_task_ids) != len(all_ac_ids):
-        _fail(
-            f"Global task/acceptance cardinality mismatch: {len(all_task_ids)} tasks vs "
-            f"{len(all_ac_ids)} acceptance criteria."
-        )
+    if all_task_ids != {identifier.replace("AC", "T", 1) for identifier in all_ac_ids}:
+        _fail("Global task/acceptance ID sets differ.")
 
     print(
         f"BACKLOG contract valid: {len(numbers)} PRs, {len(all_task_ids)} tasks, "
-        "one-to-one acceptance coverage, explicit backward-only dependencies."
+        "one-to-one acceptance coverage, explicit backward-only dependencies, "
+        "bounded atomicity, explicit file ownership, and no forbidden ambiguous phrases."
     )
 
 
