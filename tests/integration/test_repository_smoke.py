@@ -1,6 +1,7 @@
 from pathlib import Path
 
 import pytest
+
 import vix_regime_allocation
 
 pytestmark = pytest.mark.integration
