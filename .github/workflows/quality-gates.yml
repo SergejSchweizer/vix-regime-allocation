@@ -117,6 +117,19 @@ jobs:
       - name: Validate README sidecar contract
         run: python scripts/check_readme_sidecar.py
 
+  backlog-contract:
+    name: backlog-contract
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Validate canonical backlog contract
+        run: python scripts/check_backlog_contract.py
+
   coverage:
     name: coverage
     runs-on: ubuntu-latest
@@ -164,6 +177,7 @@ jobs:
       - unit-tests
       - integration-tests
       - readme-sidecar
+      - backlog-contract
       - coverage
     steps:
       - name: Require every quality gate
@@ -173,6 +187,7 @@ jobs:
           UNIT_TESTS: ${{ needs['unit-tests'].result }}
           INTEGRATION_TESTS: ${{ needs['integration-tests'].result }}
           README_SIDECAR: ${{ needs['readme-sidecar'].result }}
+          BACKLOG_CONTRACT: ${{ needs['backlog-contract'].result }}
           COVERAGE: ${{ needs.coverage.result }}
         run: |
           test "$LINT" = "success"
@@ -180,4 +195,5 @@ jobs:
           test "$UNIT_TESTS" = "success"
           test "$INTEGRATION_TESTS" = "success"
           test "$README_SIDECAR" = "success"
+          test "$BACKLOG_CONTRACT" = "success"
           test "$COVERAGE" = "success"
