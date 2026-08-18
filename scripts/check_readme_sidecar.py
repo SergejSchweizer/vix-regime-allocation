@@ -29,8 +29,8 @@ def main() -> None:
         "coverage",
         "quality-gate",
         "README technical sidecar policy",
+        "single canonical backlog",
         "BACKLOG.md",
-        "BACKLOG_STEPS_2_4.md",
         "notebooks/gwp2_vix_regime_allocation.ipynb",
         "reports/gwp2_vix_regime_allocation.html",
         "reports/Stochastic_Modeling_GWP2_Report.pdf",
@@ -49,6 +49,9 @@ def main() -> None:
         raise SystemExit(
             "README sidecar is missing required contract text: " + ", ".join(missing_fragments)
         )
+
+    if "BACKLOG_STEPS_2_4.md" in readme_text:
+        raise SystemExit("README must reference only the unified BACKLOG.md backlog.")
 
     required_jobs = (
         "lint",
