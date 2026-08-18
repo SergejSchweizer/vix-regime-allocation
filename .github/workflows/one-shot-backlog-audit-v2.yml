@@ -1,0 +1,73 @@
+name: One-shot backlog completeness audit v2
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  patch-and-validate:
+    if: github.event.head_commit.message == 'Run backlog completeness audit v2'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Apply audited patch payload
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          python - <<'PY'
+          import base64
+          import json
+          import os
+          import textwrap
+          import urllib.request
+
+          repo = os.environ['GITHUB_REPOSITORY']
+          blob_sha = 'ea619ac39124f4b69ccd1e13411bd1755afc7d14'
+          request = urllib.request.Request(
+              f'https://api.github.com/repos/{repo}/git/blobs/{blob_sha}',
+              headers={
+                  'Authorization': f"Bearer {os.environ['GH_TOKEN']}",
+                  'Accept': 'application/vnd.github+json',
+                  'X-GitHub-Api-Version': '2022-11-28',
+              },
+          )
+          with urllib.request.urlopen(request) as response:
+              payload = json.load(response)
+          raw_yaml = base64.b64decode(payload['content']).decode('utf-8')
+
+          start_marker = "          python - <<'PY'\n"
+          end_marker = "\n          PY\n\n      - name: Validate backlog and README contracts"
+          start = raw_yaml.index(start_marker) + len(start_marker)
+          end = raw_yaml.index(end_marker, start)
+          script = textwrap.dedent(raw_yaml[start:end])
+          script = script.replace("appendix = r'''", "appendix = '''", 1)
+          exec(compile(script, '<backlog-audit-payload>', 'exec'), {'__name__': '__main__'})
+          PY
+
+      - name: Validate backlog and README contracts
+        run: |
+          python scripts/check_backlog_contract.py
+          python scripts/check_readme_sidecar.py
+
+      - name: Commit audited backlog
+        shell: bash
+        run: |
+          git config user.name "SSC"
+          git config user.email "sergej.schweizer@gmail.com"
+          git add -A
+          git commit -m "Audit and complete Steps 1-5 backlog"
+          git push origin HEAD:main
