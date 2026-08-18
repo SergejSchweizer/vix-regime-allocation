@@ -2,30 +2,30 @@
 
 This backlog covers **only Step 1** of MScFE 622 Stochastic Modeling GWP2.
 
-The implementation is intentionally split into small, deterministic PRs so that two weak coding agents can work in parallel with minimal ambiguity and minimal file overlap.
+It has been audited against the assignment brief. The implementation is intentionally split into small PRs so that two weak coding agents can work with minimal ambiguity and minimal file overlap.
 
-## Step 1 scope
-
-The completed Step 1 must:
-
-1. Download daily adjusted close prices for `TLT`, `GLD`, `SPY`, and `VIX` from Yahoo Finance.
-2. Use the maximum common sample period for which all four series are available.
-3. Compute daily log returns for `TLT`, `GLD`, and `SPY`.
-4. Compute daily VIX change, using `ΔVIX = VIX_t - VIX_{t-1}`.
-5. Align all derived series on common dates and remove missing values.
-6. Produce one plot containing the three ETF return series over time.
-7. Produce one plot containing `ΔVIX` over time.
-8. Leave a clean, reproducible dataset that later steps can reuse.
-
-Out of scope for Step 1: Markov chains, HMMs, regime estimation, allocation rules, backtesting, performance metrics, model selection, AIC/BIC, and report writing.
+The assignment requires daily adjusted-close data for TLT, GLD, SPY and VIX, the maximum common sample, ETF daily log returns, a VIX change/return series, common-date alignment, missing-value removal, one ETF-return plot and one VIX-change plot.
 
 ---
 
-## Fixed technical contracts
+# Non-negotiable backlog rules
 
-These contracts are part of the backlog. Agents must not rename them without a separate PR.
+1. Every task has a task ID `Txx.n`.
+2. Every task has exactly one matching acceptance criterion `ACxx.n`.
+3. An acceptance criterion may test several observable facts only when those facts belong to the single matching task.
+4. Agents must modify only files listed under **Files owned** for their PR.
+5. Agents must not implement work assigned to a later PR.
+6. Tests must be deterministic and offline unless a PR explicitly states otherwise.
+7. Every PR must pass the repository `quality-gate`, including the >=90% combined source-coverage requirement.
+8. The README sidecar is updated only when a PR changes a user-facing/canonical contract. Internal source-file additions alone do not require README edits.
+9. The canonical analysis artifact is `notebooks/gwp2_vix_regime_allocation.ipynb`; Step 1 creates its first section and later backlogs extend the same notebook.
+10. No numerical result may be invented or copied from an external example.
 
-### Tickers
+---
+
+# Fixed Step 1 contracts
+
+## Tickers
 
 Use exactly:
 
@@ -38,12 +38,34 @@ TICKERS = {
 }
 ```
 
-### Raw data schema
+## Yahoo Finance download contract
 
-The raw price table must:
+Use `yfinance.download` with these explicit semantics:
 
-- use a `DatetimeIndex` named `Date`;
-- be sorted ascending by date;
+```text
+tickers = ["TLT", "GLD", "SPY", "^VIX"]
+period = "max"
+interval = "1d"
+auto_adjust = False
+back_adjust = False
+actions = False
+progress = False
+```
+
+The implementation must extract **`Adj Close`**, not `Close`.
+
+Do not rely on the current yfinance default for `auto_adjust`; pass the argument explicitly so a library-default change cannot silently change the dataset definition.
+
+A live network request is used only when the notebook/pipeline is intentionally executed. Unit tests must mock the downloader.
+
+## Raw data schema
+
+The raw adjusted-close table must:
+
+- be a `pandas.DataFrame`;
+- use a timezone-naive `DatetimeIndex` named `Date`;
+- contain unique dates;
+- be sorted strictly ascending by date;
 - contain exactly these columns, in this order:
 
 ```text
@@ -53,14 +75,30 @@ SPY
 VIX
 ```
 
-Each value represents the adjusted daily close for that instrument.
+Each non-missing raw price must be finite and strictly positive.
 
-### Clean Step 1 dataset schema
+## Maximum common sample definition
+
+The common raw sample is the **intersection of dates on which all four adjusted-close values are present**.
+
+Implementation rule:
+
+```text
+common_prices = raw_prices.dropna(subset=["TLT", "GLD", "SPY", "VIX"])
+```
+
+Do not forward-fill, backward-fill or interpolate any price.
+
+After common-date restriction, the first retained date must be the earliest date with all four values available and the final retained date must be the latest retained common date.
+
+## Clean Step 1 dataset schema
 
 The final clean table must:
 
-- use a `DatetimeIndex` named `Date`;
-- be sorted ascending by date;
+- use a timezone-naive `DatetimeIndex` named `Date`;
+- contain unique dates;
+- be sorted ascending;
+- contain only finite values;
 - contain no missing values;
 - contain exactly these columns, in this order:
 
@@ -75,9 +113,9 @@ SPY_log_return
 VIX_change
 ```
 
-### Return definitions
+## Return definitions
 
-For each ETF `X ∈ {TLT, GLD, SPY}`:
+For each ETF `X in {TLT, GLD, SPY}`:
 
 ```text
 X_log_return_t = ln(X_t / X_{t-1})
@@ -89,11 +127,11 @@ For VIX:
 VIX_change_t = VIX_t - VIX_{t-1}
 ```
 
-Do not compute percentage VIX returns in Step 1.
+Step 1 uses **VIX change**, not a percentage/simple VIX return.
 
-### Output paths
+Because lagged calculations require the prior common-date observation, the first row of the common raw sample is removed from the final clean dataset.
 
-Use exactly:
+## Fixed output paths
 
 ```text
 data/processed/step1_data.csv
@@ -101,176 +139,156 @@ reports/figures/step1_etf_log_returns.png
 reports/figures/step1_vix_change.png
 ```
 
-The CSV is a reproducible project output and may be regenerated; it is not a hand-edited source file.
+The CSV and figures are generated artifacts. They must never be hand-edited.
 
 ---
 
 # PR backlog
 
-## PR-01 — Add Yahoo Finance adjusted-close loader
-
-**Goal:** Implement one small module that downloads and normalizes the four required price series.
+## PR-01 — Implement Yahoo Finance adjusted-close loader
 
 **Agent lane:** A
 
-**Dependencies:** none
+**Dependencies:** repository scaffold only
 
-**Files owned by this PR:**
+**Files owned:**
 
 ```text
 src/vix_regime_allocation/data.py
 tests/test_data.py
 ```
 
-Do not modify files owned by another PR.
+### Public interface
+
+```python
+def download_adjusted_close() -> pandas.DataFrame:
+    ...
+```
 
 ### Tasks
 
-- [ ] Create `src/vix_regime_allocation/data.py`.
-- [ ] Add the fixed `TICKERS` mapping from this backlog.
-- [ ] Add `download_adjusted_close() -> pandas.DataFrame`.
-- [ ] Download daily Yahoo Finance data for all four tickers using the longest available history.
-- [ ] Extract only adjusted close values.
-- [ ] Rename `^VIX` to `VIX`.
-- [ ] Return only `TLT`, `GLD`, `SPY`, `VIX` in that exact order.
-- [ ] Normalize the index to a timezone-naive `DatetimeIndex` named `Date`.
-- [ ] Sort rows ascending by date.
-- [ ] Add focused tests for the returned schema and index properties without requiring a live Yahoo request.
+- [ ] T01.1 Create `data.py` and define the exact `TICKERS` mapping.
+- [ ] T01.2 Implement `download_adjusted_close()` using the exact Yahoo/yfinance call semantics in this backlog.
+- [ ] T01.3 Extract `Adj Close` only and rename the `^VIX` output column to `VIX`.
+- [ ] T01.4 Normalize the result to exact column order `TLT, GLD, SPY, VIX` and a timezone-naive `DatetimeIndex` named `Date`.
+- [ ] T01.5 Sort dates ascending and reject duplicate dates.
+- [ ] T01.6 Reject any non-missing raw adjusted-close value that is non-finite or <=0.
+- [ ] T01.7 Add mocked offline tests for ticker request arguments, adjusted-close extraction, renaming, schema, index normalization, sorting, duplicate rejection and invalid-price rejection.
 
 ### Acceptance criteria
 
-- [ ] `download_adjusted_close()` exists in `src/vix_regime_allocation/data.py`.
-- [ ] The function requests `TLT`, `GLD`, `SPY`, and `^VIX` from Yahoo Finance.
-- [ ] The request uses the maximum available history rather than a hard-coded start date.
-- [ ] The returned object is a `pandas.DataFrame`.
-- [ ] Returned columns are exactly `['TLT', 'GLD', 'SPY', 'VIX']` and in that order.
-- [ ] Returned values are adjusted closing prices, not unadjusted close prices.
-- [ ] The index is a `DatetimeIndex` named `Date`.
-- [ ] The index is timezone-naive.
-- [ ] The index is sorted ascending.
-- [ ] The function does not compute returns, remove common-date rows, create plots, or write output files.
-- [ ] Tests use mocked/synthetic download output and pass without internet access.
-- [ ] Every task checkbox in PR-01 is satisfied by the implementation.
+- [ ] AC01.1 (`T01.1`) `data.py` exists and `TICKERS` equals the fixed mapping exactly.
+- [ ] AC01.2 (`T01.2`) a mocked call proves `period="max"`, `interval="1d"`, `auto_adjust=False`, `back_adjust=False`, `actions=False` and `progress=False` are passed explicitly for exactly the four required Yahoo tickers.
+- [ ] AC01.3 (`T01.3`) tests prove returned values come from `Adj Close` and the external `^VIX` label is exposed internally as `VIX`.
+- [ ] AC01.4 (`T01.4`) returned columns/index type/index name/timezone match the contract exactly.
+- [ ] AC01.5 (`T01.5`) unsorted input is returned sorted and duplicate-date input fails with `ValueError`.
+- [ ] AC01.6 (`T01.6`) zero, negative and infinite non-missing prices fail with `ValueError`; NaNs remain allowed for PR-02 common-date handling.
+- [ ] AC01.7 (`T01.7`) all loader tests pass without network access.
 
 ---
 
-## PR-02 — Add deterministic Step 1 data transformation
-
-**Goal:** Convert a raw four-column price table into the final aligned Step 1 dataset.
+## PR-02 — Implement deterministic Step 1 transformation
 
 **Agent lane:** B
 
-**Dependencies:** none; develop against the fixed raw-data schema above.
+**Dependencies:** none; develop against the fixed raw-data schema
 
-**Files owned by this PR:**
+**Files owned:**
 
 ```text
 src/vix_regime_allocation/transform.py
 tests/test_transform.py
 ```
 
-Do not modify files owned by another PR.
+### Public interface
+
+```python
+def prepare_step1_data(prices: pandas.DataFrame) -> pandas.DataFrame:
+    ...
+```
 
 ### Tasks
 
-- [ ] Create `src/vix_regime_allocation/transform.py`.
-- [ ] Add `prepare_step1_data(prices: pandas.DataFrame) -> pandas.DataFrame`.
-- [ ] Validate that input columns are exactly `TLT`, `GLD`, `SPY`, `VIX`.
-- [ ] Restrict the data to dates on which all four raw price series are present.
-- [ ] Compute `TLT_log_return` using `ln(TLT_t / TLT_{t-1})`.
-- [ ] Compute `GLD_log_return` using `ln(GLD_t / GLD_{t-1})`.
-- [ ] Compute `SPY_log_return` using `ln(SPY_t / SPY_{t-1})`.
-- [ ] Compute `VIX_change` using `VIX_t - VIX_{t-1}`.
-- [ ] Remove rows made incomplete by lagged calculations.
-- [ ] Return the final columns in the fixed clean-dataset order.
-- [ ] Add deterministic unit tests with a tiny synthetic price table whose expected values can be calculated exactly.
+- [ ] T02.1 Validate the exact raw columns, `DatetimeIndex`, `Date` index name, unique dates and ascending ordering.
+- [ ] T02.2 Restrict to the exact common-date intersection with `dropna` across all four price columns; do not impute.
+- [ ] T02.3 Compute TLT, GLD and SPY daily log returns with `ln(P_t/P_{t-1})` on the common sample.
+- [ ] T02.4 Compute `VIX_change = VIX_t - VIX_{t-1}` on the same common sample.
+- [ ] T02.5 Remove only rows made incomplete by the lagged transformations and reject any remaining non-finite derived value.
+- [ ] T02.6 Return the exact clean schema/order/index contract.
+- [ ] T02.7 Add hand-computable deterministic tests covering normal calculation, an interior missing raw date, first-row removal, invalid schema and non-finite derived output.
 
 ### Acceptance criteria
 
-- [ ] `prepare_step1_data()` exists in `src/vix_regime_allocation/transform.py`.
-- [ ] The function accepts a DataFrame matching the fixed raw-data schema.
-- [ ] Invalid/missing raw columns raise a clear `ValueError`.
-- [ ] A date with a missing value in any of `TLT`, `GLD`, `SPY`, `VIX` is absent from the common raw sample used for calculations.
-- [ ] `TLT_log_return` equals `ln(TLT_t / TLT_{t-1})` for every returned row.
-- [ ] `GLD_log_return` equals `ln(GLD_t / GLD_{t-1})` for every returned row.
-- [ ] `SPY_log_return` equals `ln(SPY_t / SPY_{t-1})` for every returned row.
-- [ ] `VIX_change` equals `VIX_t - VIX_{t-1}` for every returned row.
-- [ ] No percentage/simple VIX return column is created.
-- [ ] Returned columns are exactly `['TLT', 'GLD', 'SPY', 'VIX', 'TLT_log_return', 'GLD_log_return', 'SPY_log_return', 'VIX_change']` in that order.
-- [ ] The returned index is named `Date` and sorted ascending.
-- [ ] The returned DataFrame contains no missing values.
-- [ ] Tests verify exact expected calculations from synthetic input and pass without internet access.
-- [ ] The function does not download data, create plots, or write files.
-- [ ] Every task checkbox in PR-02 is satisfied by the implementation.
+- [ ] AC02.1 (`T02.1`) malformed columns/index/name/order/duplicates fail clearly rather than being silently repaired.
+- [ ] AC02.2 (`T02.2`) a synthetic date containing one missing instrument is absent before lagged calculations, and no fill/interpolation is performed.
+- [ ] AC02.3 (`T02.3`) all three ETF log returns equal hand-calculated `ln(P_t/P_{t-1})` values within numerical tolerance.
+- [ ] AC02.4 (`T02.4`) every VIX change equals the hand-calculated first difference on the identical common-date sequence.
+- [ ] AC02.5 (`T02.5`) final output contains no NaN/inf and contains exactly one fewer row than a complete common raw sample.
+- [ ] AC02.6 (`T02.6`) columns, index name, unique/sorted index and finite/no-missing guarantees match the fixed clean-data contract.
+- [ ] AC02.7 (`T02.7`) all transformation tests pass offline.
 
 ---
 
-## PR-03 — Add Step 1 plotting functions
+## PR-03 — Implement the two required Step 1 plots
 
-**Goal:** Implement only the two plots explicitly required by Step 1.
+**Agent lane:** A after PR-01; may be developed from the fixed clean schema without PR-02 code
 
-**Agent lane:** A
+**Dependencies:** fixed clean-data contract
 
-**Dependencies:** none; develop against the fixed clean-dataset schema above.
-
-**Files owned by this PR:**
+**Files owned:**
 
 ```text
 src/vix_regime_allocation/plots.py
 tests/test_plots.py
 ```
 
-Do not modify files owned by another PR.
+### Public interfaces
+
+```python
+def plot_etf_log_returns(data: pandas.DataFrame, output_path: pathlib.Path) -> None:
+    ...
+
+
+def plot_vix_change(data: pandas.DataFrame, output_path: pathlib.Path) -> None:
+    ...
+```
 
 ### Tasks
 
-- [ ] Create `src/vix_regime_allocation/plots.py`.
-- [ ] Add `plot_etf_log_returns(data, output_path)`.
-- [ ] Plot `TLT_log_return`, `GLD_log_return`, and `SPY_log_return` together in one figure.
-- [ ] Add a descriptive title, x-axis label, y-axis label, and legend.
-- [ ] Add `plot_vix_change(data, output_path)`.
-- [ ] Plot `VIX_change` over time in one figure.
-- [ ] Add a descriptive title, x-axis label, and y-axis label.
-- [ ] Ensure parent directories for output paths are created if missing.
-- [ ] Save figures to the supplied output path and close figures after saving.
-- [ ] Add tests using synthetic clean data and temporary output paths.
+- [ ] T03.1 Validate the exact required input columns and aligned `Date` index before plotting.
+- [ ] T03.2 Implement one ETF-return figure containing exactly `TLT_log_return`, `GLD_log_return` and `SPY_log_return` over time.
+- [ ] T03.3 Give the ETF-return figure a non-empty title, date x-axis label, log-return y-axis label, visible scale/ticks and legend naming all three ETFs.
+- [ ] T03.4 Implement one VIX-change figure containing exactly `VIX_change` over time.
+- [ ] T03.5 Give the VIX-change figure a non-empty title, date x-axis label, VIX-change y-axis label and visible scale/ticks.
+- [ ] T03.6 Create output parent directories, save non-empty PNGs and close each created figure.
+- [ ] T03.7 Add deterministic synthetic/offline tests for plotted series, labels, file creation and figure closure.
 
 ### Acceptance criteria
 
-- [ ] `plot_etf_log_returns()` exists and accepts a clean Step 1 DataFrame plus an output path.
-- [ ] The ETF figure contains exactly the three required return series: TLT, GLD, and SPY.
-- [ ] The ETF figure has a non-empty title.
-- [ ] The ETF figure has non-empty x- and y-axis labels.
-- [ ] The ETF figure has a legend identifying all three ETFs.
-- [ ] `plot_vix_change()` exists and accepts a clean Step 1 DataFrame plus an output path.
-- [ ] The VIX figure plots `VIX_change`, not the VIX level and not a percentage VIX return.
-- [ ] The VIX figure has a non-empty title.
-- [ ] The VIX figure has non-empty x- and y-axis labels.
-- [ ] Both functions create missing parent directories.
-- [ ] Both functions save a non-empty image file at the requested path.
-- [ ] Both functions close their figure after saving.
-- [ ] Tests pass with synthetic data and do not require internet access.
-- [ ] The module does not download data, transform data, or write CSV files.
-- [ ] Every task checkbox in PR-03 is satisfied by the implementation.
+- [ ] AC03.1 (`T03.1`) missing/misaligned required plot inputs fail clearly.
+- [ ] AC03.2 (`T03.2`) the ETF figure contains exactly the three required ETF return series and no VIX series.
+- [ ] AC03.3 (`T03.3`) title, axes, scale/ticks and three-ETF legend are present.
+- [ ] AC03.4 (`T03.4`) the second figure plots `VIX_change`, not VIX level or VIX percentage return.
+- [ ] AC03.5 (`T03.5`) VIX figure title, axes and scale/ticks are present.
+- [ ] AC03.6 (`T03.6`) both requested files are created and non-empty and no created figure remains open.
+- [ ] AC03.7 (`T03.7`) all plotting tests pass offline.
 
 ---
 
-## PR-04 — Add executable Step 1 pipeline and outputs
-
-**Goal:** Wire the three previously defined components together without adding new analytics.
+## PR-04 — Wire the executable Step 1 pipeline
 
 **Agent lane:** B
 
 **Dependencies:** PR-01, PR-02, PR-03
 
-**Files owned by this PR:**
+**Files owned:**
 
 ```text
 scripts/run_step1.py
 tests/test_run_step1.py
 ```
 
-This PR may also generate, but must not hand-edit:
+Generated but never hand-edited by this PR:
 
 ```text
 data/processed/step1_data.csv
@@ -280,111 +298,115 @@ reports/figures/step1_vix_change.png
 
 ### Tasks
 
-- [ ] Create `scripts/run_step1.py`.
-- [ ] Call `download_adjusted_close()`.
-- [ ] Pass its output to `prepare_step1_data()`.
-- [ ] Save the clean result to `data/processed/step1_data.csv` with the `Date` index included.
-- [ ] Call `plot_etf_log_returns()` with `reports/figures/step1_etf_log_returns.png`.
-- [ ] Call `plot_vix_change()` with `reports/figures/step1_vix_change.png`.
-- [ ] Print the common-sample start date, end date, and final row count.
-- [ ] Add a focused orchestration test using mocks so the test does not require internet access.
+- [ ] T04.1 Create `scripts/run_step1.py` that calls `download_adjusted_close()` exactly once.
+- [ ] T04.2 Pass the downloaded table to `prepare_step1_data()` exactly once and do not duplicate transformation logic.
+- [ ] T04.3 Save the clean table to `data/processed/step1_data.csv` with the `Date` index serialized.
+- [ ] T04.4 Call both plotting functions with the exact canonical figure paths.
+- [ ] T04.5 Print the clean sample start date, end date and row count.
+- [ ] T04.6 Add an offline orchestration test using mocks for the downloader and plotting calls plus a temporary output root.
 
 ### Acceptance criteria
 
-- [ ] Running `python scripts/run_step1.py` performs the complete Step 1 workflow from download to outputs.
-- [ ] The script uses the three public functions created in PR-01, PR-02, and PR-03 rather than duplicating their logic.
-- [ ] `data/processed/step1_data.csv` is created.
-- [ ] The saved CSV contains the `Date` column/index plus exactly the eight fixed clean-data columns.
-- [ ] The saved dataset contains no missing values.
-- [ ] `reports/figures/step1_etf_log_returns.png` is created and non-empty.
-- [ ] `reports/figures/step1_vix_change.png` is created and non-empty.
-- [ ] The script prints a start date.
-- [ ] The script prints an end date.
-- [ ] The script prints the final number of observations.
-- [ ] No Markov-chain, HMM, regime, allocation, or backtesting logic is added.
-- [ ] The orchestration test passes without internet access.
-- [ ] Every task checkbox in PR-04 is satisfied by the implementation.
+- [ ] AC04.1 (`T04.1`) orchestration test proves exactly one loader call occurs.
+- [ ] AC04.2 (`T04.2`) orchestration delegates to the shared transformation exactly once and contains no duplicate return/difference implementation.
+- [ ] AC04.3 (`T04.3`) generated CSV has `Date` plus the exact eight clean columns, no missing values and non-zero rows.
+- [ ] AC04.4 (`T04.4`) both canonical plot functions are invoked with their exact required output paths.
+- [ ] AC04.5 (`T04.5`) captured stdout contains parseable start date, end date and integer row count matching the generated data.
+- [ ] AC04.6 (`T04.6`) orchestration tests pass without Yahoo/network access and without writing outside temporary test paths.
 
 ---
 
-## PR-05 — Add Step 1 notebook presentation
-
-**Goal:** Present the already implemented Step 1 workflow in the executable notebook format required for the course submission.
+## PR-05 — Create and execute the canonical notebook Step 1 section
 
 **Agent lane:** A or B after PR-04
 
 **Dependencies:** PR-04
 
-**Files owned by this PR:**
+**Files owned:**
 
 ```text
 notebooks/gwp2_vix_regime_allocation.ipynb
+README.md
+```
+
+### Required notebook structure
+
+```text
+Step 1: Data Preparation and Exploration
+  1.1 Data definition and adjusted-close convention
+  1.2 Common-sample construction
+  1.3 ETF log-return equation
+  1.4 VIX-change equation
+  1.5 Data-quality checks
+  1.6 Exploratory plots
+  1.7 Interpretation and limitations
 ```
 
 ### Tasks
 
-- [ ] Create `notebooks/gwp2_vix_regime_allocation.ipynb`.
-- [ ] Add a markdown heading `Step 1: Data Preparation and Exploration`.
-- [ ] Load or generate the clean Step 1 dataset using project code rather than reimplementing calculations in notebook cells.
-- [ ] Display the first rows of the clean dataset.
-- [ ] Display the common-sample start date, end date, and row count.
-- [ ] Display a missing-value check for the final dataset.
-- [ ] Display the ETF log-return plot.
-- [ ] Display the VIX-change plot.
-- [ ] Add a short markdown interpretation confirming what was prepared and what the plots show at a descriptive level only.
-- [ ] Run all Step 1 cells so outputs are stored in the notebook.
+- [ ] T05.1 Create the Step 1 notebook section with the explicit heading/question number and concise scientific purpose.
+- [ ] T05.2 Execute project functions rather than duplicate loader/transformation/plot implementations in notebook cells.
+- [ ] T05.3 Display the cleaned-data shape, first/last date, first rows, exact column list and missing/non-finite validation.
+- [ ] T05.4 Show the ETF log-return equation and define every symbol; if a Greek symbol is used, list its name/pronunciation before the equation.
+- [ ] T05.5 Show the VIX-change equation and list `Δ — delta` before the equation.
+- [ ] T05.6 Display the two canonical Step 1 plots with titles, axes, scales and legend where applicable.
+- [ ] T05.7 Add precise interpretation describing only observed data preparation/volatility dynamics; do not claim regime or strategy results.
+- [ ] T05.8 Add assumptions/limitations: adjusted-close convention, common-date filtering, use of VIX change and no imputation.
+- [ ] T05.9 Add in-text citations and an MLA-formatted bibliography only for sources actually consulted; do not copy assignment-question wording verbatim.
+- [ ] T05.10 Execute every Step 1 cell successfully and store outputs in the committed notebook.
+- [ ] T05.11 Update README status and Step 1 sidecar section so it references the same canonical data/figures and does not independently recalculate results.
 
 ### Acceptance criteria
 
-- [ ] The notebook contains a clearly labeled Step 1 section.
-- [ ] The notebook uses the project implementation and does not contain a second independent implementation of download, return, alignment, or plotting logic.
-- [ ] The notebook visibly shows the clean dataset preview.
-- [ ] The notebook visibly shows the common-sample start date, end date, and number of rows.
-- [ ] The notebook visibly demonstrates that the final Step 1 dataset has no missing values.
-- [ ] The notebook visibly contains one plot with all three ETF log-return series.
-- [ ] The notebook visibly contains one plot of `VIX_change`.
-- [ ] Both displayed plots have titles, axis labels, and the ETF plot has a legend.
-- [ ] Notebook outputs are stored; the Step 1 section is not left unexecuted.
-- [ ] The interpretation does not claim regime results, strategy performance, or causal conclusions that belong to later steps.
-- [ ] Every task checkbox in PR-05 is satisfied by the implementation.
+- [ ] AC05.1 (`T05.1`) notebook visibly identifies Step 1 and its purpose without reproducing the assignment prompt verbatim.
+- [ ] AC05.2 (`T05.2`) notebook imports/calls project functions and contains no second implementation of download/return/difference/plot logic.
+- [ ] AC05.3 (`T05.3`) all requested data-quality outputs are visibly stored and internally consistent.
+- [ ] AC05.4 (`T05.4`) ETF-return equation is mathematically correct and every symbol/Greek pronunciation rule is satisfied.
+- [ ] AC05.5 (`T05.5`) `Δ — delta` appears before the correct first-difference equation.
+- [ ] AC05.6 (`T05.6`) both required figures are visible in stored notebook output and match canonical figure files.
+- [ ] AC05.7 (`T05.7`) interpretation is evidence-based and contains no Step 2+ result claim.
+- [ ] AC05.8 (`T05.8`) all four fixed Step 1 assumptions/limitations are explicitly stated.
+- [ ] AC05.9 (`T05.9`) citations/bibliography use MLA format, refer only to actually consulted sources and no assignment questions are copied verbatim.
+- [ ] AC05.10 (`T05.10`) Step 1 contains no failed or unexecuted code cell and all expected outputs are stored.
+- [ ] AC05.11 (`T05.11`) README status is factually current and references the exact same generated Step 1 artifacts without recomputation.
 
 ---
 
-# Parallel execution plan
-
-To reduce merge conflicts, use the following schedule.
+# Parallel execution schedule
 
 ```text
-Wave 1 — parallel
-Agent A: PR-01 data loader
+Wave 1 - parallel
+Agent A: PR-01 loader
 Agent B: PR-02 transformation
 
-Wave 2 — after each agent finishes its Wave 1 PR
-Agent A: PR-03 plotting
-Agent B: wait for PR-01 and PR-03 interfaces to be merged; then PR-04 pipeline
+Wave 2
+Agent A: PR-03 plots
+Agent B: wait until PR-01/02/03 are merged
 
 Wave 3
-Either agent: PR-05 notebook
+Agent B: PR-04 pipeline
+
+Wave 4
+Either agent: PR-05 canonical notebook Step 1 + README sidecar
 ```
 
-PR-01, PR-02, and PR-03 are intentionally based on fixed interfaces in this backlog, so their implementations do not need to edit the same source files.
+No agent may start a PR before its listed dependencies are merged to `main`.
 
 ---
 
 # Step 1 Definition of Done
 
-Step 1 is complete only when **all** of the following are true:
+Step 1 is complete only when all of the following are true:
 
-- [ ] PR-01 through PR-05 are merged.
-- [ ] Daily adjusted close prices are sourced from Yahoo Finance for TLT, GLD, SPY, and VIX.
-- [ ] The final sample is restricted to common dates across all four raw series.
-- [ ] ETF daily log returns are calculated for TLT, GLD, and SPY.
-- [ ] Daily VIX change is calculated as `VIX_t - VIX_{t-1}`.
-- [ ] The final clean dataset contains no missing values.
-- [ ] The final clean dataset is saved at `data/processed/step1_data.csv`.
-- [ ] One combined ETF-return plot exists at `reports/figures/step1_etf_log_returns.png`.
-- [ ] One VIX-change plot exists at `reports/figures/step1_vix_change.png`.
-- [ ] Both required plots are visible in the executable notebook.
-- [ ] The notebook stores the executed Step 1 outputs.
-- [ ] Automated tests for loader schema, transformation calculations, plotting outputs, and orchestration pass.
+- [ ] PR-01 through PR-05 are merged to `main`.
+- [ ] Yahoo data request semantics are explicit and adjusted close is unambiguous.
+- [ ] TLT, GLD, SPY and VIX use the maximum common date intersection without imputation.
+- [ ] ETF daily log returns and daily VIX change are calculated on the common sample.
+- [ ] The final clean dataset satisfies the exact schema and contains no missing/non-finite values.
+- [ ] `data/processed/step1_data.csv` exists and is reproducible.
+- [ ] Both required Step 1 figures exist, are non-empty and are visible in the notebook.
+- [ ] The notebook Step 1 section contains code calls, stored outputs, equations, scientific interpretation, limitations, citations and MLA bibliography entries as applicable.
+- [ ] README is synchronized with the Step 1 canonical artifacts.
 - [ ] No Step 2+ implementation is included.
+- [ ] Combined source coverage is >=90%.
+- [ ] Final `quality-gate` passes.
