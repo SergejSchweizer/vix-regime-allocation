@@ -18,7 +18,9 @@ The assignment workflow is implemented step by step. The current backlog covers 
 | Assignment template | Added |
 | Step 1 backlog | Defined in `BACKLOG.md` |
 | Python package scaffold | Bootstrapped |
-| Quality gates | Configured |
+| Push quality gates | Configured |
+| Pull-request quality gates | Configured |
+| `main` merge protection | Repository branch rule still required |
 | Step 1 implementation | Not started |
 | Step 2+ implementation | Out of scope for the current backlog |
 
@@ -127,7 +129,20 @@ The final `quality-gate` job succeeds only when all of these have succeeded:
 - `coverage`
 - `readme-sidecar`
 
-For merge protection, `quality-gate` is the single status check that should be required on `main`.
+### Required `main` branch rule
+
+The GitHub Actions workflow can run the checks, but blocking an invalid merge requires a repository branch rule for `main`.
+
+Configure `main` with these requirements:
+
+- require a pull request before merging;
+- require status checks to pass before merging;
+- require the `quality-gate` status check;
+- require the branch to be up to date before merging;
+- block force pushes;
+- block branch deletion.
+
+Once that rule is enabled, a PR cannot merge unless the aggregate `quality-gate` succeeds.
 
 ## Local quality commands
 
