@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import numpy as np
 import pandas as pd
-import yfinance as yf
 from pandas.api.types import is_numeric_dtype
+import yfinance as yf
 
 TICKERS: dict[str, str] = {
     "TLT": "TLT",
