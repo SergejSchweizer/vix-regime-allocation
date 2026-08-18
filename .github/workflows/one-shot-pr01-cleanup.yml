@@ -1,0 +1,33 @@
+name: PR-01 branch cleanup
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  cleanup:
+    if: github.event.head_commit.message == 'PR-01 — Yahoo adjusted-close loader: start branch cleanup'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Delete merged remote branches and self-clean
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "SSC"
+          git config user.email "sergej.schweizer@gmail.com"
+          git push origin --delete pr-01-yahoo-adjusted-close-loader
+          git push origin --delete audit/backlog-completeness-v2
+          git fetch --prune origin
+          git rm .github/workflows/one-shot-pr01-cleanup.yml
+          git commit -m "PR-01 — Yahoo adjusted-close loader: finish branch cleanup"
+          git push origin HEAD:main
