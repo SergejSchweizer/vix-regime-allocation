@@ -149,6 +149,12 @@ Final ZIP `dist/MScFE_622_GWP2_submission.zip` contains exactly notebook, HTML, 
 
 **Dependencies:** none
 
+**Git branch:** `pr-01-yahoo-adjusted-close-loader`
+
+**Git status:** `git status --short --branch` must show `pr-01-yahoo-adjusted-close-loader` and no staged, modified, or untracked files immediately before commit and merge.
+
+**Commit message:** `PR-01 — Yahoo adjusted-close loader`
+
 **Files owned:**
 
 ```text
@@ -180,6 +186,12 @@ def download_adjusted_close() -> pandas.DataFrame: ...
 
 **Dependencies:** none
 
+**Git branch:** `pr-02-step-1-common-sample-transformation`
+
+**Git status:** `git status --short --branch` must show `pr-02-step-1-common-sample-transformation` and no staged, modified, or untracked files immediately before commit and merge.
+
+**Commit message:** `PR-02 — Step 1 common-sample transformation`
+
 **Files owned:**
 
 ```text
@@ -210,6 +222,12 @@ def prepare_step1_data(prices: pandas.DataFrame) -> pandas.DataFrame: ...
 **Agent lane:** A
 
 **Dependencies:** PR-02
+
+**Git branch:** `pr-03-step-1-exploratory-plots`
+
+**Git status:** `git status --short --branch` must show `pr-03-step-1-exploratory-plots` and no staged, modified, or untracked files immediately before commit and merge.
+
+**Commit message:** `PR-03 — Step 1 exploratory plots`
 
 **Files owned:**
 
@@ -243,6 +261,12 @@ def plot_vix_change(data: pandas.DataFrame, output_path: pathlib.Path) -> None: 
 
 **Dependencies:** PR-01, PR-02, PR-03
 
+**Git branch:** `pr-04-executable-step-1-pipeline`
+
+**Git status:** `git status --short --branch` must show `pr-04-executable-step-1-pipeline` and no staged, modified, or untracked files immediately before commit and merge.
+
+**Commit message:** `PR-04 — Executable Step 1 pipeline`
+
 **Files owned:**
 
 ```text
@@ -267,6 +291,12 @@ tests/test_run_step1.py
 **Agent lane:** A
 
 **Dependencies:** PR-04
+
+**Git branch:** `pr-05-canonical-notebook-step-1`
+
+**Git status:** `git status --short --branch` must show `pr-05-canonical-notebook-step-1` and no staged, modified, or untracked files immediately before commit and merge.
+
+**Commit message:** `PR-05 — Canonical notebook Step 1`
 
 **Files owned:**
 
@@ -293,6 +323,12 @@ README.md
 
 **Dependencies:** PR-05
 
+**Git branch:** `pr-06-model-notebook-report-dependencies`
+
+**Git status:** `git status --short --branch` must show `pr-06-model-notebook-report-dependencies` and no staged, modified, or untracked files immediately before commit and merge.
+
+**Commit message:** `PR-06 — Model/notebook/report dependencies`
+
 **Files owned:**
 
 ```text
@@ -314,6 +350,12 @@ pyproject.toml
 **Agent lane:** setup
 
 **Dependencies:** PR-06
+
+**Git branch:** `pr-07-immutable-model-configuration`
+
+**Git status:** `git status --short --branch` must show `pr-07-immutable-model-configuration` and no staged, modified, or untracked files immediately before commit and merge.
+
+**Commit message:** `PR-07 — Immutable model configuration`
 
 **Files owned:**
 
@@ -339,6 +381,12 @@ tests/test_model_config.py
 **Agent lane:** A
 
 **Dependencies:** PR-07
+
+**Git branch:** `pr-08-markov-quantile-states`
+
+**Git status:** `git status --short --branch` must show `pr-08-markov-quantile-states` and no staged, modified, or untracked files immediately before commit and merge.
+
+**Commit message:** `PR-08 — Markov quantile states`
 
 **Files owned:**
 
@@ -371,6 +419,12 @@ def discretize_vix_change(vix_change: pandas.Series, n_states: int) -> tuple[pan
 
 **Dependencies:** PR-07
 
+**Git branch:** `pr-09-deterministic-gaussian-hmm-fitter`
+
+**Git status:** `git status --short --branch` must show `pr-09-deterministic-gaussian-hmm-fitter` and no staged, modified, or untracked files immediately before commit and merge.
+
+**Commit message:** `PR-09 — Deterministic Gaussian HMM fitter`
+
 **Files owned:**
 
 ```text
@@ -401,6 +455,12 @@ def fit_gaussian_hmm(vix_change: pandas.Series, n_states: int) -> HMMFitResult: 
 **Agent lane:** A
 
 **Dependencies:** PR-08
+
+**Git branch:** `pr-10-markov-transition-and-stationary-distribution`
+
+**Git status:** `git status --short --branch` must show `pr-10-markov-transition-and-stationary-distribution` and no staged, modified, or untracked files immediately before commit and merge.
+
+**Commit message:** `PR-10 — Markov transition and stationary distribution`
 
 **Files owned:**
 
@@ -434,6 +494,12 @@ def stationary_distribution(transition: pandas.DataFrame) -> pandas.Series: ...
 
 **Dependencies:** PR-07
 
+**Git branch:** `pr-11-information-criterion-helpers`
+
+**Git status:** `git status --short --branch` must show `pr-11-information-criterion-helpers` and no staged, modified, or untracked files immediately before commit and merge.
+
+**Commit message:** `PR-11 — Information-criterion helpers`
+
 **Files owned:**
 
 ```text
@@ -466,6 +532,12 @@ def bic(log_likelihood: float, n_parameters: int, n_observations: int) -> float:
 
 **Dependencies:** PR-10, PR-11
 
+**Git branch:** `pr-12-markov-candidate-evaluation`
+
+**Git status:** `git status --short --branch` must show `pr-12-markov-candidate-evaluation` and no staged, modified, or untracked files immediately before commit and merge.
+
+**Commit message:** `PR-12 — Markov candidate evaluation`
+
 **Files owned:**
 
 ```text
@@ -496,6 +568,12 @@ def evaluate_markov_candidate(vix_change: pandas.Series, n_states: int) -> dict[
 **Agent lane:** B
 
 **Dependencies:** PR-09, PR-11
+
+**Git branch:** `pr-13-hmm-candidate-evaluation`
+
+**Git status:** `git status --short --branch` must show `pr-13-hmm-candidate-evaluation` and no staged, modified, or untracked files immediately before commit and merge.
+
+**Commit message:** `PR-13 — HMM candidate evaluation`
 
 **Files owned:**
 
@@ -528,6 +606,12 @@ def evaluate_hmm_candidate(vix_change: pandas.Series, n_states: int) -> dict[str
 
 **Dependencies:** PR-12
 
+**Git branch:** `pr-14-markov-vix-state-figure`
+
+**Git status:** `git status --short --branch` must show `pr-14-markov-vix-state-figure` and no staged, modified, or untracked files immediately before commit and merge.
+
+**Commit message:** `PR-14 — Markov VIX-state figure`
+
 **Files owned:**
 
 ```text
@@ -558,6 +642,12 @@ def plot_markov_vix_states(vix: pandas.Series, states_2: pandas.Series, states_3
 **Agent lane:** B
 
 **Dependencies:** PR-13
+
+**Git branch:** `pr-15-hmm-vix-state-figure`
+
+**Git status:** `git status --short --branch` must show `pr-15-hmm-vix-state-figure` and no staged, modified, or untracked files immediately before commit and merge.
+
+**Commit message:** `PR-15 — HMM VIX-state figure`
 
 **Files owned:**
 
@@ -590,6 +680,12 @@ def plot_hmm_vix_states(vix: pandas.Series, states_2: pandas.Series, states_3: p
 
 **Dependencies:** PR-13
 
+**Git branch:** `pr-16-hmm-smoothed-probability-figure`
+
+**Git status:** `git status --short --branch` must show `pr-16-hmm-smoothed-probability-figure` and no staged, modified, or untracked files immediately before commit and merge.
+
+**Commit message:** `PR-16 — HMM smoothed-probability figure`
+
 **Files owned:**
 
 ```text
@@ -620,6 +716,12 @@ def plot_hmm_smoothed_probabilities(probabilities_2: pandas.DataFrame, probabili
 **Agent lane:** A
 
 **Dependencies:** PR-12, PR-13
+
+**Git branch:** `pr-17-model-comparison-and-preferred-selection`
+
+**Git status:** `git status --short --branch` must show `pr-17-model-comparison-and-preferred-selection` and no staged, modified, or untracked files immediately before commit and merge.
+
+**Commit message:** `PR-17 — Model comparison and preferred selection`
 
 **Files owned:**
 
@@ -653,6 +755,12 @@ def select_preferred_model(comparison: pandas.DataFrame, markov_candidates: list
 
 **Dependencies:** PR-02
 
+**Git branch:** `pr-18-preferred-state-etf-statistics`
+
+**Git status:** `git status --short --branch` must show `pr-18-preferred-state-etf-statistics` and no staged, modified, or untracked files immediately before commit and merge.
+
+**Commit message:** `PR-18 — Preferred-state ETF statistics`
+
 **Files owned:**
 
 ```text
@@ -683,6 +791,12 @@ def compute_state_asset_statistics(data: pandas.DataFrame, states: pandas.Series
 **Agent lane:** A
 
 **Dependencies:** PR-18
+
+**Git branch:** `pr-19-step-3-state-return-bar-chart`
+
+**Git status:** `git status --short --branch` must show `pr-19-step-3-state-return-bar-chart` and no staged, modified, or untracked files immediately before commit and merge.
+
+**Commit message:** `PR-19 — Step 3 state-return bar chart`
 
 **Files owned:**
 
@@ -715,6 +829,12 @@ def plot_state_asset_statistics(statistics: pandas.DataFrame, output_path: pathl
 
 **Dependencies:** PR-18
 
+**Git branch:** `pr-20-step-4-state-to-allocation-mapping`
+
+**Git status:** `git status --short --branch` must show `pr-20-step-4-state-to-allocation-mapping` and no staged, modified, or untracked files immediately before commit and merge.
+
+**Commit message:** `PR-20 — Step 4 state-to-allocation mapping`
+
 **Files owned:**
 
 ```text
@@ -745,6 +865,12 @@ def build_state_allocation(statistics: pandas.DataFrame) -> pandas.DataFrame: ..
 **Agent lane:** A
 
 **Dependencies:** PR-05, PR-12, PR-14
+
+**Git branch:** `pr-21-notebook-step-2-markov-canonical-states`
+
+**Git status:** `git status --short --branch` must show `pr-21-notebook-step-2-markov-canonical-states` and no staged, modified, or untracked files immediately before commit and merge.
+
+**Commit message:** `PR-21 — Notebook Step 2 Markov + canonical states`
 
 **Files owned:**
 
@@ -779,6 +905,12 @@ reports/figures/step2_markov_vix_states.png
 
 **Dependencies:** PR-13, PR-15, PR-16, PR-21
 
+**Git branch:** `pr-22-notebook-step-2-hmm-canonical-states`
+
+**Git status:** `git status --short --branch` must show `pr-22-notebook-step-2-hmm-canonical-states` and no staged, modified, or untracked files immediately before commit and merge.
+
+**Commit message:** `PR-22 — Notebook Step 2 HMM + canonical states`
+
 **Files owned:**
 
 ```text
@@ -811,6 +943,12 @@ reports/figures/step2_hmm_smoothed_probabilities.png
 
 **Dependencies:** PR-17, PR-22
 
+**Git branch:** `pr-23-notebook-step-3-model-selection-selected-state-provenance`
+
+**Git status:** `git status --short --branch` must show `pr-23-notebook-step-3-model-selection-selected-state-provenance` and no staged, modified, or untracked files immediately before commit and merge.
+
+**Commit message:** `PR-23 — Notebook Step 3 model selection + selected-state provenance`
+
 **Files owned:**
 
 ```text
@@ -838,6 +976,12 @@ reports/generated/step3_selected_model.json
 
 **Dependencies:** PR-18, PR-19, PR-23
 
+**Git branch:** `pr-24-notebook-step-3-state-conditional-etf-analysis`
+
+**Git status:** `git status --short --branch` must show `pr-24-notebook-step-3-state-conditional-etf-analysis` and no staged, modified, or untracked files immediately before commit and merge.
+
+**Commit message:** `PR-24 — Notebook Step 3 state-conditional ETF analysis`
+
 **Files owned:**
 
 ```text
@@ -863,6 +1007,12 @@ reports/figures/step3_state_asset_statistics.png
 **Agent lane:** A
 
 **Dependencies:** PR-20, PR-24
+
+**Git branch:** `pr-25-notebook-step-4-allocation-steps2-4-manifest`
+
+**Git status:** `git status --short --branch` must show `pr-25-notebook-step-4-allocation-steps2-4-manifest` and no staged, modified, or untracked files immediately before commit and merge.
+
+**Commit message:** `PR-25 — Notebook Step 4 allocation + Steps2–4 manifest`
 
 **Files owned:**
 
@@ -890,6 +1040,12 @@ reports/generated/steps_2_4_manifest.json
 
 **Dependencies:** PR-25
 
+**Git branch:** `pr-26-deterministic-readme-analysis-synchronizer`
+
+**Git status:** `git status --short --branch` must show `pr-26-deterministic-readme-analysis-synchronizer` and no staged, modified, or untracked files immediately before commit and merge.
+
+**Commit message:** `PR-26 — Deterministic README analysis synchronizer`
+
 **Files owned:**
 
 ```text
@@ -914,6 +1070,12 @@ tests/test_sync_readme_analysis.py
 **Agent lane:** A
 
 **Dependencies:** PR-26
+
+**Git branch:** `pr-27-synchronize-readme-through-step-4`
+
+**Git status:** `git status --short --branch` must show `pr-27-synchronize-readme-through-step-4` and no staged, modified, or untracked files immediately before commit and merge.
+
+**Commit message:** `PR-27 — Synchronize README through Step 4`
 
 **Files owned:**
 
@@ -940,6 +1102,12 @@ scripts/check_readme_sidecar.py
 
 **Dependencies:** PR-25
 
+**Git branch:** `pr-28-non-technical-pdf-builder`
+
+**Git status:** `git status --short --branch` must show `pr-28-non-technical-pdf-builder` and no staged, modified, or untracked files immediately before commit and merge.
+
+**Commit message:** `PR-28 — Non-technical PDF builder`
+
 **Files owned:**
 
 ```text
@@ -964,6 +1132,12 @@ tests/test_build_pdf_report.py
 **Agent lane:** B
 
 **Dependencies:** PR-28
+
+**Git branch:** `pr-29-generate-visually-verify-step1-4-pdf`
+
+**Git status:** `git status --short --branch` must show `pr-29-generate-visually-verify-step1-4-pdf` and no staged, modified, or untracked files immediately before commit and merge.
+
+**Commit message:** `PR-29 — Generate/visually verify Step1–4 PDF`
 
 **Files owned:**
 
@@ -991,6 +1165,12 @@ reports/rendered/Stochastic_Modeling_GWP2_Report/*.png
 
 **Dependencies:** PR-25
 
+**Git branch:** `pr-30-executed-notebook-html-exporter`
+
+**Git status:** `git status --short --branch` must show `pr-30-executed-notebook-html-exporter` and no staged, modified, or untracked files immediately before commit and merge.
+
+**Commit message:** `PR-30 — Executed-notebook HTML exporter`
+
 **Files owned:**
 
 ```text
@@ -1017,6 +1197,12 @@ reports/gwp2_vix_regime_allocation.html
 
 **Dependencies:** PR-27, PR-29, PR-30
 
+**Git branch:** `pr-31-step1-4-sidecar-parity-checker`
+
+**Git status:** `git status --short --branch` must show `pr-31-step1-4-sidecar-parity-checker` and no staged, modified, or untracked files immediately before commit and merge.
+
+**Commit message:** `PR-31 — Step1–4 sidecar parity checker`
+
 **Files owned:**
 
 ```text
@@ -1041,6 +1227,12 @@ tests/test_analysis_sidecars.py
 **Agent lane:** A
 
 **Dependencies:** PR-31
+
+**Git branch:** `pr-32-step1-4-sidecar-backlog-ci-gates`
+
+**Git status:** `git status --short --branch` must show `pr-32-step1-4-sidecar-backlog-ci-gates` and no staged, modified, or untracked files immediately before commit and merge.
+
+**Commit message:** `PR-32 — Step1–4 sidecar + backlog CI gates`
 
 **Files owned:**
 
@@ -1067,6 +1259,12 @@ scripts/check_readme_sidecar.py
 **Agent lane:** A
 
 **Dependencies:** PR-20, PR-23
+
+**Git branch:** `pr-33-one-day-lag-rotation-engine`
+
+**Git status:** `git status --short --branch` must show `pr-33-one-day-lag-rotation-engine` and no staged, modified, or untracked files immediately before commit and merge.
+
+**Commit message:** `PR-33 — One-day-lag rotation engine`
 
 **Files owned:**
 
@@ -1099,6 +1297,12 @@ def build_rotation_returns(data: pandas.DataFrame, states: pandas.Series, alloca
 
 **Dependencies:** PR-02
 
+**Git branch:** `pr-34-required-benchmark-engines`
+
+**Git status:** `git status --short --branch` must show `pr-34-required-benchmark-engines` and no staged, modified, or untracked files immediately before commit and merge.
+
+**Commit message:** `PR-34 — Required benchmark engines`
+
 **Files owned:**
 
 ```text
@@ -1123,6 +1327,12 @@ tests/test_benchmarks.py
 **Agent lane:** A
 
 **Dependencies:** PR-02
+
+**Git branch:** `pr-35-required-performance-metrics`
+
+**Git status:** `git status --short --branch` must show `pr-35-required-performance-metrics` and no staged, modified, or untracked files immediately before commit and merge.
+
+**Commit message:** `PR-35 — Required performance metrics`
 
 **Files owned:**
 
@@ -1157,6 +1367,12 @@ def performance_metrics(returns: pandas.Series) -> dict[str, float | int]: ...
 
 **Dependencies:** PR-33, PR-34, PR-35
 
+**Git branch:** `pr-36-aligned-comparison-performance-summary`
+
+**Git status:** `git status --short --branch` must show `pr-36-aligned-comparison-performance-summary` and no staged, modified, or untracked files immediately before commit and merge.
+
+**Commit message:** `PR-36 — Aligned comparison + performance summary`
+
 **Files owned:**
 
 ```text
@@ -1181,6 +1397,12 @@ tests/test_backtest_summary.py
 **Agent lane:** A
 
 **Dependencies:** PR-35
+
+**Git branch:** `pr-37-cumulative-performance-figure`
+
+**Git status:** `git status --short --branch` must show `pr-37-cumulative-performance-figure` and no staged, modified, or untracked files immediately before commit and merge.
+
+**Commit message:** `PR-37 — Cumulative-performance figure`
 
 **Files owned:**
 
@@ -1207,6 +1429,12 @@ tests/test_backtest_plot.py
 
 **Dependencies:** PR-18, PR-20, PR-33, PR-35
 
+**Git branch:** `pr-38-k-2-vs-k-3-sensitivity`
+
+**Git status:** `git status --short --branch` must show `pr-38-k-2-vs-k-3-sensitivity` and no staged, modified, or untracked files immediately before commit and merge.
+
+**Commit message:** `PR-38 — K=2 vs K=3 sensitivity`
+
 **Files owned:**
 
 ```text
@@ -1232,6 +1460,12 @@ tests/test_sensitivity.py
 
 **Dependencies:** PR-33, PR-34, PR-35, PR-36, PR-37, PR-38
 
+**Git branch:** `pr-39-step5-source-integration-test`
+
+**Git status:** `git status --short --branch` must show `pr-39-step5-source-integration-test` and no staged, modified, or untracked files immediately before commit and merge.
+
+**Commit message:** `PR-39 — Step5 source integration test`
+
 **Files owned:**
 
 ```text
@@ -1255,6 +1489,12 @@ tests/integration/test_step5_pipeline.py
 **Agent lane:** A
 
 **Dependencies:** PR-25, PR-39
+
+**Git branch:** `pr-40-notebook-step5-backtest-benchmarks`
+
+**Git status:** `git status --short --branch` must show `pr-40-notebook-step5-backtest-benchmarks` and no staged, modified, or untracked files immediately before commit and merge.
+
+**Commit message:** `PR-40 — Notebook Step5 backtest + benchmarks`
 
 **Files owned:**
 
@@ -1280,6 +1520,12 @@ reports/tables/step5_daily_returns.csv
 **Agent lane:** B
 
 **Dependencies:** PR-36, PR-37, PR-40
+
+**Git branch:** `pr-41-notebook-step5-metrics-cumulative-comparison`
+
+**Git status:** `git status --short --branch` must show `pr-41-notebook-step5-metrics-cumulative-comparison` and no staged, modified, or untracked files immediately before commit and merge.
+
+**Commit message:** `PR-41 — Notebook Step5 metrics + cumulative comparison`
 
 **Files owned:**
 
@@ -1307,6 +1553,12 @@ reports/figures/step5_cumulative_performance.png
 
 **Dependencies:** PR-38, PR-41
 
+**Git branch:** `pr-42-notebook-step5-sensitivity-manifest`
+
+**Git status:** `git status --short --branch` must show `pr-42-notebook-step5-sensitivity-manifest` and no staged, modified, or untracked files immediately before commit and merge.
+
+**Commit message:** `PR-42 — Notebook Step5 sensitivity + manifest`
+
 **Files owned:**
 
 ```text
@@ -1332,6 +1584,12 @@ reports/generated/step5_manifest.json
 **Agent lane:** B
 
 **Dependencies:** PR-27, PR-42
+
+**Git branch:** `pr-43-readme-step5-synchronization`
+
+**Git status:** `git status --short --branch` must show `pr-43-readme-step5-synchronization` and no staged, modified, or untracked files immediately before commit and merge.
+
+**Commit message:** `PR-43 — README Step5 synchronization`
 
 **Files owned:**
 
@@ -1360,6 +1618,12 @@ scripts/check_readme_sidecar.py
 
 **Dependencies:** PR-28, PR-42
 
+**Git branch:** `pr-44-extend-pdf-builder-through-step5`
+
+**Git status:** `git status --short --branch` must show `pr-44-extend-pdf-builder-through-step5` and no staged, modified, or untracked files immediately before commit and merge.
+
+**Commit message:** `PR-44 — Extend PDF builder through Step5`
+
 **Files owned:**
 
 ```text
@@ -1384,6 +1648,12 @@ tests/test_build_pdf_report.py
 **Agent lane:** A
 
 **Dependencies:** PR-29, PR-44
+
+**Git branch:** `pr-45-final-step1-5-nontechnical-pdf-visual-qa`
+
+**Git status:** `git status --short --branch` must show `pr-45-final-step1-5-nontechnical-pdf-visual-qa` and no staged, modified, or untracked files immediately before commit and merge.
+
+**Commit message:** `PR-45 — Final Step1–5 nontechnical PDF + visual QA`
 
 **Files owned:**
 
@@ -1411,6 +1681,12 @@ reports/rendered/Stochastic_Modeling_GWP2_Report/*.png
 
 **Dependencies:** PR-30, PR-42
 
+**Git branch:** `pr-46-final-executed-notebook-html`
+
+**Git status:** `git status --short --branch` must show `pr-46-final-executed-notebook-html` and no staged, modified, or untracked files immediately before commit and merge.
+
+**Commit message:** `PR-46 — Final executed-notebook HTML`
+
 **Files owned:**
 
 ```text
@@ -1432,6 +1708,12 @@ reports/gwp2_vix_regime_allocation.html
 **Agent lane:** B
 
 **Dependencies:** PR-31, PR-32, PR-43, PR-45, PR-46
+
+**Git branch:** `pr-47-final-step1-5-parity-ci`
+
+**Git status:** `git status --short --branch` must show `pr-47-final-step1-5-parity-ci` and no staged, modified, or untracked files immediately before commit and merge.
+
+**Commit message:** `PR-47 — Final Step1–5 parity CI`
 
 **Files owned:**
 
@@ -1460,6 +1742,12 @@ scripts/check_readme_sidecar.py
 **Agent lane:** A
 
 **Dependencies:** PR-47
+
+**Git branch:** `pr-48-deterministic-final-submission-bundle-builder`
+
+**Git status:** `git status --short --branch` must show `pr-48-deterministic-final-submission-bundle-builder` and no staged, modified, or untracked files immediately before commit and merge.
+
+**Commit message:** `PR-48 — Deterministic final submission bundle builder`
 
 **Files owned:**
 
@@ -1491,6 +1779,12 @@ def build_submission_bundle(repository_root: pathlib.Path, output_zip: pathlib.P
 **Agent lane:** B
 
 **Dependencies:** PR-48
+
+**Git branch:** `pr-49-generate-validate-final-release-artifacts`
+
+**Git status:** `git status --short --branch` must show `pr-49-generate-validate-final-release-artifacts` and no staged, modified, or untracked files immediately before commit and merge.
+
+**Commit message:** `PR-49 — Generate/validate final release artifacts`
 
 **Files owned:**
 

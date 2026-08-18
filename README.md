@@ -14,7 +14,7 @@ The assignment studies a VIX-driven allocation rule across `TLT`, `GLD`, and `SP
 | Python package scaffold | Bootstrapped |
 | Push / pull-request quality gates | Configured |
 | Combined source coverage threshold | 90% |
-| Step 1 implementation | Not started |
+| Step 1 implementation | PR-01 Yahoo adjusted-close loader implemented; PR-02 through PR-05 pending |
 | Steps 2–4 implementation | Not started |
 | Step 5 implementation | Not started |
 | Final submission bundle | Planned in PR-48/PR-49 |
@@ -24,15 +24,35 @@ No uncomputed assignment result is claimed in this README.
 
 ## Canonical backlog
 
-`BACKLOG.md` is the **single canonical planning source**. It fixes PR dependencies, file ownership, public interfaces, schemas, numerical conventions, tie rules, test evidence, notebook serialization, sidecar parity, Step 5 backtesting semantics, and final submission packaging.
+`BACKLOG.md` is the **single canonical planning source**. It fixes PR dependencies, file ownership, public interfaces, schemas, numerical conventions, tie rules, test evidence, notebook serialization, sidecar parity, Step 5 backtesting semantics, final submission packaging, and the Git branch/status/commit contract for every PR.
 
-The backlog is deliberately optimized for two weak coding agents. Every PR has explicit lower-numbered dependencies (or `none`), a complete write set, contiguous numbered tasks, and one matching acceptance criterion for every task. `scripts/check_backlog_contract.py` verifies PR-01..PR-49, backward-only dependencies, contiguous task IDs, and one-to-one acceptance coverage.
+The backlog is deliberately optimized for two weak coding agents. Every PR has explicit lower-numbered dependencies (or `none`), a complete write set, contiguous numbered tasks, one matching acceptance criterion for every task, an exact feature-branch name, an explicit `git status --short --branch` clean-tree check, and an exact commit message containing the PR number and PR name. `scripts/check_backlog_contract.py` verifies PR-01..PR-49, backward-only dependencies, contiguous task IDs, one-to-one acceptance coverage, and this Git metadata.
+
+## Git workflow per backlog PR
+
+Every PR section in `BACKLOG.md` declares these three fields explicitly:
+
+```text
+Git branch
+Git status
+Commit message
+```
+
+The required status command is:
+
+```bash
+git status --short --branch
+```
+
+Immediately before commit and immediately before merge, it must show the branch declared by that PR and no staged, modified, or untracked files. Branch names start with the matching lowercase PR identifier (for example `pr-01-...`), and commit messages start with the matching uppercase PR identifier and exact PR name (for example `PR-01 — Yahoo adjusted-close loader`).
 
 ## Assignment implementation plan
 
 ### Step 1 — Data Preparation and Exploration
 
-Use Yahoo Finance adjusted closes for `TLT`, `GLD`, `SPY`, and `^VIX`, maximum common dates, no imputation, ETF daily log returns, and daily VIX first difference. Canonical outputs are:
+Use Yahoo Finance adjusted closes for `TLT`, `GLD`, `SPY`, and `^VIX`, maximum common dates, no imputation, ETF daily log returns, and daily VIX first difference. PR-01 implements the deterministic adjusted-close loader with explicit Yahoo arguments, `Adj Close` extraction, `^VIX`→`VIX` renaming, canonical column order, timezone-naive sorted unique `Date` index, positive/finite non-missing price validation, and mocked offline tests. Missing price observations are intentionally preserved for PR-02, which constructs the common-date sample.
+
+Canonical Step 1 outputs planned across PR-01 through PR-05 are:
 
 ```text
 data/processed/step1_data.csv
