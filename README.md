@@ -172,8 +172,8 @@ Windows PowerShell:
 |---|---|---|
 | Lint | `ruff check .` + `ruff format --check .` | pass |
 | Type check | `mypy src` | pass |
-| Unit tests | `coverage run -m pytest -m "not integration"` | pass |
-| Integration tests | `coverage run -m pytest -m integration` | pass |
+| Unit tests (`unit-tests`) | `coverage run -m pytest -m "not integration"` | pass |
+| Integration tests (`integration-tests`) | `coverage run -m pytest -m integration` | pass |
 | README sidecar | `python scripts/check_readme_sidecar.py` | pass |
 | Backlog contract | `python scripts/check_backlog_contract.py` | pass |
 | Coverage | combined unit + integration | `>=90%` |
