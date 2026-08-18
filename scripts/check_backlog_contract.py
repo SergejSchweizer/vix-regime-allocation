@@ -97,9 +97,10 @@ def main() -> None:
         expected_branch = f"pr-{pr_code}-{_branch_slug(title)}"
         git_branch_match = GIT_BRANCH_RE.search(section)
         if git_branch_match is None or git_branch_match.group(1) != expected_branch:
+            found_branch = git_branch_match.group(1) if git_branch_match else None
             _fail(
                 f"PR-{pr_code} Git branch must be exactly {expected_branch!r}; "
-                f"found {git_branch_match.group(1)!r if git_branch_match else None}."
+                f"found {found_branch!r}."
             )
 
         git_status_match = GIT_STATUS_RE.search(section)
