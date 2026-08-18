@@ -9,7 +9,7 @@ EXPECTED_FIRST_PR = 1
 EXPECTED_LAST_PR = 49
 MAX_TASKS_PER_PR = 3
 
-PR_HEADER_RE = re.compile(r"^#{2,3}\s+PR-(\d{2})\s+—\s+.+$", re.MULTILINE)
+PR_HEADER_RE = re.compile(r"^#{2,3}\s+PR-(\d{2})\s+—\s+(.+)$", re.MULTILINE)
 TASK_RE = re.compile(r"^- \[ \] T(\d{2})\.(\d+)\s+(.+)$", re.MULTILINE)
 AC_RE = re.compile(
     r"^- \[ \] AC(\d{2})\.(\d+)\s+\(`T(\d{2})\.(\d+)`\)\s+(.+)$",
@@ -17,6 +17,13 @@ AC_RE = re.compile(
 )
 DEPENDENCY_RE = re.compile(r"^\*\*Dependencies:\*\*\s*(.+)$", re.MULTILINE)
 FILES_RE = re.compile(r"\*\*Files owned:\*\*\s*\n\s*```text\n(.*?)\n```", re.DOTALL)
+GIT_BRANCH_RE = re.compile(r"^\*\*Git branch:\*\*\s+`([^`]+)`$", re.MULTILINE)
+GIT_STATUS_RE = re.compile(
+    r"^\*\*Git status:\*\*\s+`git status --short --branch` must show `([^`]+)` "
+    r"and no staged, modified, or untracked files immediately before commit and merge\.$",
+    re.MULTILINE,
+)
+COMMIT_MESSAGE_RE = re.compile(r"^\*\*Commit message:\*\*\s+`([^`]+)`$", re.MULTILINE)
 
 FORBIDDEN_AMBIGUOUS_PHRASES = (
     "as needed",
@@ -34,6 +41,10 @@ def _fail(message: str) -> None:
     raise SystemExit(message)
 
 
+def _branch_slug(title: str) -> str:
+    return re.sub(r"[^a-z0-9]+", "-", title.lower()).strip("-")
+
+
 def main() -> None:
     text = BACKLOG.read_text(encoding="utf-8")
     matches = list(PR_HEADER_RE.finditer(text))
@@ -48,12 +59,16 @@ def main() -> None:
     for position, match in enumerate(matches):
         pr_number = int(match.group(1))
         pr_code = f"{pr_number:02d}"
+        title = match.group(2).strip()
         end = matches[position + 1].start() if position + 1 < len(matches) else len(text)
         section = text[match.start() : end]
 
         for marker in (
             "**Agent lane:**",
             "**Dependencies:**",
+            "**Git branch:**",
+            "**Git status:**",
+            "**Commit message:**",
             "**Files owned:**",
             "### Tasks",
             "### Acceptance criteria",
@@ -78,6 +93,28 @@ def main() -> None:
             _fail(f"PR-{pr_code} has a self/forward dependency: {dependency_text!r}.")
         if len(dependency_refs) != len(set(dependency_refs)):
             _fail(f"PR-{pr_code} repeats a dependency: {dependency_text!r}.")
+
+        expected_branch = f"pr-{pr_code}-{_branch_slug(title)}"
+        git_branch_match = GIT_BRANCH_RE.search(section)
+        if git_branch_match is None or git_branch_match.group(1) != expected_branch:
+            _fail(
+                f"PR-{pr_code} Git branch must be exactly {expected_branch!r}; "
+                f"found {git_branch_match.group(1)!r if git_branch_match else None}."
+            )
+
+        git_status_match = GIT_STATUS_RE.search(section)
+        if git_status_match is None or git_status_match.group(1) != expected_branch:
+            _fail(
+                f"PR-{pr_code} Git status must require a clean {expected_branch!r} branch "
+                "using 'git status --short --branch'."
+            )
+
+        commit_message_match = COMMIT_MESSAGE_RE.search(section)
+        expected_commit_message = f"PR-{pr_code} — {title}"
+        if commit_message_match is None or commit_message_match.group(1) != expected_commit_message:
+            _fail(
+                f"PR-{pr_code} Commit message must be exactly {expected_commit_message!r}."
+            )
 
         files_match = FILES_RE.search(section)
         if files_match is None:
@@ -152,7 +189,8 @@ def main() -> None:
     print(
         f"BACKLOG contract valid: {len(numbers)} PRs, {len(all_task_ids)} tasks, "
         "one-to-one acceptance coverage, explicit backward-only dependencies, "
-        "bounded atomicity, explicit file ownership, and no forbidden ambiguous phrases."
+        "deterministic Git branch/status/commit metadata, bounded atomicity, explicit file "
+        "ownership, and no forbidden ambiguous phrases."
     )
 
 
