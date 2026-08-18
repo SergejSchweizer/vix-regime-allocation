@@ -14,8 +14,7 @@ The project studies whether VIX-driven volatility regimes can support a transpar
 | Area | Status |
 |---|---|
 | Assignment template | Added and populated with team names |
-| Step 1 backlog | Audited and hardened in [`BACKLOG.md`](BACKLOG.md) |
-| Steps 2-4 backlog | Audited and expanded in [`BACKLOG_STEPS_2_4.md`](BACKLOG_STEPS_2_4.md) |
+| Canonical Steps 1-4 backlog | Audited, consolidated and defined in [`BACKLOG.md`](BACKLOG.md) |
 | Python package scaffold | Bootstrapped |
 | Push quality gates | Configured |
 | Pull-request quality gates | Configured |
@@ -31,7 +30,7 @@ No uncomputed assignment result is claimed in this README.
 
 ## Backlog audit outcome
 
-The backlogs were reviewed against the assignment tasks, submission requirements, template instructions and grading rubric. The audit introduced several explicit safeguards:
+The single canonical backlog was reviewed against the assignment tasks, submission requirements, template instructions and grading rubric. The audit introduced several explicit safeguards:
 
 - yfinance adjusted-close semantics are fixed explicitly rather than depending on library defaults;
 - every task has a one-to-one numbered acceptance criterion;
@@ -46,6 +45,8 @@ The backlogs were reviewed against the assignment tasks, submission requirements
 - README, notebook HTML and standalone PDF have explicit parity contracts;
 - the standalone PDF is treated as a non-technical report, in line with the rubric, rather than duplicating technical model mechanics;
 - MLA citations, graph labels/scales and the template instruction-page exclusion are explicit acceptance requirements.
+
+All PR definitions, dependencies, file ownership, tasks, acceptance criteria, schedules and Definitions of Done for Steps 1-4 now live in **one file: [`BACKLOG.md`](BACKLOG.md)**.
 
 ## Assignment implementation plan
 
@@ -73,7 +74,7 @@ reports/figures/step1_etf_log_returns.png
 reports/figures/step1_vix_change.png
 ```
 
-The exact PR contracts are in [`BACKLOG.md`](BACKLOG.md).
+The exact PR contracts are in [`BACKLOG.md`](BACKLOG.md), PR-01 through PR-05.
 
 ### Step 2 - Modeling VIX Regimes
 
@@ -96,7 +97,7 @@ Step 2 will display and persist:
 
 All four candidates will have log-likelihood, AIC and BIC reported.
 
-The Markov likelihood is the conditional likelihood of the discretized transition sequence, whereas the HMM likelihood is the likelihood of the continuous `VIX_change` observations. Therefore raw AIC/BIC values are **not treated as a valid direct cross-family ranking**. BIC selects 2 vs 3 states within each family. The preferred family then follows the deterministic validity/interpretability rule in [`BACKLOG_STEPS_2_4.md`](BACKLOG_STEPS_2_4.md).
+The Markov likelihood is the conditional likelihood of the discretized transition sequence, whereas the HMM likelihood is the likelihood of the continuous `VIX_change` observations. Therefore raw AIC/BIC values are **not treated as a valid direct cross-family ranking**. BIC selects 2 vs 3 states within each family. The preferred family then follows the deterministic validity/interpretability rule fixed in [`BACKLOG.md`](BACKLOG.md).
 
 For the preferred state sequence, Step 3 computes for TLT, GLD and SPY:
 
@@ -122,7 +123,7 @@ The optional 60/40 allocation is not implemented.
 
 The analysis explicitly notes that the state-conditioned mean-return mapping is estimated in-sample. Step 5 must therefore be interpreted carefully and must at minimum apply the assignment-required one-trading-day lag to the state-driven position; a fully out-of-sample implementation would require rolling or expanding re-estimation.
 
-The complete atomic Step 2-4 contracts are in [`BACKLOG_STEPS_2_4.md`](BACKLOG_STEPS_2_4.md).
+The complete atomic Step 2-4 contracts are in [`BACKLOG.md`](BACKLOG.md), PR-06 through PR-32.
 
 ## Canonical technical notebook
 
@@ -229,7 +230,7 @@ reports/generated/step3_selected_model.json
 reports/generated/steps_2_4_manifest.json
 ```
 
-The exhaustive schema/path contract is in `BACKLOG_STEPS_2_4.md`.
+The exhaustive schema/path contract is in [`BACKLOG.md`](BACKLOG.md).
 
 ## Development setup
 
@@ -289,7 +290,7 @@ The current aggregate `quality-gate` requires:
 - `coverage`
 - `readme-sidecar`
 
-PR-32 in the Steps 2-4 backlog adds `analysis-sidecars` after notebook/README/HTML/PDF synchronization exists.
+PR-32 in the unified [`BACKLOG.md`](BACKLOG.md) adds `analysis-sidecars` after notebook/README/HTML/PDF synchronization exists.
 
 ### Required `main` branch rule
 
@@ -326,10 +327,7 @@ python scripts/check_analysis_sidecars.py
 
 ## PR rules for weak parallel agents
 
-Agents follow the relevant backlog literally:
-
-- Step 1: [`BACKLOG.md`](BACKLOG.md)
-- Steps 2-4: [`BACKLOG_STEPS_2_4.md`](BACKLOG_STEPS_2_4.md)
+Agents follow the **single canonical backlog**: [`BACKLOG.md`](BACKLOG.md).
 
 Core rules:
 
