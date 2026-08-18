@@ -1,0 +1,1019 @@
+name: One-shot append Step 5 backlog
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  append-step5:
+    if: github.event.head_commit.message == 'Add one-shot Step 5 backlog merger'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Append audited Step 5 backlog and update sidecar planning docs
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          backlog = Path("BACKLOG.md")
+          text = backlog.read_text(encoding="utf-8")
+          if "## PR-33 — Implement one-day-lag rotation backtest engine" in text:
+              raise SystemExit("Step 5 backlog already present; refusing duplicate append.")
+
+          text = text.replace(
+              "# BACKLOG — MScFE 622 GWP2: Steps 1–4",
+              "# BACKLOG — MScFE 622 GWP2: Steps 1–5",
+              1,
+          )
+          text = text.replace(
+              "This is the **single canonical implementation backlog** for MScFE 622 Stochastic Modeling GWP2 through Step 4.",
+              "This is the **single canonical implementation backlog** for MScFE 622 Stochastic Modeling GWP2 through Step 5.",
+              1,
+          )
+          text = text.replace(
+              "PR-06 through PR-32 cover Steps 2–4, notebook integration, synchronized sidecars, and final parity CI.",
+              "PR-06 through PR-32 cover Steps 2–4, notebook integration, synchronized sidecars, and Steps 1–4 parity CI. PR-33 through PR-47 cover complete Step 5 backtesting/evaluation and final Steps 1–5 sidecar parity.",
+              1,
+          )
+          text = text.replace(
+              "- [ ] Step 5 is not implemented by this backlog.",
+              "- [ ] Step 5 is not implemented by PR-01 through PR-32; complete Step 5 implementation is defined in Part III (PR-33 through PR-47).",
+          )
+
+          appendix = r'''
+
+---
+
+# Part III — Step 5: Backtesting and Evaluation
+
+Step 5 completes the assignment by backtesting the Step 4 regime-rotation rule over the common sample with a **one-trading-day execution lag**, computing the five required performance metrics, comparing against the two required benchmarks, plotting cumulative performance, summarizing results in a table, and discussing sensitivity. The assignment explicitly requires the benchmarks to be **equal-weight TLT/GLD/SPY with monthly rebalancing** and **buy-and-hold SPY**.
+
+The Step 5 implementation does **not** redefine Steps 3 or 4. It consumes the preferred Step 3 state sequence and the Step 4 state-to-allocation rule. Any Step 5 function that needs states or an allocation mapping must receive those objects explicitly or reconstruct them through the already-fixed deterministic Step 2–4 project functions; it must not invent a second model-selection or allocation rule.
+
+## Step 5 non-negotiable rules
+
+1. PR-33 through PR-47 continue the one-task/one-acceptance numbering rule: every `Txx.n` has exactly one matching `ACxx.n`.
+2. Every PR modifies only its **Files owned** list.
+3. Source tests are deterministic and offline; no Step 5 unit/integration test may download market data.
+4. Combined source coverage remains `>=90%`.
+5. Lint, type-check, unit-test and integration-test CI jobs remain independent and parallel.
+6. The canonical notebook remains `notebooks/gwp2_vix_regime_allocation.ipynb`; only one notebook PR may be open at a time.
+7. README, notebook HTML and standalone PDF are regenerated after Step 5; no sidecar may independently refit a model or recompute a second analysis.
+8. No transaction cost, tax, slippage, leverage or financing assumption may be silently added. The required assignment backtest is gross of such costs; their omission is stated as a limitation.
+9. All three portfolios are evaluated on the **same final Step 5 comparison dates** so metric differences cannot be caused by different sample lengths.
+10. All wealth/performance calculations use **simple returns**, derived deterministically from the Step 1 ETF log returns.
+11. The risk-free rate for the required Sharpe ratio is fixed at `0.0` because the assignment does not provide a risk-free series; this assumption must be stated explicitly in notebook/README/report.
+12. Step 5 sensitivity uses **number of states** rather than a new sample-window design, satisfying the assignment's “number of states or sample window” requirement without introducing a second estimation-window methodology.
+13. No result may be described as out-of-sample. The one-day lag removes same-day signal execution, but Step 4 state-conditional mean mappings are still estimated in-sample unless a later, separately scoped walk-forward study is added.
+
+---
+
+## Fixed Step 5 mathematical and data contracts
+
+### Input data
+
+Step 5 uses the exact Step 1 file:
+
+```text
+data/processed/step1_data.csv
+```
+
+with the fixed columns defined in Part I. It also consumes the preferred model/state decision from Step 3 and the canonical Step 4 mapping:
+
+```text
+reports/generated/step3_selected_model.json
+reports/tables/step4_allocation_mapping.csv
+```
+
+The executable notebook may reconstruct the preferred state Series by rerunning the deterministic project model functions on the unchanged Step 1 data. Sidecars may not refit models.
+
+### Simple-return conversion
+
+If `ell_i,t` is the Step 1 log return for ETF `i`, the simple return used in Step 5 is:
+
+```text
+r_i,t = exp(ell_i,t) - 1
+```
+
+The code must never sum log returns and label the result a simple cumulative return.
+
+### One-day execution lag
+
+Let `S_t` be the state observed/decoded at trading date `t` and `w(S_t)` the Step 4 portfolio weights. The return earned on date `t` uses the **previous trading date's** state:
+
+```text
+r_rotation,t = w(S_(t-1))' r_t
+```
+
+Consequences:
+
+- the first state date has no executable prior-state decision and is excluded from Step 5 comparison returns;
+- the lag is by one **observed trading row**, not one calendar day;
+- no backward fill is allowed;
+- all benchmark returns are restricted to the resulting strategy return index before comparison.
+
+### Rotation daily-return schema
+
+`build_rotation_returns()` returns a DataFrame indexed by execution `Date` with columns exactly:
+
+```text
+decision_date
+decision_state
+selected_asset
+TLT_weight
+GLD_weight
+SPY_weight
+regime_rotation_return
+```
+
+`decision_date` is the immediately preceding Step 1 trading date. `decision_state` is the state on that date. Weights must match the corresponding Step 4 mapping row exactly.
+
+### Equal-weight monthly benchmark
+
+The required benchmark holds TLT, GLD and SPY with target weights `1/3` each and rebalances monthly.
+
+Use this exact convention:
+
+1. initialize target weights `1/3, 1/3, 1/3` immediately before the first comparison-date return;
+2. on the first observed comparison trading date of each new calendar month, reset all three weights to `1/3` **before applying that date's return**;
+3. on all other dates, allow weights to drift after returns according to portfolio arithmetic;
+4. no intra-month rebalance is allowed;
+5. no transaction costs are deducted.
+
+After applying date `t` asset simple returns, drift weights for the next date as:
+
+```text
+w_i,t+ = w_i,t * (1 + r_i,t) / (1 + r_portfolio,t)
+```
+
+The benchmark return on date `t` is:
+
+```text
+r_equal_weight,t = sum_i w_i,t * r_i,t
+```
+
+### Buy-and-hold SPY benchmark
+
+The SPY benchmark return is exactly the SPY adjusted-close simple return on each comparison date:
+
+```text
+r_spy,t = exp(SPY_log_return_t) - 1
+```
+
+No rebalance logic is applied to SPY.
+
+### Common Step 5 comparison table
+
+The exact daily comparison return columns are:
+
+```text
+regime_rotation
+equal_weight_monthly
+spy_buy_hold
+```
+
+All three columns use the same sorted unique `DatetimeIndex` named `Date`, contain no missing/non-finite values, and use exactly the rotation strategy's valid one-day-lag dates.
+
+### Performance metrics
+
+Use `TRADING_DAYS = 252` and simple daily returns.
+
+For a return series `r_1, ..., r_N`, wealth is:
+
+```text
+W_t = product_(j=1..t) (1 + r_j)
+```
+
+Required metrics are fixed as:
+
+```text
+Cumulative Return   = W_N - 1
+Annualized Return   = W_N^(252/N) - 1
+Annualized Volatility = sample_std(r_t, ddof=1) * sqrt(252)
+Sharpe Ratio        = mean(r_t) / sample_std(r_t, ddof=1) * sqrt(252)
+Max Drawdown        = min_t(W_t / max_(u<=t) W_u - 1)
+```
+
+Sharpe uses zero risk-free return. `Max Drawdown` is stored as a non-positive decimal; `0.0` means no drawdown. Reject any daily simple return `<= -1` because wealth would become non-positive/invalid for these formulas.
+
+### Performance-summary schema
+
+Canonical table columns exactly:
+
+```text
+portfolio
+cumulative_return
+annualized_return
+annualized_volatility
+sharpe_ratio
+max_drawdown
+observations
+```
+
+Portfolio rows exactly and in this order:
+
+```text
+regime_rotation
+equal_weight_monthly
+spy_buy_hold
+```
+
+### Cumulative-performance figure
+
+Plot cumulative return, not raw daily return:
+
+```text
+C_t = W_t - 1
+```
+
+One figure contains exactly the three required portfolios. It must have a non-empty title, date x-axis, cumulative-return y-axis, visible ticks/scales, zero reference line, and complete legend.
+
+### Sensitivity contract
+
+Sensitivity is evaluated for **2 versus 3 states within the Step 3 preferred model family**.
+
+For each `K in {2, 3}`:
+
+1. use that family's already-defined K-state candidate state sequence on the same Step 1 sample;
+2. recompute state-conditional ETF statistics with the fixed Step 3 function;
+3. rebuild the state-to-allocation mapping with the fixed Step 4 function;
+4. backtest with the exact same one-trading-day lag;
+5. compare the K-state rotation variant on the common sensitivity date intersection;
+6. compute the same five performance metrics.
+
+Do not switch model family in this sensitivity check. Do not introduce a new sample window. The sensitivity discussion must explicitly state that both mappings are in-sample and that this is a robustness comparison, not an out-of-sample test.
+
+Sensitivity table columns exactly:
+
+```text
+family
+n_states
+cumulative_return
+annualized_return
+annualized_volatility
+sharpe_ratio
+max_drawdown
+observations
+```
+
+Rows are ordered by `n_states` ascending.
+
+---
+
+## Canonical Step 5 artifacts
+
+```text
+reports/tables/step5_daily_returns.csv
+reports/tables/step5_performance_summary.csv
+reports/tables/step5_state_count_sensitivity.csv
+reports/figures/step5_cumulative_performance.png
+reports/generated/step5_manifest.json
+```
+
+`step5_daily_returns.csv` serializes `Date` plus the exact three common comparison return columns.
+
+`step5_manifest.json` exact top-level keys:
+
+```text
+schema_version
+input_data_path
+input_data_sha256
+selected_model_path
+allocation_path
+notebook_path
+tables
+figures
+```
+
+Requirements:
+
+- `schema_version = 1`;
+- `input_data_sha256` equals the Step 1 SHA-256 already recorded by Step 3;
+- `tables` lists the three canonical Step 5 CSVs exactly once;
+- `figures` lists the Step 5 cumulative-performance PNG exactly once;
+- all paths are repository-relative POSIX paths;
+- no timestamp is stored.
+
+---
+
+## PR-33 — Implement one-day-lag rotation backtest engine
+
+**Agent lane:** A
+
+**Dependencies:** PR-20 (Step 4 mapping contract)
+
+**Files owned:**
+
+```text
+src/vix_regime_allocation/backtest.py
+tests/test_backtest.py
+```
+
+### Public interface
+
+```python
+def build_rotation_returns(
+    data: pandas.DataFrame,
+    states: pandas.Series,
+    allocation: pandas.DataFrame,
+) -> pandas.DataFrame: ...
+```
+
+### Tasks
+
+- [ ] T33.1 Validate Step 1 ETF log-return columns, exact data/state index equality, unique sorted dates, finite values, and complete allocation rows for every state used.
+- [ ] T33.2 Convert current-date ETF log returns to simple returns with `exp(log_return)-1`.
+- [ ] T33.3 Apply the Step 4 weights from state `t-1` to ETF returns at trading row `t`; do not use state `t` for return `t`.
+- [ ] T33.4 Exclude exactly the first state/data row because it has no prior trading-state decision.
+- [ ] T33.5 Return the exact rotation daily schema, including immediately preceding `decision_date`, `decision_state`, selected asset, weights, and `regime_rotation_return`.
+- [ ] T33.6 Reject any missing allocation state, non-0/1 Step 4 weight, weight row not summing to 1, or simple ETF return `<=-1`.
+- [ ] T33.7 Add hand-computable deterministic tests proving one-row lag, correct asset return, correct decision dates, and failure cases.
+
+### Acceptance criteria
+
+- [ ] AC33.1 (`T33.1`) malformed/misaligned/duplicate/non-finite/incomplete inputs fail clearly.
+- [ ] AC33.2 (`T33.2`) synthetic ETF simple returns equal hand-computed `exp(ell)-1` values.
+- [ ] AC33.3 (`T33.3`) a state change on date `t` affects date `t+1` return and never date `t` return.
+- [ ] AC33.4 (`T33.4`) output has exactly `len(data)-1` rows for complete inputs and starts on the second trading row.
+- [ ] AC33.5 (`T33.5`) columns/order/index/decision dates/state/selected asset/weights match the fixed schema exactly.
+- [ ] AC33.6 (`T33.6`) every listed invalid allocation/return condition raises a clear error.
+- [ ] AC33.7 (`T33.7`) all backtest tests pass offline.
+
+---
+
+## PR-34 — Implement required benchmark return engines
+
+**Agent lane:** B
+
+**Dependencies:** Step 1 clean-data contract only
+
+**Files owned:**
+
+```text
+src/vix_regime_allocation/benchmarks.py
+tests/test_benchmarks.py
+```
+
+### Public interfaces
+
+```python
+def build_equal_weight_monthly_returns(
+    data: pandas.DataFrame,
+    comparison_index: pandas.DatetimeIndex,
+) -> pandas.Series: ...
+
+
+def build_spy_buy_hold_returns(
+    data: pandas.DataFrame,
+    comparison_index: pandas.DatetimeIndex,
+) -> pandas.Series: ...
+```
+
+Series names exactly:
+
+```text
+equal_weight_monthly
+spy_buy_hold
+```
+
+### Tasks
+
+- [ ] T34.1 Validate the comparison index is a non-empty sorted unique subset of the Step 1 dates and required ETF return columns are finite.
+- [ ] T34.2 Convert ETF log returns to simple returns without using price-level shortcuts that change the sample.
+- [ ] T34.3 Implement exact monthly `1/3` target-weight reset on the first observed comparison trading date of each calendar month before that date's return.
+- [ ] T34.4 Implement exact intra-month weight drift with no additional rebalance.
+- [ ] T34.5 Implement SPY buy-and-hold simple returns on exactly the supplied comparison index.
+- [ ] T34.6 Return finite Series with the exact supplied index and fixed names; reject simple returns `<=-1`.
+- [ ] T34.7 Add hand-computable tests spanning at least two months and verifying reset, drift, no intra-month reset, SPY equality and index failures.
+
+### Acceptance criteria
+
+- [ ] AC34.1 (`T34.1`) invalid/non-subset/duplicate/unsorted/empty comparison indexes and malformed data fail clearly.
+- [ ] AC34.2 (`T34.2`) converted asset returns equal `exp(log_return)-1` hand calculations.
+- [ ] AC34.3 (`T34.3`) first comparison day and first observed day of every new month use exactly `1/3` starting weights.
+- [ ] AC34.4 (`T34.4`) intra-month benchmark returns/weights match hand-calculated drift and are not daily rebalanced.
+- [ ] AC34.5 (`T34.5`) SPY benchmark equals SPY simple returns exactly on every comparison date.
+- [ ] AC34.6 (`T34.6`) both output Series have exact names/index and finite valid returns.
+- [ ] AC34.7 (`T34.7`) all benchmark tests pass offline.
+
+---
+
+## PR-35 — Implement required performance metrics
+
+**Agent lane:** A
+
+**Dependencies:** none; develop against the fixed Step 5 metric contract
+
+**Files owned:**
+
+```text
+src/vix_regime_allocation/performance.py
+tests/test_performance.py
+```
+
+### Public interfaces
+
+```python
+TRADING_DAYS = 252
+
+
+def cumulative_wealth(returns: pandas.Series) -> pandas.Series: ...
+def cumulative_return(returns: pandas.Series) -> float: ...
+def annualized_return(returns: pandas.Series) -> float: ...
+def annualized_volatility(returns: pandas.Series) -> float: ...
+def sharpe_ratio(returns: pandas.Series) -> float: ...
+def max_drawdown(returns: pandas.Series) -> float: ...
+def performance_metrics(returns: pandas.Series) -> dict[str, float | int]: ...
+```
+
+### Tasks
+
+- [ ] T35.1 Validate non-empty finite simple returns with unique sorted index, at least two observations for sample-volatility/Sharpe metrics, and every return `>-1`.
+- [ ] T35.2 Implement cumulative wealth and cumulative return exactly from compounded simple returns.
+- [ ] T35.3 Implement annualized return with `252/N` exponent exactly.
+- [ ] T35.4 Implement annualized sample volatility with `ddof=1` and `sqrt(252)`.
+- [ ] T35.5 Implement zero-risk-free annualized Sharpe using arithmetic mean daily simple return divided by sample daily standard deviation times `sqrt(252)`; reject zero volatility.
+- [ ] T35.6 Implement max drawdown as the minimum wealth/running-peak minus one, returning a value in `[-1,0]`.
+- [ ] T35.7 Return exact metric dictionary keys: `cumulative_return, annualized_return, annualized_volatility, sharpe_ratio, max_drawdown, observations`.
+- [ ] T35.8 Add exact hand-calculated tests for all metrics and invalid/zero-volatility cases.
+
+### Acceptance criteria
+
+- [ ] AC35.1 (`T35.1`) every invalid-input condition fails clearly before metric calculation.
+- [ ] AC35.2 (`T35.2`) wealth and cumulative return equal manual compound products.
+- [ ] AC35.3 (`T35.3`) annualized return equals the exact fixed exponent formula.
+- [ ] AC35.4 (`T35.4`) annualized volatility equals `ddof=1` manual standard deviation times `sqrt(252)`.
+- [ ] AC35.5 (`T35.5`) Sharpe equals the zero-risk-free fixed formula and zero-volatility series fails clearly.
+- [ ] AC35.6 (`T35.6`) max drawdown equals a manually identified peak-to-trough drawdown and is non-positive.
+- [ ] AC35.7 (`T35.7`) metric keys/types and observation count match exactly.
+- [ ] AC35.8 (`T35.8`) all performance tests pass offline.
+
+---
+
+## PR-36 — Assemble common strategy/benchmark returns and summary table
+
+**Agent lane:** B
+
+**Dependencies:** PR-33, PR-34, PR-35
+
+**Files owned:**
+
+```text
+src/vix_regime_allocation/backtest_summary.py
+tests/test_backtest_summary.py
+```
+
+### Public interfaces
+
+```python
+def build_comparison_returns(
+    rotation: pandas.DataFrame,
+    equal_weight: pandas.Series,
+    spy: pandas.Series,
+) -> pandas.DataFrame: ...
+
+
+def build_performance_summary(comparison_returns: pandas.DataFrame) -> pandas.DataFrame: ...
+```
+
+### Tasks
+
+- [ ] T36.1 Validate exact index equality among rotation/benchmark inputs; do not silently inner-join different date ranges.
+- [ ] T36.2 Build exact daily comparison columns `regime_rotation, equal_weight_monthly, spy_buy_hold` with finite values.
+- [ ] T36.3 Build one performance-summary row per fixed portfolio by delegating to `performance_metrics()`.
+- [ ] T36.4 Return exact summary schema/order and fixed portfolio row order.
+- [ ] T36.5 Add mocked/hand-computable tests proving no metric reimplementation and exact alignment behavior.
+
+### Acceptance criteria
+
+- [ ] AC36.1 (`T36.1`) any date mismatch fails instead of being silently dropped/aligned.
+- [ ] AC36.2 (`T36.2`) comparison frame columns/order/index are exact and values equal supplied source returns.
+- [ ] AC36.3 (`T36.3`) summary delegates each portfolio to the shared performance helper exactly once.
+- [ ] AC36.4 (`T36.4`) summary columns/portfolio rows/order match the canonical contract exactly.
+- [ ] AC36.5 (`T36.5`) all summary tests pass offline.
+
+---
+
+## PR-37 — Implement cumulative-performance figure
+
+**Agent lane:** A
+
+**Dependencies:** PR-35; develop against fixed comparison-return schema
+
+**Files owned:**
+
+```text
+src/vix_regime_allocation/backtest_plot.py
+tests/test_backtest_plot.py
+```
+
+### Public interface
+
+```python
+def plot_cumulative_performance(
+    comparison_returns: pandas.DataFrame,
+    output_path: pathlib.Path,
+) -> None: ...
+```
+
+### Tasks
+
+- [ ] T37.1 Validate exact three comparison columns, sorted unique Date index, finite values and returns `>-1`.
+- [ ] T37.2 Compute each cumulative-return curve as `(1+r).cumprod()-1` using shared wealth semantics.
+- [ ] T37.3 Plot exactly three curves with fixed readable portfolio labels.
+- [ ] T37.4 Add title, date x-axis, cumulative-return y-axis, visible ticks/scales, zero reference line and complete legend.
+- [ ] T37.5 Create parent directories, save non-empty PNG and close the figure.
+- [ ] T37.6 Add deterministic plotting tests verifying curve data, labels and figure closure.
+
+### Acceptance criteria
+
+- [ ] AC37.1 (`T37.1`) malformed comparison input fails clearly.
+- [ ] AC37.2 (`T37.2`) plotted y-values equal hand-compounded cumulative returns.
+- [ ] AC37.3 (`T37.3`) exactly the three required portfolios appear and no extra performance series is plotted.
+- [ ] AC37.4 (`T37.4`) title/axes/scales/zero line/legend are all present.
+- [ ] AC37.5 (`T37.5`) canonical requested file can be created non-empty and no created figure remains open.
+- [ ] AC37.6 (`T37.6`) all plot tests pass offline.
+
+---
+
+## PR-38 — Implement 2-versus-3-state sensitivity evaluator
+
+**Agent lane:** B
+
+**Dependencies:** PR-18, PR-20, PR-33, PR-35
+
+**Files owned:**
+
+```text
+src/vix_regime_allocation/sensitivity.py
+tests/test_sensitivity.py
+```
+
+### Public interface
+
+```python
+def evaluate_state_count_sensitivity(
+    data: pandas.DataFrame,
+    family: str,
+    states_by_count: dict[int, pandas.Series],
+) -> pandas.DataFrame: ...
+```
+
+### Tasks
+
+- [ ] T38.1 Accept family exactly `markov` or `hmm` and require exactly state-count keys `{2,3}` with index-aligned finite state Series.
+- [ ] T38.2 For each K, delegate to existing Step 3 state-statistics and Step 4 allocation functions; do not implement alternative mapping math.
+- [ ] T38.3 Backtest each K variant using `build_rotation_returns()` with the fixed one-day lag.
+- [ ] T38.4 Restrict both K variants to their exact common return-date intersection before metrics.
+- [ ] T38.5 Compute all five required metrics for each K using shared performance helpers.
+- [ ] T38.6 Return exact sensitivity schema, family values and ascending 2/3 row order.
+- [ ] T38.7 Add deterministic tests for delegation, common-index handling, same-family enforcement and metric outputs.
+
+### Acceptance criteria
+
+- [ ] AC38.1 (`T38.1`) invalid family/key/index/state inputs fail clearly.
+- [ ] AC38.2 (`T38.2`) mocks prove shared Step 3/4 functions are used exactly once per state count and no alternative winner rule exists.
+- [ ] AC38.3 (`T38.3`) both candidate strategies use the shared lagged backtest engine.
+- [ ] AC38.4 (`T38.4`) both rows are computed over the same sensitivity date intersection/observation count.
+- [ ] AC38.5 (`T38.5`) metric values equal shared performance helper outputs.
+- [ ] AC38.6 (`T38.6`) schema/family/state-count ordering are exact.
+- [ ] AC38.7 (`T38.7`) all sensitivity tests pass offline.
+
+---
+
+## PR-39 — Add deterministic Step 5 integration test
+
+**Agent lane:** A or B after source PRs merge
+
+**Dependencies:** PR-33 through PR-38
+
+**Files owned:**
+
+```text
+tests/integration/test_step5_pipeline.py
+```
+
+### Tasks
+
+- [ ] T39.1 Build a small deterministic synthetic Step 1-style dataset spanning at least two calendar months.
+- [ ] T39.2 Supply a deterministic state sequence and valid Step 4 mapping and run the complete rotation-return path.
+- [ ] T39.3 Build both required benchmarks on the rotation index.
+- [ ] T39.4 Build common comparison returns and the full performance summary.
+- [ ] T39.5 Run 2/3-state sensitivity with deterministic synthetic state sequences.
+- [ ] T39.6 Assert no network/model fit occurs and all canonical schemas/row counts/alignment contracts hold end-to-end.
+
+### Acceptance criteria
+
+- [ ] AC39.1 (`T39.1`) fixture spans multiple months and has hand-checkable finite ETF returns.
+- [ ] AC39.2 (`T39.2`) integration output proves one-day lag and valid strategy returns.
+- [ ] AC39.3 (`T39.3`) both benchmark Series cover exactly the strategy dates and monthly reset behavior is exercised.
+- [ ] AC39.4 (`T39.4`) three-portfolio comparison/summary schemas and observation counts are exact.
+- [ ] AC39.5 (`T39.5`) sensitivity produces exactly K=2/3 rows on a common date set.
+- [ ] AC39.6 (`T39.6`) integration test passes offline with no Yahoo/model-estimation dependency.
+
+---
+
+# Step 5 canonical notebook PRs
+
+Only one of PR-40, PR-41 and PR-42 may be open at a time. Each starts from the current executed notebook on `main`, executes the full notebook from top to bottom, and commits stored outputs.
+
+## PR-40 — Add notebook Step 5 backtest and benchmark construction
+
+**Agent lane:** A
+
+**Dependencies:** PR-39 and PR-25 canonical Steps 1–4 notebook
+
+**Files owned:**
+
+```text
+notebooks/gwp2_vix_regime_allocation.ipynb
+reports/tables/step5_daily_returns.csv
+```
+
+### Tasks
+
+- [ ] T40.1 Add `Step 5: Backtesting and Evaluation` and state the assignment objective in original wording without copying the prompt verbatim.
+- [ ] T40.2 Load/validate the unchanged Step 1 data, reconstruct exactly the Step 3 preferred state sequence, and load the canonical Step 4 allocation mapping.
+- [ ] T40.3 Show the log-to-simple-return equation with every symbol defined and any Greek symbol listed/pronounced first.
+- [ ] T40.4 Show the one-trading-day execution-lag equation and explicitly demonstrate with at least the first five rows that decision state/date precede execution return date.
+- [ ] T40.5 Build the regime-rotation return Series by calling the shared backtest function; do not duplicate backtest math in cells.
+- [ ] T40.6 Build equal-weight monthly and SPY benchmarks on exactly the rotation return index and explain the monthly reset/drift convention.
+- [ ] T40.7 Display first rows, date range, row count and missing/non-finite checks of the exact three-column comparison returns.
+- [ ] T40.8 Save `step5_daily_returns.csv` with Date plus the exact three canonical comparison-return columns.
+- [ ] T40.9 State explicitly that returns are gross of transaction costs/slippage/taxes and that the allocation mapping remains in-sample despite the one-day execution lag.
+- [ ] T40.10 Execute the full notebook successfully and store outputs.
+
+### Acceptance criteria
+
+- [ ] AC40.1 (`T40.1`) notebook visibly identifies Step 5 and its evaluation purpose without copied question text.
+- [ ] AC40.2 (`T40.2`) selected family/state count/state source match Step 3 JSON and allocation matches canonical Step 4 CSV.
+- [ ] AC40.3 (`T40.3`) simple-return equation is correct and notation/pronunciation rules are satisfied.
+- [ ] AC40.4 (`T40.4`) equation and displayed rows visibly prove state `t-1` drives execution at `t`.
+- [ ] AC40.5 (`T40.5`) notebook calls shared rotation function and contains no second implementation.
+- [ ] AC40.6 (`T40.6`) benchmark definitions exactly match the fixed monthly/SPY contracts and share the rotation index.
+- [ ] AC40.7 (`T40.7`) displayed comparison data quality/date/row outputs are internally consistent and contain no missing/non-finite values.
+- [ ] AC40.8 (`T40.8`) canonical daily CSV exists/non-empty and exactly matches displayed comparison returns.
+- [ ] AC40.9 (`T40.9`) gross-cost and in-sample-mapping limitations are explicit.
+- [ ] AC40.10 (`T40.10`) full notebook contains no failed/unexecuted cell and stores outputs.
+
+---
+
+## PR-41 — Add notebook Step 5 metrics, benchmark comparison and performance plot
+
+**Agent lane:** B
+
+**Dependencies:** PR-40, PR-36, PR-37
+
+**Files owned:**
+
+```text
+notebooks/gwp2_vix_regime_allocation.ipynb
+reports/tables/step5_performance_summary.csv
+reports/figures/step5_cumulative_performance.png
+```
+
+### Tasks
+
+- [ ] T41.1 Show equations for cumulative return, annualized return, annualized volatility, Sharpe and max drawdown; define all symbols and list/pronounce Greek letters first.
+- [ ] T41.2 State `252` trading days, `ddof=1`, simple-return compounding, zero risk-free Sharpe and negative max-drawdown sign convention.
+- [ ] T41.3 Build/display the exact three-row performance summary using shared functions and save canonical CSV.
+- [ ] T41.4 Display/save the exact three-curve cumulative-performance figure.
+- [ ] T41.5 Interpret the rotation strategy versus **both** required benchmarks using displayed cumulative return, annualized return, volatility, Sharpe and max drawdown; do not cherry-pick only favorable metrics.
+- [ ] T41.6 State whether the displayed evidence supports or does not support an improvement in risk-adjusted performance, qualified as in-sample evidence.
+- [ ] T41.7 Execute the full notebook successfully and store outputs.
+
+### Acceptance criteria
+
+- [ ] AC41.1 (`T41.1`) all five assignment metric equations are visible/correct and notation rules are satisfied.
+- [ ] AC41.2 (`T41.2`) every fixed metric assumption/convention is explicit and consistent with source code.
+- [ ] AC41.3 (`T41.3`) summary has exact schema/row order and values equal shared performance functions.
+- [ ] AC41.4 (`T41.4`) figure exists/non-empty, is visible, and contains exactly the three compounded cumulative-return curves with required labels/scales.
+- [ ] AC41.5 (`T41.5`) interpretation references all five metrics for the rotation and both benchmarks and matches displayed values.
+- [ ] AC41.6 (`T41.6`) risk-adjusted conclusion is evidence-based and explicitly limited to the in-sample experiment.
+- [ ] AC41.7 (`T41.7`) full notebook contains no failed/unexecuted cell and stores outputs.
+
+---
+
+## PR-42 — Add notebook Step 5 sensitivity, final interpretation and manifest
+
+**Agent lane:** A
+
+**Dependencies:** PR-41, PR-38
+
+**Files owned:**
+
+```text
+notebooks/gwp2_vix_regime_allocation.ipynb
+reports/tables/step5_state_count_sensitivity.csv
+reports/generated/step5_manifest.json
+```
+
+### Tasks
+
+- [ ] T42.1 Reconstruct 2- and 3-state candidate state sequences **within the Step 3 preferred family only** and verify both use the unchanged Step 1 input.
+- [ ] T42.2 Run/display the canonical state-count sensitivity table by calling the shared sensitivity function and save CSV.
+- [ ] T42.3 Briefly discuss whether performance conclusions are stable or materially change between 2 and 3 states, referencing the displayed five metrics.
+- [ ] T42.4 State explicitly that state-count sensitivity is not an out-of-sample test and does not test alternative sample windows.
+- [ ] T42.5 Add final Step 5 practical takeaway covering benchmark comparison, risk-adjusted evidence, limitations, and what would be required for a stronger out-of-sample validation.
+- [ ] T42.6 Add/refresh authoritative MLA citations/bibliography only where external factual/financial claims are made; do not invent sources.
+- [ ] T42.7 Create exact `step5_manifest.json`, including Step 1 SHA-256 matching Step 3 metadata and all Step 5 canonical artifacts exactly once.
+- [ ] T42.8 Execute the entire notebook from Step 1 through Step 5 successfully, store outputs, and verify canonical Step 1–5 artifacts remain consistent.
+
+### Acceptance criteria
+
+- [ ] AC42.1 (`T42.1`) sensitivity uses exactly K=2/3 states from the preferred family and the same Step 1 data hash.
+- [ ] AC42.2 (`T42.2`) displayed sensitivity table and canonical CSV have exact schema/values and same observation count for both K variants.
+- [ ] AC42.3 (`T42.3`) discussion references all five metrics and accurately reflects displayed K=2/3 differences.
+- [ ] AC42.4 (`T42.4`) robustness scope and non-out-of-sample limitation are explicit.
+- [ ] AC42.5 (`T42.5`) final takeaway is supported by displayed results and identifies a concrete stronger-validation direction without claiming it was performed.
+- [ ] AC42.6 (`T42.6`) citations/bibliography remain MLA-formatted and contain no fabricated source.
+- [ ] AC42.7 (`T42.7`) manifest keys/paths/hash are exact and every canonical Step 5 table/figure appears exactly once.
+- [ ] AC42.8 (`T42.8`) complete notebook has no failed/unexecuted cells and stored outputs/artifacts are mutually consistent.
+
+---
+
+# Step 5 sidecar and final submission PRs
+
+## PR-43 — Extend and regenerate README technical sidecar through Step 5
+
+**Agent lane:** B
+
+**Dependencies:** PR-42, PR-27
+
+**Files owned:**
+
+```text
+scripts/sync_readme_analysis.py
+tests/test_sync_readme_analysis.py
+README.md
+scripts/check_readme_sidecar.py
+```
+
+### Tasks
+
+- [ ] T43.1 Extend the synchronizer to read Step 5 manifest/daily returns/summary/sensitivity/figure without executing notebook or fitting a model.
+- [ ] T43.2 Extend the generated README analysis block with Step 5 return/metric equations and the same fixed metric assumptions.
+- [ ] T43.3 Render the exact Step 5 performance-summary and sensitivity values and link/embed the canonical cumulative-performance figure.
+- [ ] T43.4 Add concise Step 5 benchmark/sensitivity interpretation matching the notebook; do not independently infer different conclusions.
+- [ ] T43.5 Update README status/artifact map from “Step 5 planned” to actual Step 5 completion only after canonical artifacts exist.
+- [ ] T43.6 Extend README checker to require Step 5 manifest/table/figure paths and a single synchronized analysis block.
+- [ ] T43.7 Add/extend deterministic fixture tests for Step 5 parity, missing/stale artifact failure and idempotent README regeneration.
+
+### Acceptance criteria
+
+- [ ] AC43.1 (`T43.1`) synchronizer has no model/backtest recalculation path and fails when required Step 5 artifact is missing.
+- [ ] AC43.2 (`T43.2`) README equations/assumptions exactly match notebook fixed definitions.
+- [ ] AC43.3 (`T43.3`) README Step 5 numbers/figure path equal canonical files exactly.
+- [ ] AC43.4 (`T43.4`) README conclusion/sensitivity wording is consistent with notebook evidence.
+- [ ] AC43.5 (`T43.5`) README implementation/status/artifact sections are factually current through Step 5.
+- [ ] AC43.6 (`T43.6`) checker fails if any required Step 5 path/block disappears and passes current valid repository.
+- [ ] AC43.7 (`T43.7`) all README synchronization tests pass offline and repeated generation is byte-identical.
+
+---
+
+## PR-44 — Extend non-technical PDF builder validation for Step 5
+
+**Agent lane:** A
+
+**Dependencies:** PR-42, PR-28
+
+**Files owned:**
+
+```text
+scripts/build_pdf_report.py
+tests/test_build_pdf_report.py
+```
+
+### Tasks
+
+- [ ] T44.1 Extend canonical-artifact readers to accept Step 5 summary/sensitivity/performance figure without model/backtest recomputation.
+- [ ] T44.2 Require a non-technical Step 5 section containing benchmark comparison, risk-adjusted conclusion, sensitivity and limitations.
+- [ ] T44.3 Validate that report Step 5 decision numbers equal canonical summary/sensitivity artifacts.
+- [ ] T44.4 Preserve existing prohibitions on code, model/algorithm/library prose, template instruction page and missing team names.
+- [ ] T44.5 Add fixture-based offline tests for Step 5 content parity and stale/missing Step 5 report data.
+
+### Acceptance criteria
+
+- [ ] AC44.1 (`T44.1`) builder reads Step 5 canonical files only and contains no estimation/backtest engine path.
+- [ ] AC44.2 (`T44.2`) incomplete Step 5 non-technical report body fails validation.
+- [ ] AC44.3 (`T44.3`) stale/mismatched performance or sensitivity values fail validation.
+- [ ] AC44.4 (`T44.4`) all previous non-technical/template/code/team-name safeguards remain enforced.
+- [ ] AC44.5 (`T44.5`) all extended report-builder tests pass offline.
+
+---
+
+## PR-45 — Regenerate and visually verify final Step 1–5 PDF report
+
+**Agent lane:** A
+
+**Dependencies:** PR-44, PR-29
+
+**Files owned:**
+
+```text
+reports/Stochastic_Modeling_GWP2_Report.md
+reports/Stochastic_Modeling_GWP2_Report.pdf
+reports/rendered/Stochastic_Modeling_GWP2_Report/*.png
+```
+
+### Tasks
+
+- [ ] T45.1 Extend original non-technical prose through Step 5 without copying assignment questions and without model/algorithm/library names.
+- [ ] T45.2 Add the same decision-relevant Step 5 performance summary, state-count sensitivity result and cumulative-performance figure as the notebook.
+- [ ] T45.3 Explain whether the rotation improves risk-adjusted performance relative to **both** benchmarks based on the canonical metrics.
+- [ ] T45.4 Include practical recommendation, sensitivity conclusion, gross-cost assumption, in-sample limitation and factors affecting the three portfolios.
+- [ ] T45.5 Preserve populated template page 1 as cover, exclude template page 2, preserve team names and leave unknown fields blank.
+- [ ] T45.6 Refresh MLA citations/bibliography only from sources actually used.
+- [ ] T45.7 Generate final PDF, render every page to PNG and visually inspect every page for clipping, overlap, broken glyphs, blank figures, split tables/charts and instruction-page leakage.
+
+### Acceptance criteria
+
+- [ ] AC45.1 (`T45.1`) report prose is original/non-technical and covers all Step 5 answer components without prohibited technical naming.
+- [ ] AC45.2 (`T45.2`) report Step 5 numbers/figure are identical to canonical notebook artifacts.
+- [ ] AC45.3 (`T45.3`) benchmark/risk-adjusted conclusion addresses both required benchmarks and matches displayed metrics.
+- [ ] AC45.4 (`T45.4`) recommendation/sensitivity/cost/in-sample/portfolio-factor discussion is complete and evidence-based.
+- [ ] AC45.5 (`T45.5`) final PDF first page is the populated cover, instruction page is absent, names remain present and unknown fields remain blank.
+- [ ] AC45.6 (`T45.6`) MLA citations/bibliography contain no fabricated source.
+- [ ] AC45.7 (`T45.7`) every rendered page is manually verified free of the listed defects and final PDF is non-empty.
+
+---
+
+## PR-46 — Regenerate executed-notebook HTML duplicate through Step 5
+
+**Agent lane:** B
+
+**Dependencies:** PR-42, PR-30
+
+**Files owned:**
+
+```text
+reports/gwp2_vix_regime_allocation.html
+```
+
+### Tasks
+
+- [ ] T46.1 Run the existing deterministic exporter against the committed fully executed Step 1–5 notebook without re-execution/refitting.
+- [ ] T46.2 Verify the HTML includes Step 5 heading, stored daily-return preview, performance summary, cumulative figure, sensitivity table and final interpretation.
+- [ ] T46.3 Ensure the HTML corresponds to the exact current notebook revision/hash expected by the exporter/parity checker.
+
+### Acceptance criteria
+
+- [ ] AC46.1 (`T46.1`) generated HTML is non-empty and produced without notebook execution/model fitting.
+- [ ] AC46.2 (`T46.2`) all required Step 5 stored outputs/heading are visibly present in the HTML.
+- [ ] AC46.3 (`T46.3`) HTML notebook hash/revision marker matches the current committed Step 1–5 notebook.
+
+---
+
+## PR-47 — Extend final sidecar parity CI through Step 5
+
+**Agent lane:** B after all sidecars
+
+**Dependencies:** PR-43, PR-45, PR-46, PR-31, PR-32
+
+**Files owned:**
+
+```text
+scripts/check_analysis_sidecars.py
+tests/test_analysis_sidecars.py
+.github/workflows/quality-gates.yml
+README.md
+scripts/check_readme_sidecar.py
+```
+
+### Tasks
+
+- [ ] T47.1 Extend parity checker to validate Step 5 manifest schema/hash and existence/non-emptiness of every canonical Step 5 artifact.
+- [ ] T47.2 Validate notebook and README exact technical parity for Step 5 performance summary, sensitivity result and cumulative figure.
+- [ ] T47.3 Validate HTML is the current executed notebook duplicate through Step 5.
+- [ ] T47.4 Validate standalone PDF has non-technical decision parity for both benchmark comparisons, Step 5 summary metrics, sensitivity result and recommendation without requiring prohibited technical prose.
+- [ ] T47.5 Add deterministic stale/missing/mismatched failure tests for each Step 5 table, figure, manifest, notebook, README, HTML and PDF path.
+- [ ] T47.6 Keep CI job name exactly `analysis-sidecars`, make it run the extended checker, and preserve aggregate `quality-gate` dependency.
+- [ ] T47.7 Preserve independent parallel lint/type/unit/integration jobs and the combined `>=90%` coverage threshold.
+- [ ] T47.8 Update README final status/parity documentation to Steps 1–5 and extend README checker accordingly.
+
+### Acceptance criteria
+
+- [ ] AC47.1 (`T47.1`) any Step 5 manifest/hash/missing/empty canonical artifact defect causes parity failure.
+- [ ] AC47.2 (`T47.2`) any Step 5 notebook/README technical-result or figure mismatch causes failure.
+- [ ] AC47.3 (`T47.3`) stale HTML from a pre-Step-5 notebook revision causes failure.
+- [ ] AC47.4 (`T47.4`) stale/missing Step 5 decision content in PDF causes failure while non-technical wording remains allowed/required.
+- [ ] AC47.5 (`T47.5`) all enumerated Step 5 stale/missing/mismatch failure tests pass offline.
+- [ ] AC47.6 (`T47.6`) existing `analysis-sidecars` and aggregate `quality-gate` wiring remain correct and Step 5-aware.
+- [ ] AC47.7 (`T47.7`) lint/type/unit/integration remain parallel-start capable and both configuration/workflow still enforce 90% coverage.
+- [ ] AC47.8 (`T47.8`) README accurately states final Steps 1–5 completion/parity and checker passes current repository.
+
+---
+
+## Step 5 parallel execution schedule
+
+Exactly two weak agents are assumed.
+
+```text
+Wave 18 - parallel source foundation
+Agent A: PR-33 rotation backtest
+Agent B: PR-34 benchmarks
+
+Wave 19 - parallel
+Agent A: PR-35 performance metrics
+Agent B: wait for PR-33/34
+
+Wave 20 - parallel
+Agent A: PR-37 cumulative plot
+Agent B: PR-36 comparison/summary
+
+Wave 21
+Agent B: PR-38 state-count sensitivity
+Agent A: wait
+
+Wave 22
+Either agent: PR-39 Step 5 integration test
+
+Notebook waves - strictly serialized
+Wave 23 Agent A: PR-40 notebook backtest/benchmarks
+Wave 24 Agent B: PR-41 notebook metrics/plot
+Wave 25 Agent A: PR-42 notebook sensitivity/final manifest
+
+Sidecar waves
+Wave 26 - parallel
+Agent B: PR-43 README synchronization
+Agent A: PR-44 PDF builder extension
+
+Wave 27 - parallel
+Agent A: PR-45 final PDF generation/visual QA
+Agent B: PR-46 notebook HTML regeneration
+
+Wave 28
+Agent B: PR-47 final Steps 1-5 parity CI
+```
+
+No agent may start a PR before all listed dependencies are merged to `main`. Notebook PRs may never run in parallel with one another.
+
+---
+
+## Step 5 Definition of Done
+
+Step 5 is complete only when all conditions are true:
+
+- [ ] PR-33 through PR-47 are merged to `main`.
+- [ ] Rotation returns apply the Step 4 allocation with exactly one observed-trading-day lag.
+- [ ] Equal-weight benchmark is exactly 1/3 TLT, 1/3 GLD, 1/3 SPY with monthly reset and intra-month drift.
+- [ ] SPY benchmark is adjusted-close buy-and-hold return.
+- [ ] All three portfolios use identical Step 5 comparison dates.
+- [ ] Cumulative Return, Annualized Return, Annualized Volatility, zero-risk-free Sharpe Ratio and Max Drawdown are computed from simple returns using the fixed formulas.
+- [ ] Performance summary contains exactly regime rotation, monthly equal weight and SPY buy-and-hold.
+- [ ] Cumulative-performance plot contains exactly the three required portfolios with professional labels/axes/scales.
+- [ ] Sensitivity compares 2 versus 3 states within the preferred model family and uses the same sample/common sensitivity dates.
+- [ ] Notebook Step 5 contains code calls, stored output, equations, assumptions, benchmark comparison, sensitivity, interpretation, limitations and practical takeaway.
+- [ ] One-day lag is not misrepresented as a fully out-of-sample design; in-sample mapping limitation is explicit.
+- [ ] No transaction cost/slippage/tax result is fabricated; gross-return assumption is explicit.
+- [ ] `step5_daily_returns.csv`, `step5_performance_summary.csv`, `step5_state_count_sensitivity.csv`, cumulative figure and Step 5 manifest exist and are mutually consistent.
+- [ ] README has exact technical parity with Step 5 notebook outputs.
+- [ ] Notebook HTML is regenerated from the final executed Step 1–5 notebook.
+- [ ] Standalone PDF is regenerated through Step 5, remains non-technical/no-code, uses template page 1 only and has decision-result parity.
+- [ ] Step 5 sidecar parity is enforced by the existing `analysis-sidecars` CI job.
+- [ ] Combined source coverage remains `>=90%`.
+- [ ] Lint, type, unit and integration jobs remain parallel.
+- [ ] Final aggregate `quality-gate` passes.
+'''
+
+          text = text.rstrip() + appendix + "\n"
+          backlog.write_text(text, encoding="utf-8")
+
+          readme = Path("README.md")
+          r = readme.read_text(encoding="utf-8")
+          if "| Step 5 implementation |" not in r:
+              anchor = "| Steps 2-4 implementation | Planned as atomic PR-06 through PR-32; not started |"
+              if anchor in r:
+                  r = r.replace(anchor, anchor + "\n| Step 5 implementation | Planned as atomic PR-33 through PR-47; not started |", 1)
+          step5 = '''### Step 5 - Backtesting and Evaluation\n\nStep 5 is now fully specified in the single canonical [`BACKLOG.md`](BACKLOG.md) as PR-33 through PR-47. It will backtest the Step 4 mapping with a one-trading-day execution lag; compute Cumulative Return, Annualized Return, Volatility, Sharpe Ratio and Max Drawdown; compare against monthly rebalanced equal-weight TLT/GLD/SPY and buy-and-hold SPY; plot cumulative performance; and evaluate 2-versus-3-state sensitivity within the preferred model family.\n\nThe fixed implementation uses simple returns for wealth/metrics, 252 trading days for annualization, a zero risk-free rate for Sharpe because the assignment provides no risk-free series, and identical comparison dates for all three portfolios. The backtest is explicitly treated as gross of transaction costs/slippage/taxes and not as fully out-of-sample because the Step 4 mapping is estimated in-sample.\n\nPlanned Step 5 canonical outputs include:\n\n```text\nreports/tables/step5_daily_returns.csv\nreports/tables/step5_performance_summary.csv\nreports/tables/step5_state_count_sensitivity.csv\nreports/figures/step5_cumulative_performance.png\nreports/generated/step5_manifest.json\n```\n\n'''
+          marker = "## Canonical technical notebook"
+          if "### Step 5 - Backtesting and Evaluation" not in r and marker in r:
+              r = r.replace(marker, step5 + marker, 1)
+          r = r.replace(
+              "PR-32 in the Steps 2-4 backlog adds `analysis-sidecars` after notebook/README/HTML/PDF synchronization exists.",
+              "PR-32 adds the initial Steps 1-4 `analysis-sidecars` gate; PR-47 extends the same gate to final Steps 1-5 parity after Step 5 sidecars exist.",
+          )
+          readme.write_text(r, encoding="utf-8")
+
+          checker = Path("scripts/check_readme_sidecar.py")
+          c = checker.read_text(encoding="utf-8")
+          insertion = '''        "Step 5 - Backtesting and Evaluation",\n        "PR-33",\n        "PR-47",\n        "reports/tables/step5_performance_summary.csv",\n        "reports/figures/step5_cumulative_performance.png",\n        "reports/generated/step5_manifest.json",\n'''
+          needle = '        "single canonical backlog",\n'
+          if '"reports/generated/step5_manifest.json"' not in c and needle in c:
+              c = c.replace(needle, needle + insertion, 1)
+          checker.write_text(c, encoding="utf-8")
+          PY
+
+          git rm .github/workflows/one-shot-append-step5-backlog.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add BACKLOG.md README.md scripts/check_readme_sidecar.py
+          git commit -m "Extend canonical backlog through Step 5"
+          git push origin HEAD:main
