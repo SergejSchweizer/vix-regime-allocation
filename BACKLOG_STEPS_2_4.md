@@ -1,123 +1,138 @@
-# BACKLOG — Steps 2, 3 and 4: Regime Modeling, Model Selection and Allocation
+# BACKLOG — Steps 2, 3 and 4: Regime Modeling, Selection and Allocation
 
-This backlog covers **complete implementation of Steps 2, 3 and 4** of MScFE 622 Stochastic Modeling GWP2.
+This backlog covers the **complete implementation of Steps 2, 3 and 4** of MScFE 622 Stochastic Modeling GWP2.
 
-It is designed for **two weak coding agents working in parallel**. Every PR is intentionally small, has fixed file ownership, fixed public interfaces, explicit dependencies, deterministic behavior, and one-to-one task-to-acceptance traceability.
+It has been audited against the assignment brief, submission instructions and grading rubric. It is designed for **two weak coding agents**. Source-code work is parallelized wherever file ownership permits; edits to the single canonical notebook are intentionally serialized to avoid merge conflicts and stale notebook outputs.
 
-The assignment requires regime modeling from VIX, model comparison/selection, state-conditional ETF behavior, and a rule-based state-to-allocation mapping. Both the **discrete Markov-chain approach** and the **Gaussian Hidden Markov Model approach** must be implemented and presented even if only one is selected as the preferred model for Step 4.
+Both assignment model families are implemented:
+
+- discrete Markov chains with 2 and 3 quantile-defined states;
+- Gaussian Hidden Markov Models with 2 and 3 states estimated by EM.
+
+The assignment requires Step 2 regime estimation, Step 3 log-likelihood/AIC/BIC comparison and state interpretation, and Step 4 a rule-based state-to-allocation mapping. The notebook is the technical report; README is its technical sidecar; the standalone PDF uses the official template cover and is the non-technical sidecar required by the rubric.
 
 ---
 
-# Non-negotiable project rules
+# 1. Non-negotiable backlog rules
 
-## 1. Notebook is the canonical analysis artifact
+1. Every task has a task ID `Txx.n`.
+2. Every task has exactly one matching acceptance criterion `ACxx.n`.
+3. No task is considered complete because a nearby acceptance criterion "implicitly" covers it; task/acceptance numbering is one-to-one.
+4. Agents modify only files listed under **Files owned** for their PR.
+5. Agents do not implement work assigned to a later PR.
+6. Agents do not rename specified functions, columns, paths, JSON keys, state-ordering rules or model-selection rules.
+7. Agents stop if a listed dependency is not merged to `main`.
+8. All source changes have deterministic offline tests.
+9. Every PR passes the repository `quality-gate`; combined source coverage remains >=90%.
+10. Lint, type-check, unit-test and integration-test CI jobs remain independent and parallel.
+11. Numerical outputs are never fabricated. Narrative claims are written only after the corresponding numerical outputs exist.
+12. Assignment questions are not copied verbatim into notebook, README or report; use step/question numbers and original section titles instead.
+13. In-text citations and bibliography use MLA format and refer only to sources actually consulted.
+14. Before any equation containing a Greek letter, list every Greek letter used and its pronunciation.
 
-The canonical analysis file is:
+---
+
+# 2. Artifact roles and rubric contract
+
+## 2.1 Canonical technical notebook
+
+Canonical path:
 
 ```text
 notebooks/gwp2_vix_regime_allocation.ipynb
 ```
 
-Core numerical logic must live in small tested functions under `src/vix_regime_allocation/`, but the **actual assignment analysis is executed, displayed, interpreted and explained in the notebook**.
+The notebook is the primary technical analysis artifact. It must contain, for each step:
 
-The notebook must:
+1. the step/question number;
+2. executable code calling tested project functions;
+3. stored function output;
+4. equations and parameter definitions;
+5. tables/plots;
+6. precise interpretation and recommended action supported by the results.
 
-- call the tested project functions rather than duplicate their implementation;
-- display function outputs directly;
-- show all required equations before or next to the outputs they define;
-- show all required tables and plots;
-- provide precise, scientific-paper-style explanations of assumptions, methodology, interpretation and limitations;
-- contain stored outputs from a successful execution;
-- never fabricate a numerical result;
-- use the frozen Step 1 dataset as the analysis input once Step 1 is complete;
-- clearly distinguish observed quantities, estimated quantities and model-selection decisions.
+The narrative may name the statistical models and estimation methods, but must explain theory rather than narrate Python library/function names. Library names may appear naturally in executable code or environment metadata, not as a substitute for methodological explanation.
 
-## 2. Greek-letter rule for the notebook and report
+## 2.2 README technical sidecar
 
-Before an equation containing Greek letters, explicitly list every Greek letter used and its pronunciation.
+`README.md` must show the **same canonical technical results** as the executed notebook after PR-27:
 
-Examples:
+- same equations;
+- same candidate comparison values;
+- same selected family/state count;
+- same state statistics;
+- same allocation mapping;
+- same canonical figures.
 
-```text
-Δ — delta
-π — pi
-μ — mu
-σ — sigma
-```
+README synchronization must read canonical files. It must never refit a model or recompute a second independent analysis.
 
-Do not use a Greek symbol in an equation without first identifying it in the surrounding explanatory text.
+## 2.3 Standalone PDF non-technical sidecar
 
-## 3. README is a synchronized sidecar
-
-`README.md` is not a separate analysis. It must show the **same final equations, selected tables, figures, model decision and allocation mapping** as the executed notebook.
-
-The README must not independently recompute results. It must consume or reference canonical outputs produced by the notebook workflow.
-
-## 4. PDF report is a synchronized sidecar
-
-The final report path is fixed:
+Fixed path:
 
 ```text
 reports/Stochastic_Modeling_GWP2_Report.pdf
 ```
 
-The report must:
+The assignment rubric distinguishes the non-technical report from the technical notebook. Therefore the PDF must preserve **decision parity**, not duplicate every technical parameter table.
 
-- use page 1 of `reports/Template_Stochastic_Modeling_Group_Work_Project.pdf` as the cover;
-- never include page 2 of the template because page 2 contains submission instructions that the template explicitly says to remove;
-- contain no source code;
-- show the same equations, numerical tables, figures, selected model, state interpretation and Step 4 allocation mapping as the notebook;
-- use the same canonical generated artifacts as the README;
-- preserve the three already-filled team names on the cover;
-- leave unknown group number, country and email fields unchanged until values are supplied;
-- be rendered and visually verified before merge.
+The PDF must contain the same decision-relevant numerical results and figures as the notebook, including:
 
-## 5. Same-output contract
+- data/sample summary needed to understand the analysis;
+- final regime interpretation;
+- state-conditional ETF mean/std results;
+- selected state count/result without unnecessary algorithm detail;
+- state-to-allocation mapping;
+- practical recommendation and limitations.
 
-The notebook, README and PDF report must derive their displayed numerical outputs from the same files under:
+To comply with the rubric, its prose must avoid model/library/algorithm names and unnecessary estimation detail. It contains no source code. The technical transition matrices, EM mechanics and parameter-count derivations remain in the notebook/README.
 
-```text
-reports/tables/
-reports/figures/
-reports/generated/
-```
-
-No sidecar may independently rerun model estimation to obtain a second copy of a result.
-
-## 6. Quality contract
-
-Every PR must pass the repository `quality-gate`.
-
-Required combined coverage remains:
+The report must use page 1 of:
 
 ```text
->= 90%
+reports/Template_Stochastic_Modeling_Group_Work_Project.pdf
 ```
 
-All new source modules must have focused deterministic unit tests. Tests must not depend on Yahoo Finance or network access.
+as its cover and must never include template page 2, which contains instructions the template explicitly says to delete.
 
-## 7. Weak-agent rule
+Unknown group number, country and email fields remain blank until supplied.
 
-An agent must:
+## 2.4 Executed-notebook duplicate
 
-- modify only files owned by its PR;
-- not rename a specified function, column, path or state-ordering rule;
-- not implement work assigned to a later PR;
-- not add optional features not listed in the PR;
-- not change the model-selection rule;
-- not change the state-label ordering;
-- not write narrative results before numerical outputs exist;
-- stop if a required dependency PR is not merged.
+The submission instructions require an executable notebook **and a duplicate version in PDF or HTML format**. For deterministic generation without a LaTeX dependency, this backlog creates:
+
+```text
+reports/gwp2_vix_regime_allocation.html
+```
+
+It must be exported from the committed executed notebook and contain its stored outputs. Step 5 must regenerate this HTML after the notebook is extended later.
+
+## 2.5 Parity levels
+
+```text
+Notebook <-> README: exact technical-result parity
+Notebook <-> HTML: exact executed-notebook duplicate
+Notebook <-> standalone PDF: decision-result parity, non-technical wording
+```
+
+This distinction is intentional and required to satisfy both the user's sidecar requirement and the assignment rubric.
 
 ---
 
-# Fixed modeling contracts
+# 3. Fixed modeling contracts
 
-## Step 1 input
+## 3.1 Step 1 input
 
-All Step 2-4 modeling uses the Step 1 clean dataset with these columns:
+All Step 2-4 work uses:
 
 ```text
+data/processed/step1_data.csv
+```
+
+with exactly:
+
+```text
+Date
 TLT
 GLD
 SPY
@@ -128,74 +143,91 @@ SPY_log_return
 VIX_change
 ```
 
-The state-model observation is exactly:
+The modeling observation is exclusively:
 
 ```text
 X_t = VIX_change_t
 ```
 
-Do not switch from `VIX_change` to the VIX level or percentage VIX return.
+Do not switch to VIX level or percentage VIX return.
 
-## Candidate state counts
+Before modeling, notebook code must verify unique sorted dates, zero missing/non-finite values and the exact required columns.
 
-Implement exactly:
+## 3.2 Candidate state counts
 
-```text
-2 states
-3 states
+Implement exactly 2 and 3 states for each family.
+
+```python
+SUPPORTED_STATE_COUNTS = (2, 3)
 ```
 
-for both model families.
+## 3.3 Deterministic state ordering
 
-## Deterministic state ordering
-
-All returned state identifiers must be ordered by increasing mean `VIX_change`:
+Returned state identifiers are ordered by increasing state mean `VIX_change`.
 
 ```text
 State 0 = lowest mean VIX_change
 State 1 = next higher mean VIX_change
-State 2 = highest mean VIX_change  # only for 3-state models
+State 2 = highest mean VIX_change  # 3-state only
 ```
 
-This rule applies to both Markov-chain and HMM outputs.
+If two HMM component means are numerically equal, break the ordering tie by the component's original pre-relabel index. This makes relabeling deterministic.
 
-Do not hard-code semantic labels such as `calm`, `normal`, or `stress` before the actual state statistics are displayed. Interpret the states from their estimated VIX-change behavior.
+Do not hard-code semantic labels such as `calm` or `stress`. Any label/interpretation must be justified from displayed state statistics.
 
-## Discrete Markov-chain state construction
+## 3.4 Discrete Markov quantile states
 
-Use empirical quantile bins.
+Quantile cut points are empirical quantiles of finite `VIX_change` values using NumPy's linear quantile method.
 
-For `n_states = 2`:
+For 2 states:
 
 ```text
-quantile edges = [0, 0.5, 1.0]
+cut points = q(0.50)
 ```
 
-For `n_states = 3`:
+For 3 states:
 
 ```text
-quantile edges = [0, 1/3, 2/3, 1.0]
+cut points = q(1/3), q(2/3)
 ```
 
-Use integer states `0..K-1` in ascending `VIX_change` order.
+State assignment uses:
 
-If quantile edges are not unique because the input lacks enough distinct values, raise a clear `ValueError`; do not silently merge bins.
+```python
+numpy.searchsorted(cut_points, values, side="right")
+```
 
-## Markov transition estimate
+Therefore a value exactly equal to a cut point belongs to the higher-numbered state.
 
-For state transition counts `N_ij`, estimate:
+The threshold table has exactly:
+
+```text
+state
+lower_bound
+upper_bound
+```
+
+with conceptual intervals `[lower_bound, upper_bound)`, except the final interval includes all values above its lower bound. Use `-inf` and `+inf` as outer bounds.
+
+Required cut points must be strictly increasing. Duplicate cut points raise `ValueError`; never silently merge bins.
+
+## 3.5 Markov transition estimate
+
+For observed transition counts `N_ij`:
 
 ```text
 P_ij = N_ij / sum_j N_ij
 ```
 
-No Laplace smoothing or pseudocounts are allowed.
+No smoothing/pseudocounts.
 
-If a state has zero outgoing transitions, raise a clear `ValueError`.
+Only consecutive rows of the already aligned Step 1 sequence are counted.
 
-## Markov stationary distribution
+If an expected state has zero outgoing transitions, raise `ValueError`.
 
-Return a stationary row vector satisfying:
+## 3.6 Markov stationary distribution
+
+Return a unique stationary row vector satisfying:
 
 ```text
 pi @ P = pi
@@ -203,144 +235,277 @@ sum(pi) = 1
 pi_i >= 0
 ```
 
-Numerical tolerance for validation:
+Validation tolerance:
 
 ```text
 1e-10
 ```
 
-## Gaussian HMM contract
+If the transition matrix does not admit a numerically unique stationary distribution at that tolerance, raise `ValueError`; do not return an arbitrary eigenvector from a non-unique stationary subspace.
 
-Use `hmmlearn.hmm.GaussianHMM` with:
+## 3.7 Markov conditional likelihood
+
+Use the conditional likelihood of the observed discretized state transitions:
+
+```text
+log L_MC = sum_t log(P[state_t, state_(t+1)])
+```
+
+The first state probability is not modeled in this conditional likelihood.
+
+For AIC/BIC:
+
+```text
+n_MC = number of transitions = len(states) - 1
+k_MC = K * (K - 1)
+```
+
+The notebook must state this definition explicitly.
+
+## 3.8 Gaussian HMM fitting
+
+Use `hmmlearn.hmm.GaussianHMM` with exactly:
 
 ```text
 covariance_type = "diag"
 n_iter = 500
 tol = 1e-6
 min_covar = 1e-6
-random restart seeds = [42, 43, 44, 45, 46]
+restart seeds = [42, 43, 44, 45, 46]
 ```
 
-For each state count, fit all five restarts and select the converged fit with the highest training log-likelihood.
+Fit all five seeds for each state count.
 
-If none of the five fits converges, raise a clear `RuntimeError`.
+Select the converged fit with greatest training log-likelihood. If several converged fits have log-likelihoods equal within `1e-12`, select the smallest restart seed.
 
-After fitting, relabel all state-dependent parameters, Viterbi states and posterior-probability columns using the fixed increasing-mean state ordering.
+If no restart converges, raise `RuntimeError`.
 
-## Information criteria
+Relabel means, variances, start probabilities, transition rows/columns, Viterbi states and posterior columns using the fixed state ordering.
 
-For every candidate model, compute:
+Posterior columns are exactly `state_0`, `state_1`, and `state_2` when applicable. Every posterior row must be finite and sum to 1 within `1e-8`.
+
+## 3.9 HMM likelihood and parameter count
+
+For univariate diagonal Gaussian HMM with K states:
+
+```text
+k_HMM = (K - 1)            # initial probabilities
+      + K*(K - 1)          # transition probabilities
+      + K                  # means
+      + K                  # variances
+      = K^2 + 2*K - 1
+```
+
+Use:
+
+```text
+n_HMM = len(VIX_change)
+```
+
+## 3.10 Information criteria
 
 ```text
 AIC = 2*k - 2*log_likelihood
 BIC = k*ln(n) - 2*log_likelihood
 ```
 
-where:
+The four candidates appear together in one comparison table, but the notebook must state that their likelihoods are defined on different observation spaces:
 
-```text
-k = number of free model parameters
-n = number of observations used by that model likelihood
-```
+- Markov: discretized state-transition sequence;
+- HMM: continuous `VIX_change` observations.
 
-Markov-chain free-parameter count:
+Therefore AIC/BIC select **2 vs 3 states within each family**. The notebook/README must not claim that a raw cross-family difference in AIC/BIC establishes statistical superiority.
 
-```text
-k_MC = K * (K - 1)
-```
+## 3.11 Preferred-method rule
 
-Gaussian HMM free-parameter count for a univariate K-state model:
+The project needs one deterministic preferred state sequence for Steps 3-4.
 
-```text
-k_HMM = (K - 1) + K*(K - 1) + K + K
-      = K^2 + 2*K - 1
-```
+1. Inside the Markov family, select the lowest-BIC candidate.
+2. Inside the HMM family, select the lowest-BIC converged candidate.
+3. The selected HMM is valid only when all conditions hold:
+   - convergence flag is true;
+   - log-likelihood is finite;
+   - means and variances are finite;
+   - every variance is >0;
+   - start probabilities are finite, nonnegative and sum to 1 within `1e-8`;
+   - transition probabilities are finite/nonnegative and every row sums to 1 within `1e-8`;
+   - posterior probabilities are finite and every row sums to 1 within `1e-8`;
+   - every state has at least 5% Viterbi occupancy.
+4. If the selected HMM is valid, use it as the preferred method because it models the continuous observation directly and provides posterior regime probabilities.
+5. Otherwise use the selected Markov candidate.
 
-The notebook must state that the Markov-chain likelihood is a likelihood of the **discretized state sequence**, whereas the HMM likelihood is a likelihood of the **continuous VIX-change observations**. Therefore AIC/BIC values are used to choose the state count **within each model family**, not as a mathematically valid direct cross-family ranking.
+This is an explicit project decision rule, **not** a claim that HMM wins a cross-family information-criterion test. The notebook must say so.
 
-## Preferred-model selection rule
+Preferred HMM state sequence = Viterbi sequence. Preferred Markov state sequence = quantile state sequence.
 
-Selection is deterministic and must not be changed by an agent.
+## 3.12 Step 3 state-conditional ETF statistics
 
-1. Select the 2-state or 3-state Markov chain with the lowest Markov-family BIC.
-2. Select the 2-state or 3-state HMM with the lowest HMM-family BIC among converged models.
-3. Prefer the selected HMM if all of the following are true:
-   - the selected HMM converged;
-   - every posterior probability is finite;
-   - every posterior-probability row sums to 1 within `1e-8`;
-   - every state has at least 5% Viterbi occupancy;
-   - every fitted state variance is finite and strictly positive;
-   - the transition matrix is finite, nonnegative and every row sums to 1 within `1e-8`.
-4. Otherwise use the selected Markov chain.
-
-The scientific explanation must explicitly state that the method-level decision is based on model validity, probabilistic regime information and interpretability, rather than comparing non-comparable AIC/BIC values across families.
-
-## Step 3 state-conditional ETF statistics
-
-For the preferred state sequence, compute for every state and every ETF:
+For the preferred state sequence and fixed asset order `TLT, GLD, SPY`, compute:
 
 ```text
 mean daily log return
-standard deviation of daily log return
+sample standard deviation of daily log return (ddof=1)
 number of observations
 ```
 
-Assets are fixed and ordered:
+Do not annualize these Step 3 statistics.
+
+## 3.13 Step 3 bar chart
+
+Use a grouped bar chart:
+
+- x-axis: state;
+- grouped bars: TLT, GLD, SPY;
+- bar height: mean daily log return;
+- error bars: one state-conditional sample standard deviation;
+- horizontal zero line;
+- title, axis labels, scales/ticks and legend.
+
+This directly satisfies the assignment requirement to visualize state-conditional mean/std results with a bar chart.
+
+## 3.14 Step 4 allocation
+
+For each preferred state, choose the ETF with greatest state-conditional mean daily log return.
 
 ```text
-TLT
-GLD
-SPY
+winner weight = 1.0
+other weights = 0.0
 ```
 
-Do not annualize these Step 3 state-conditional statistics unless a later assignment step explicitly requires it.
-
-## Step 4 allocation rule
-
-For each preferred-model state, choose the ETF with the highest historical mean daily log return in that state.
-
-Use exactly 100% allocation to the selected ETF:
-
-```text
-selected asset weight = 1.0
-other two asset weights = 0.0
-```
-
-If two means are exactly equal, use the fixed deterministic tie-break order:
+Exact tie-break order:
 
 ```text
 TLT -> GLD -> SPY
 ```
 
-Do not implement the optional 60/40 variant in Steps 2-4.
+Do not implement the optional 60/40 variant.
 
-Do not implement the Step 5 backtest in this backlog. The later Step 5 backtest must apply a 1-day execution lag to the state-driven position.
+Do not implement Step 5 backtesting here. The notebook must note that Step 5 applies a one-trading-day lag to the state-driven position. It must also explicitly identify the in-sample allocation-map/lookahead limitation: state-conditional means are estimated using the analysis sample, so a truly out-of-sample trading evaluation would require a rolling/expanding estimation design.
 
 ---
 
-# Canonical output contract
+# 4. Canonical Step 2-4 output schemas
 
-The executed notebook must create or refresh these files exactly.
+## 4.1 Markov threshold CSVs
 
-## Tables
+```text
+state,lower_bound,upper_bound
+```
+
+Paths:
 
 ```text
 reports/tables/step2_markov_2_thresholds.csv
-reports/tables/step2_markov_2_transition.csv
-reports/tables/step2_markov_2_stationary.csv
 reports/tables/step2_markov_3_thresholds.csv
+```
+
+## 4.2 Transition CSVs
+
+All transition tables serialize as:
+
+```text
+from_state,state_0,state_1[,state_2]
+```
+
+Paths:
+
+```text
+reports/tables/step2_markov_2_transition.csv
 reports/tables/step2_markov_3_transition.csv
-reports/tables/step2_markov_3_stationary.csv
-reports/tables/step2_hmm_2_parameters.csv
 reports/tables/step2_hmm_2_transition.csv
-reports/tables/step2_hmm_3_parameters.csv
 reports/tables/step2_hmm_3_transition.csv
+```
+
+## 4.3 Markov stationary CSVs
+
+```text
+state,stationary_probability
+```
+
+Paths:
+
+```text
+reports/tables/step2_markov_2_stationary.csv
+reports/tables/step2_markov_3_stationary.csv
+```
+
+## 4.4 HMM parameter CSVs
+
+```text
+state
+mean_vix_change
+variance_vix_change
+start_probability
+viterbi_observations
+viterbi_occupancy
+posterior_mean_probability
+```
+
+Paths:
+
+```text
+reports/tables/step2_hmm_2_parameters.csv
+reports/tables/step2_hmm_3_parameters.csv
+```
+
+## 4.5 Model comparison CSV
+
+```text
+family
+n_states
+log_likelihood
+n_parameters
+n_observations
+aic
+bic
+converged
+criterion_scope
+```
+
+Path:
+
+```text
 reports/tables/step3_model_comparison.csv
+```
+
+`family` values are exactly `markov` and `hmm`.
+
+`criterion_scope` values are exactly `within_markov_family` and `within_hmm_family`.
+
+## 4.6 State-asset statistics CSV
+
+```text
+state
+asset
+mean_log_return
+std_log_return
+observations
+```
+
+Path:
+
+```text
 reports/tables/step3_state_asset_statistics.csv
+```
+
+## 4.7 Allocation CSV
+
+```text
+state
+selected_asset
+selection_mean_log_return
+TLT_weight
+GLD_weight
+SPY_weight
+```
+
+Path:
+
+```text
 reports/tables/step4_allocation_mapping.csv
 ```
 
-## Figures
+## 4.8 Figures
 
 ```text
 reports/figures/step2_markov_vix_states.png
@@ -349,59 +514,122 @@ reports/figures/step2_hmm_smoothed_probabilities.png
 reports/figures/step3_state_asset_statistics.png
 ```
 
-## Generated metadata
+## 4.9 Selected-model JSON
+
+Path:
 
 ```text
-reports/generated/steps_2_4_manifest.json
 reports/generated/step3_selected_model.json
 ```
 
-The manifest must contain the exact relative paths of every canonical Step 2-4 table and figure.
+Exact keys:
+
+```text
+family
+n_states
+state_source
+selection_reason
+markov_best_n_states
+hmm_best_n_states
+input_data_sha256
+```
+
+`state_source` is exactly `quantile_states` or `viterbi_states`.
+
+## 4.10 Manifest JSON
+
+Path:
+
+```text
+reports/generated/steps_2_4_manifest.json
+```
+
+Exact top-level keys:
+
+```text
+schema_version
+input_data_path
+input_data_sha256
+notebook_path
+selected_model_path
+tables
+figures
+```
+
+Requirements:
+
+- `schema_version` = `1`;
+- paths are repository-relative POSIX strings;
+- `tables` lists every canonical Step 2-4 CSV exactly once;
+- `figures` lists every canonical Step 2-4 PNG exactly once;
+- no timestamp is stored, so regenerating identical analysis does not create a meaningless manifest diff.
 
 ---
 
-# PR backlog
+# 5. Atomic PR backlog
 
-## PR-06 — Add Step 2-4 modeling dependencies and fixed configuration
+## PR-06 — Add Steps 2-4 dependencies
 
 **Agent lane:** setup / sequential
 
-**Dependencies:** Step 1 repository scaffold only
+**Dependencies:** repository scaffold
 
 **Files owned:**
 
 ```text
 pyproject.toml
-src/vix_regime_allocation/model_config.py
-tests/test_model_config.py
-README.md
 ```
 
 ### Tasks
 
-- [ ] T06.1 Add runtime dependencies `scipy>=1.13` and `hmmlearn>=0.3.3`.
-- [ ] T06.2 Add development/runtime support needed later for notebook and sidecars: `nbformat>=5.10`, `nbclient>=0.10`, `reportlab>=4.2`, and `pypdf>=5.0`.
-- [ ] T06.3 Create `model_config.py` with `SUPPORTED_STATE_COUNTS = (2, 3)`.
-- [ ] T06.4 Add the exact HMM seeds `[42, 43, 44, 45, 46]` and fixed HMM numerical settings from this backlog.
-- [ ] T06.5 Add tests asserting the fixed constants exactly.
-- [ ] T06.6 Update README dependency/status text without claiming Step 2-4 results exist.
+- [ ] T06.1 Add `scipy>=1.13` and `hmmlearn>=0.3.3` as runtime dependencies.
+- [ ] T06.2 Add `nbformat>=5.10`, `nbclient>=0.10` and `nbconvert>=7.16` for notebook validation/export.
+- [ ] T06.3 Add `reportlab>=4.2`, `pypdf>=5.0` and `pymupdf>=1.24` for deterministic report generation/text inspection/render validation.
 
 ### Acceptance criteria
 
-- [ ] AC06.1 (`T06.1`) `pyproject.toml` contains `scipy>=1.13` and `hmmlearn>=0.3.3`.
-- [ ] AC06.2 (`T06.2`) the four notebook/report support dependencies are declared.
-- [ ] AC06.3 (`T06.3`) `SUPPORTED_STATE_COUNTS` is exactly `(2, 3)`.
-- [ ] AC06.4 (`T06.4`) HMM seeds and numerical settings exactly match this backlog.
-- [ ] AC06.5 (`T06.5`) tests fail if any fixed setting changes.
-- [ ] AC06.6 (`T06.6`) README remains factually current and does not present uncomputed results.
+- [ ] AC06.1 (`T06.1`) both modeling dependencies appear exactly once in project dependencies.
+- [ ] AC06.2 (`T06.2`) all three notebook dependencies appear exactly once.
+- [ ] AC06.3 (`T06.3`) all three report dependencies appear exactly once and the existing development/quality dependencies remain intact.
 
 ---
 
-## PR-07 — Implement Markov quantile-state discretization
+## PR-07 — Add immutable model configuration
+
+**Agent lane:** setup / sequential after PR-06
+
+**Dependencies:** PR-06
+
+**Files owned:**
+
+```text
+src/vix_regime_allocation/model_config.py
+tests/test_model_config.py
+```
+
+### Tasks
+
+- [ ] T07.1 Define `SUPPORTED_STATE_COUNTS = (2, 3)`.
+- [ ] T07.2 Define restart seeds exactly `(42, 43, 44, 45, 46)`.
+- [ ] T07.3 Define HMM settings exactly: diagonal covariance, 500 iterations, `1e-6` tolerance and `1e-6` minimum covariance.
+- [ ] T07.4 Define numerical tolerances exactly: stationary `1e-10`, probability rows `1e-8`, restart-likelihood tie `1e-12`, minimum Viterbi occupancy `0.05`.
+- [ ] T07.5 Add tests asserting every constant exactly.
+
+### Acceptance criteria
+
+- [ ] AC07.1 (`T07.1`) supported state counts equal `(2, 3)` exactly.
+- [ ] AC07.2 (`T07.2`) restart seeds equal the five fixed seeds exactly and preserve order.
+- [ ] AC07.3 (`T07.3`) every HMM setting equals the fixed contract.
+- [ ] AC07.4 (`T07.4`) all four tolerances/thresholds equal the fixed values.
+- [ ] AC07.5 (`T07.5`) tests fail if any fixed configuration value changes.
+
+---
+
+## PR-08 — Implement Markov quantile discretization
 
 **Agent lane:** A
 
-**Dependencies:** PR-06
+**Dependencies:** PR-07
 
 **Files owned:**
 
@@ -420,43 +648,96 @@ def discretize_vix_change(
     ...
 ```
 
-Returned threshold table columns must be:
+### Tasks
+
+- [ ] T08.1 Validate state count is exactly 2 or 3 and input is a non-empty finite Series with unique index.
+- [ ] T08.2 Calculate exact linear-method empirical quantile cut points.
+- [ ] T08.3 Reject non-strictly-increasing/duplicate required cut points.
+- [ ] T08.4 Assign states with `searchsorted(..., side="right")` and preserve the input index.
+- [ ] T08.5 Return state Series named `state` with integer values `0..K-1`.
+- [ ] T08.6 Return exact threshold schema `state, lower_bound, upper_bound` using infinite outer bounds.
+- [ ] T08.7 Add deterministic tests for 2 states, 3 states, exact-boundary membership, invalid input and duplicate cut points.
+
+### Acceptance criteria
+
+- [ ] AC08.1 (`T08.1`) unsupported counts, empty input, NaN/inf and duplicate index fail clearly.
+- [ ] AC08.2 (`T08.2`) test cut points equal NumPy linear quantiles at 0.5 or 1/3 and 2/3.
+- [ ] AC08.3 (`T08.3`) duplicate cut points raise `ValueError` and are never merged.
+- [ ] AC08.4 (`T08.4`) values exactly on cut points enter the higher state and output index equals input index.
+- [ ] AC08.5 (`T08.5`) state name/dtype/value set match the contract.
+- [ ] AC08.6 (`T08.6`) threshold columns/order/bounds match the contract exactly.
+- [ ] AC08.7 (`T08.7`) all focused tests pass offline.
+
+---
+
+## PR-09 — Implement deterministic Gaussian HMM fitter
+
+**Agent lane:** B
+
+**Dependencies:** PR-07
+
+**Files owned:**
 
 ```text
-state
-lower_bound
-upper_bound
+src/vix_regime_allocation/hmm_model.py
+tests/test_hmm_model.py
+```
+
+### Public result
+
+```python
+@dataclass(frozen=True)
+class HMMFitResult:
+    n_states: int
+    selected_seed: int
+    log_likelihood: float
+    converged: bool
+    means: numpy.ndarray
+    variances: numpy.ndarray
+    start_probabilities: numpy.ndarray
+    transition_matrix: numpy.ndarray
+    viterbi_states: pandas.Series
+    posterior_probabilities: pandas.DataFrame
+```
+
+### Public interface
+
+```python
+def fit_gaussian_hmm(vix_change: pandas.Series, n_states: int) -> HMMFitResult:
+    ...
 ```
 
 ### Tasks
 
-- [ ] T07.1 Validate `n_states` is exactly 2 or 3.
-- [ ] T07.2 Reject missing/non-finite observations with a clear `ValueError`.
-- [ ] T07.3 Use the exact quantile edges defined in this backlog.
-- [ ] T07.4 Raise `ValueError` if required quantile boundaries are duplicated.
-- [ ] T07.5 Return integer states ordered from lowest to highest `VIX_change`.
-- [ ] T07.6 Return the exact threshold table schema.
-- [ ] T07.7 Preserve the original input index and state-series name `state`.
-- [ ] T07.8 Add deterministic tests for 2-state, 3-state, invalid-state-count and duplicate-boundary cases.
+- [ ] T09.1 Validate state count, non-empty finite observations and unique index.
+- [ ] T09.2 Fit one univariate diagonal Gaussian HMM for each fixed restart seed with the exact fixed settings.
+- [ ] T09.3 Discard non-converged fits and raise `RuntimeError` if none converge.
+- [ ] T09.4 Select maximum-likelihood converged restart; break a `1e-12` likelihood tie by smallest seed.
+- [ ] T09.5 Relabel states by increasing fitted mean, with original component index as deterministic equal-mean tie break.
+- [ ] T09.6 Apply the same relabel permutation to every state-dependent parameter, transition row/column, Viterbi state and posterior column.
+- [ ] T09.7 Return Viterbi states on original index named `state`.
+- [ ] T09.8 Return finite posterior probabilities on original index with exact `state_i` columns and normalized rows.
+- [ ] T09.9 Add deterministic mocked/synthetic tests for settings, restart selection, tie selection, relabel consistency, 2/3-state shapes and failure when no restart converges.
 
 ### Acceptance criteria
 
-- [ ] AC07.1 (`T07.1`) unsupported state counts raise `ValueError`.
-- [ ] AC07.2 (`T07.2`) NaN/inf input raises `ValueError`.
-- [ ] AC07.3 (`T07.3`) tests prove the exact 50% and tercile quantile rules are used.
-- [ ] AC07.4 (`T07.4`) duplicated required boundaries are never silently merged.
-- [ ] AC07.5 (`T07.5`) returned states are exactly `0..K-1` in increasing-value order.
-- [ ] AC07.6 (`T07.6`) threshold columns are exactly `state, lower_bound, upper_bound`.
-- [ ] AC07.7 (`T07.7`) index and series name are preserved exactly.
-- [ ] AC07.8 (`T07.8`) all focused tests pass offline.
+- [ ] AC09.1 (`T09.1`) invalid state count/empty/non-finite/duplicate-index inputs fail clearly.
+- [ ] AC09.2 (`T09.2`) tests prove exactly five fixed seeds and all fixed HMM settings are used.
+- [ ] AC09.3 (`T09.3`) non-converged fits cannot be selected and all-non-converged raises `RuntimeError`.
+- [ ] AC09.4 (`T09.4`) selected seed is highest-likelihood converged fit or smallest seed under the fixed equality tolerance.
+- [ ] AC09.5 (`T09.5`) relabeled means are nondecreasing and equal-mean ordering is deterministic.
+- [ ] AC09.6 (`T09.6`) tests prove means/variances/start probabilities/transition axes/Viterbi/posteriors use one consistent permutation.
+- [ ] AC09.7 (`T09.7`) Viterbi index/name/state values match the contract.
+- [ ] AC09.8 (`T09.8`) posterior columns/index are exact and rows are finite/sum to 1 within `1e-8`.
+- [ ] AC09.9 (`T09.9`) all fitter tests pass offline.
 
 ---
 
-## PR-08 — Implement Markov transition matrix and stationary distribution
+## PR-10 — Implement Markov transition and unique stationary distribution
 
 **Agent lane:** A
 
-**Dependencies:** PR-07
+**Dependencies:** PR-08
 
 **Files owned:**
 
@@ -476,113 +757,33 @@ def stationary_distribution(transition: pandas.DataFrame) -> pandas.Series:
     ...
 ```
 
-Matrix index/columns must be integer states `0..K-1`.
-
-Stationary series name must be `stationary_probability`.
-
 ### Tasks
 
-- [ ] T08.1 Count only consecutive observed transitions `state_t -> state_{t+1}`.
-- [ ] T08.2 Normalize every transition row by that row's outgoing transition count.
-- [ ] T08.3 Add no pseudocounts or smoothing.
-- [ ] T08.4 Raise `ValueError` if any expected state has zero outgoing transitions.
-- [ ] T08.5 Solve for a nonnegative normalized stationary distribution.
-- [ ] T08.6 Validate `pi @ P = pi` within `1e-10`.
-- [ ] T08.7 Add exact tests using a hand-constructed state sequence with a known transition matrix and stationary distribution.
+- [ ] T10.1 Validate states/index/state count and count exactly consecutive `state_t -> state_(t+1)` transitions.
+- [ ] T10.2 Row-normalize observed counts with no pseudocounts.
+- [ ] T10.3 Raise `ValueError` when an expected state has no outgoing transitions.
+- [ ] T10.4 Validate transition matrix finiteness, non-negativity and row sums before stationary calculation.
+- [ ] T10.5 Solve and normalize the stationary distribution.
+- [ ] T10.6 Reject a non-unique stationary solution and validate `pi @ P = pi` within `1e-10`.
+- [ ] T10.7 Add hand-computable tests for counts, probabilities, stationary vector, zero-outgoing state and non-unique stationary case.
 
 ### Acceptance criteria
 
-- [ ] AC08.1 (`T08.1`) transition counts match a manually enumerated sequence exactly.
-- [ ] AC08.2 (`T08.2`) every returned row sums to 1.
-- [ ] AC08.3 (`T08.3`) zero observed transitions remain zero.
-- [ ] AC08.4 (`T08.4`) zero-outgoing states raise `ValueError`.
-- [ ] AC08.5 (`T08.5`) stationary probabilities are finite, nonnegative and sum to 1.
-- [ ] AC08.6 (`T08.6`) the stationary equation passes at the fixed tolerance.
-- [ ] AC08.7 (`T08.7`) focused tests pass offline.
+- [ ] AC10.1 (`T10.1`) transition counts match a manually enumerated path exactly.
+- [ ] AC10.2 (`T10.2`) every returned transition row sums to 1 and unobserved cells remain zero.
+- [ ] AC10.3 (`T10.3`) zero-outgoing expected state raises `ValueError`.
+- [ ] AC10.4 (`T10.4`) malformed transition matrices fail before stationary solving.
+- [ ] AC10.5 (`T10.5`) returned stationary probabilities are finite/nonnegative and sum to 1.
+- [ ] AC10.6 (`T10.6`) stationary equation passes at `1e-10` and non-unique stationary subspace raises `ValueError`.
+- [ ] AC10.7 (`T10.7`) all tests pass offline.
 
 ---
 
-## PR-09 — Implement Gaussian HMM fitting with deterministic state ordering
+## PR-11 — Implement information-criterion helpers
 
 **Agent lane:** B
 
-**Dependencies:** PR-06
-
-**Files owned:**
-
-```text
-src/vix_regime_allocation/hmm_model.py
-tests/test_hmm_model.py
-```
-
-### Public result type
-
-Create a frozen dataclass:
-
-```python
-@dataclass(frozen=True)
-class HMMFitResult:
-    n_states: int
-    log_likelihood: float
-    converged: bool
-    means: numpy.ndarray
-    variances: numpy.ndarray
-    start_probabilities: numpy.ndarray
-    transition_matrix: numpy.ndarray
-    viterbi_states: pandas.Series
-    posterior_probabilities: pandas.DataFrame
-```
-
-Posterior columns must be exactly:
-
-```text
-state_0
-state_1
-state_2
-```
-
-as applicable.
-
-### Public interface
-
-```python
-def fit_gaussian_hmm(vix_change: pandas.Series, n_states: int) -> HMMFitResult:
-    ...
-```
-
-### Tasks
-
-- [ ] T09.1 Validate state count and finite input.
-- [ ] T09.2 Fit one univariate diagonal-covariance Gaussian HMM for each fixed restart seed.
-- [ ] T09.3 Use exactly the fixed iteration, tolerance and minimum-covariance values.
-- [ ] T09.4 Discard non-converged restarts.
-- [ ] T09.5 Select the converged restart with maximum log-likelihood.
-- [ ] T09.6 Raise `RuntimeError` if no restart converges.
-- [ ] T09.7 Relabel all state-dependent outputs by increasing fitted mean `VIX_change`.
-- [ ] T09.8 Return Viterbi states on the original index.
-- [ ] T09.9 Return posterior probabilities on the original index with rows summing to 1.
-- [ ] T09.10 Add deterministic synthetic tests covering 2-state and 3-state shapes, state ordering and probability normalization.
-
-### Acceptance criteria
-
-- [ ] AC09.1 (`T09.1`) invalid state counts and non-finite input fail clearly.
-- [ ] AC09.2 (`T09.2`) the implementation uses exactly five fixed restart seeds.
-- [ ] AC09.3 (`T09.3`) HMM numerical settings equal the backlog contract.
-- [ ] AC09.4 (`T09.4`) non-converged restarts cannot be selected.
-- [ ] AC09.5 (`T09.5`) selected likelihood equals the maximum among converged restarts.
-- [ ] AC09.6 (`T09.6`) all-non-converged behavior raises `RuntimeError`.
-- [ ] AC09.7 (`T09.7`) returned means are strictly nondecreasing and every dependent state output is reordered consistently.
-- [ ] AC09.8 (`T09.8`) Viterbi index equals the input index.
-- [ ] AC09.9 (`T09.9`) posterior rows are finite and sum to 1 within `1e-8`.
-- [ ] AC09.10 (`T09.10`) focused tests pass offline.
-
----
-
-## PR-10 — Add common likelihood-information-criteria helpers
-
-**Agent lane:** B
-
-**Dependencies:** PR-06
+**Dependencies:** PR-07
 
 **Files owned:**
 
@@ -594,47 +795,35 @@ tests/test_information_criteria.py
 ### Public interfaces
 
 ```python
-def aic(log_likelihood: float, n_parameters: int) -> float:
-    ...
-
-
-def bic(log_likelihood: float, n_parameters: int, n_observations: int) -> float:
-    ...
-
-
-def markov_parameter_count(n_states: int) -> int:
-    ...
-
-
-def gaussian_hmm_parameter_count(n_states: int) -> int:
-    ...
+def aic(log_likelihood: float, n_parameters: int) -> float: ...
+def bic(log_likelihood: float, n_parameters: int, n_observations: int) -> float: ...
+def markov_parameter_count(n_states: int) -> int: ...
+def gaussian_hmm_parameter_count(n_states: int) -> int: ...
 ```
 
 ### Tasks
 
-- [ ] T10.1 Implement the exact AIC formula.
-- [ ] T10.2 Implement the exact BIC formula.
-- [ ] T10.3 Implement `K*(K-1)` Markov free-parameter count.
-- [ ] T10.4 Implement `K^2 + 2*K - 1` HMM free-parameter count.
-- [ ] T10.5 Reject invalid nonpositive observation counts and unsupported state counts.
-- [ ] T10.6 Add exact numerical unit tests.
+- [ ] T11.1 Implement exact AIC formula and finite/positive-parameter validation.
+- [ ] T11.2 Implement exact BIC formula and finite/positive parameter/observation validation.
+- [ ] T11.3 Implement Markov parameter count `K*(K-1)` for supported K only.
+- [ ] T11.4 Implement HMM parameter count `K^2 + 2*K - 1` for supported K only.
+- [ ] T11.5 Add exact numerical tests for K=2 and K=3 plus invalid inputs.
 
 ### Acceptance criteria
 
-- [ ] AC10.1 (`T10.1`) AIC matches hand-calculated examples exactly within floating tolerance.
-- [ ] AC10.2 (`T10.2`) BIC matches hand-calculated examples exactly within floating tolerance.
-- [ ] AC10.3 (`T10.3`) Markov parameter counts are 2 for K=2 and 6 for K=3.
-- [ ] AC10.4 (`T10.4`) HMM parameter counts are 7 for K=2 and 14 for K=3.
-- [ ] AC10.5 (`T10.5`) invalid counts fail clearly.
-- [ ] AC10.6 (`T10.6`) tests pass offline.
+- [ ] AC11.1 (`T11.1`) AIC equals hand calculations and invalid inputs fail clearly.
+- [ ] AC11.2 (`T11.2`) BIC equals hand calculations and invalid inputs fail clearly.
+- [ ] AC11.3 (`T11.3`) Markov counts are exactly 2 and 6 for K=2/3.
+- [ ] AC11.4 (`T11.4`) HMM counts are exactly 7 and 14 for K=2/3.
+- [ ] AC11.5 (`T11.5`) all criterion tests pass offline.
 
 ---
 
-## PR-11 — Add Markov-chain likelihood and candidate result builder
+## PR-12 — Implement Markov candidate evaluation
 
 **Agent lane:** A
 
-**Dependencies:** PR-08, PR-10
+**Dependencies:** PR-10, PR-11
 
 **Files owned:**
 
@@ -646,18 +835,12 @@ tests/test_markov_evaluation.py
 ### Public interfaces
 
 ```python
-def markov_log_likelihood(states: pandas.Series, transition: pandas.DataFrame) -> float:
-    ...
+def markov_log_likelihood(states: pandas.Series, transition: pandas.DataFrame) -> float: ...
 
-
-def evaluate_markov_candidate(
-    vix_change: pandas.Series,
-    n_states: int,
-) -> dict[str, object]:
-    ...
+def evaluate_markov_candidate(vix_change: pandas.Series, n_states: int) -> dict[str, object]: ...
 ```
 
-Candidate dictionary keys must be exactly:
+Exact candidate keys:
 
 ```text
 family
@@ -667,6 +850,7 @@ n_parameters
 n_observations
 aic
 bic
+converged
 states
 thresholds
 transition
@@ -675,29 +859,29 @@ stationary
 
 ### Tasks
 
-- [ ] T11.1 Compute state-sequence log-likelihood from observed transitions only.
-- [ ] T11.2 Treat any observed transition with estimated probability zero as invalid and raise `ValueError`.
-- [ ] T11.3 Build a complete 2- or 3-state Markov candidate using PR-07/08/10 functions.
-- [ ] T11.4 Use `n_observations = number of observed transitions` for the Markov likelihood criteria.
-- [ ] T11.5 Return exactly the fixed candidate keys.
-- [ ] T11.6 Add tests with a hand-computable state path.
+- [ ] T12.1 Implement the conditional state-transition log-likelihood exactly as fixed in section 3.7.
+- [ ] T12.2 Reject an externally supplied transition matrix that assigns zero/non-finite probability to an observed transition.
+- [ ] T12.3 Build a complete candidate by delegating to PR-08/10/11 functions without duplicating their math.
+- [ ] T12.4 Set `n_observations = len(states)-1`, `family="markov"` and `converged=True`.
+- [ ] T12.5 Return exactly the fixed candidate keys.
+- [ ] T12.6 Add hand-computable likelihood/AIC/BIC tests for both state counts.
 
 ### Acceptance criteria
 
-- [ ] AC11.1 (`T11.1`) log-likelihood equals the manual sum of `log(P_ij)` over the path.
-- [ ] AC11.2 (`T11.2`) impossible observed transitions fail clearly.
-- [ ] AC11.3 (`T11.3`) both 2-state and 3-state candidate builders call the shared components rather than duplicating them.
-- [ ] AC11.4 (`T11.4`) Markov `n_observations` equals `len(states)-1`.
-- [ ] AC11.5 (`T11.5`) returned keys match the contract exactly.
-- [ ] AC11.6 (`T11.6`) tests pass offline.
+- [ ] AC12.1 (`T12.1`) log-likelihood equals a manual sum of observed `log(P_ij)` terms and excludes an initial-state probability term.
+- [ ] AC12.2 (`T12.2`) impossible/non-finite observed transition probabilities fail clearly.
+- [ ] AC12.3 (`T12.3`) candidate construction calls shared discretization/transition/stationary/criterion functions rather than reimplementing them.
+- [ ] AC12.4 (`T12.4`) family/convergence/observation count match the contract exactly.
+- [ ] AC12.5 (`T12.5`) returned key set matches exactly.
+- [ ] AC12.6 (`T12.6`) all evaluation tests pass offline.
 
 ---
 
-## PR-12 — Add HMM candidate evaluation table helpers
+## PR-13 — Implement HMM candidate evaluation
 
 **Agent lane:** B
 
-**Dependencies:** PR-09, PR-10
+**Dependencies:** PR-09, PR-11
 
 **Files owned:**
 
@@ -709,15 +893,15 @@ tests/test_hmm_evaluation.py
 ### Public interface
 
 ```python
-def evaluate_hmm_candidate(vix_change: pandas.Series, n_states: int) -> dict[str, object]:
-    ...
+def evaluate_hmm_candidate(vix_change: pandas.Series, n_states: int) -> dict[str, object]: ...
 ```
 
-Candidate keys must be exactly:
+Exact candidate keys:
 
 ```text
 family
 n_states
+selected_seed
 log_likelihood
 n_parameters
 n_observations
@@ -734,29 +918,27 @@ posterior_probabilities
 
 ### Tasks
 
-- [ ] T12.1 Call `fit_gaussian_hmm()` exactly once per candidate evaluation.
-- [ ] T12.2 Use the fixed HMM free-parameter formula from PR-10.
-- [ ] T12.3 Use `n_observations = len(vix_change)`.
-- [ ] T12.4 Compute AIC and BIC from the fitted log-likelihood.
-- [ ] T12.5 Return exactly the fixed candidate keys.
-- [ ] T12.6 Add mocked tests that verify the evaluation math without relying on stochastic fitting.
+- [ ] T13.1 Call `fit_gaussian_hmm()` exactly once for one candidate evaluation.
+- [ ] T13.2 Use shared HMM parameter count and `n_observations=len(vix_change)`.
+- [ ] T13.3 Compute AIC/BIC with shared helpers from the fitted log-likelihood.
+- [ ] T13.4 Map the `HMMFitResult` into exactly the fixed candidate keys without mutating fitted arrays/dataframes.
+- [ ] T13.5 Add mocked deterministic tests for 2/3-state evaluation math and delegation.
 
 ### Acceptance criteria
 
-- [ ] AC12.1 (`T12.1`) evaluation delegates estimation to PR-09.
-- [ ] AC12.2 (`T12.2`) parameter count is 7 for 2 states and 14 for 3 states.
-- [ ] AC12.3 (`T12.3`) observation count equals the continuous input length.
-- [ ] AC12.4 (`T12.4`) AIC/BIC equal shared helper results.
-- [ ] AC12.5 (`T12.5`) returned keys match exactly.
-- [ ] AC12.6 (`T12.6`) deterministic tests pass offline.
+- [ ] AC13.1 (`T13.1`) mock asserts exactly one fitter call per evaluation.
+- [ ] AC13.2 (`T13.2`) parameter/observation counts are exact for K=2/3.
+- [ ] AC13.3 (`T13.3`) AIC/BIC equal shared-helper results exactly within floating tolerance.
+- [ ] AC13.4 (`T13.4`) returned key set and values map to the fit result without hidden refitting/relabeling.
+- [ ] AC13.5 (`T13.5`) all evaluation tests pass offline.
 
 ---
 
-## PR-13 — Add Step 2 Markov visualization functions
+## PR-14 — Implement Markov VIX-state figure
 
 **Agent lane:** A
 
-**Dependencies:** PR-11
+**Dependencies:** PR-12
 
 **Files owned:**
 
@@ -773,44 +955,43 @@ def plot_markov_vix_states(
     states_2: pandas.Series,
     states_3: pandas.Series,
     output_path: pathlib.Path,
-) -> None:
-    ...
+) -> None: ...
 ```
 
 ### Tasks
 
-- [ ] T13.1 Create one figure containing a 2-state panel and a 3-state panel.
-- [ ] T13.2 Plot the observed VIX level against date in both panels.
-- [ ] T13.3 Color observations by the aligned discrete Markov state.
-- [ ] T13.4 Include titles identifying the state count, axis labels and a state legend.
-- [ ] T13.5 Create missing parent directories, save a non-empty PNG and close the figure.
-- [ ] T13.6 Add synthetic/offline tests.
+- [ ] T14.1 Validate exact index equality between VIX and both supplied state series.
+- [ ] T14.2 Build one two-panel figure: 2-state candidate and 3-state candidate.
+- [ ] T14.3 Plot VIX **level** over time and color every observation by supplied state.
+- [ ] T14.4 Add per-panel state-count titles, date/VIX axes, visible scales/ticks and complete state legends.
+- [ ] T14.5 Create parent directories, save non-empty PNG and close the figure.
+- [ ] T14.6 Add deterministic plotting tests.
 
 ### Acceptance criteria
 
-- [ ] AC13.1 (`T13.1`) the image contains both candidate state counts.
-- [ ] AC13.2 (`T13.2`) the y-data are VIX levels, not VIX changes.
-- [ ] AC13.3 (`T13.3`) all plotted state assignments come from the supplied state series.
-- [ ] AC13.4 (`T13.4`) both panels have clear title/axes/legend.
-- [ ] AC13.5 (`T13.5`) requested path exists and is non-empty after the call, and no figure remains open.
-- [ ] AC13.6 (`T13.6`) tests pass offline.
+- [ ] AC14.1 (`T14.1`) any index mismatch fails clearly.
+- [ ] AC14.2 (`T14.2`) output has exactly two candidate panels.
+- [ ] AC14.3 (`T14.3`) y-data are supplied VIX levels and colors derive only from supplied states.
+- [ ] AC14.4 (`T14.4`) each panel has non-empty title/axes/scales/complete legend.
+- [ ] AC14.5 (`T14.5`) output path exists/non-empty and no created figure remains open.
+- [ ] AC14.6 (`T14.6`) tests pass offline.
 
 ---
 
-## PR-14 — Add Step 2 HMM visualization functions
+## PR-15 — Implement HMM VIX-state figure
 
 **Agent lane:** B
 
-**Dependencies:** PR-12
+**Dependencies:** PR-13
 
 **Files owned:**
 
 ```text
-src/vix_regime_allocation/hmm_plots.py
-tests/test_hmm_plots.py
+src/vix_regime_allocation/hmm_state_plot.py
+tests/test_hmm_state_plot.py
 ```
 
-### Public interfaces
+### Public interface
 
 ```python
 def plot_hmm_vix_states(
@@ -818,45 +999,77 @@ def plot_hmm_vix_states(
     states_2: pandas.Series,
     states_3: pandas.Series,
     output_path: pathlib.Path,
-) -> None:
-    ...
-
-
-def plot_hmm_smoothed_probabilities(
-    probabilities_2: pandas.DataFrame,
-    probabilities_3: pandas.DataFrame,
-    output_path: pathlib.Path,
-) -> None:
-    ...
+) -> None: ...
 ```
 
 ### Tasks
 
-- [ ] T14.1 Create a two-panel 2-state/3-state VIX-level color-coded HMM state figure.
-- [ ] T14.2 Add titles, axes and state legends.
-- [ ] T14.3 Create a two-panel posterior/smoothed-probability figure for both HMM candidates.
-- [ ] T14.4 Show every posterior state probability and label each state.
-- [ ] T14.5 Use probability y-axis bounds `[0, 1]`.
-- [ ] T14.6 Save and close both figures and create missing directories.
-- [ ] T14.7 Add deterministic synthetic tests.
+- [ ] T15.1 Validate exact index equality between VIX and both HMM state series.
+- [ ] T15.2 Build one two-panel figure for 2-state and 3-state HMM candidates.
+- [ ] T15.3 Plot VIX level and color observations only from supplied Viterbi states.
+- [ ] T15.4 Add state-count titles, date/VIX axes, visible scales/ticks and complete legends.
+- [ ] T15.5 Create directories, save non-empty PNG and close the figure.
+- [ ] T15.6 Add deterministic synthetic tests.
 
 ### Acceptance criteria
 
-- [ ] AC14.1 (`T14.1`) both HMM candidate state paths are visible against VIX level.
-- [ ] AC14.2 (`T14.2`) titles/axes/legends are non-empty.
-- [ ] AC14.3 (`T14.3`) posterior probabilities for both candidate state counts are shown.
-- [ ] AC14.4 (`T14.4`) no posterior state column is omitted.
-- [ ] AC14.5 (`T14.5`) probability axes are bounded from 0 to 1.
-- [ ] AC14.6 (`T14.6`) both output images are non-empty and figures are closed.
-- [ ] AC14.7 (`T14.7`) tests pass offline.
+- [ ] AC15.1 (`T15.1`) any index mismatch fails clearly.
+- [ ] AC15.2 (`T15.2`) output has exactly two HMM candidate panels.
+- [ ] AC15.3 (`T15.3`) y-data are VIX levels and state coloring matches supplied Viterbi states.
+- [ ] AC15.4 (`T15.4`) every panel has required titles/axes/scales/legends.
+- [ ] AC15.5 (`T15.5`) non-empty image is created and figure is closed.
+- [ ] AC15.6 (`T15.6`) tests pass offline.
 
 ---
 
-## PR-15 — Implement Step 3 model-comparison and preferred-model selection
+## PR-16 — Implement HMM smoothed-probability figure
+
+**Agent lane:** B after PR-15
+
+**Dependencies:** PR-13
+
+**Files owned:**
+
+```text
+src/vix_regime_allocation/hmm_probability_plot.py
+tests/test_hmm_probability_plot.py
+```
+
+### Public interface
+
+```python
+def plot_hmm_smoothed_probabilities(
+    probabilities_2: pandas.DataFrame,
+    probabilities_3: pandas.DataFrame,
+    output_path: pathlib.Path,
+) -> None: ...
+```
+
+### Tasks
+
+- [ ] T16.1 Validate exact expected posterior column names, finite values and rows summing to 1 within `1e-8`.
+- [ ] T16.2 Build one two-panel figure for 2-state and 3-state posterior probabilities over time.
+- [ ] T16.3 Plot every posterior state column exactly once.
+- [ ] T16.4 Set probability y-limits to `[0,1]` and add titles, date/probability axes, scales/ticks and complete legends.
+- [ ] T16.5 Create directories, save non-empty PNG and close figure.
+- [ ] T16.6 Add deterministic synthetic tests.
+
+### Acceptance criteria
+
+- [ ] AC16.1 (`T16.1`) malformed/non-normalized/non-finite posterior frames fail clearly.
+- [ ] AC16.2 (`T16.2`) output contains exactly the two required state-count panels.
+- [ ] AC16.3 (`T16.3`) no posterior state column is omitted or duplicated.
+- [ ] AC16.4 (`T16.4`) both y-axes are bounded `[0,1]` and all labels/scales/legends are present.
+- [ ] AC16.5 (`T16.5`) non-empty image is created and figure is closed.
+- [ ] AC16.6 (`T16.6`) tests pass offline.
+
+---
+
+## PR-17 — Implement Step 3 model comparison and deterministic selection
 
 **Agent lane:** A
 
-**Dependencies:** PR-11, PR-12
+**Dependencies:** PR-12, PR-13
 
 **Files owned:**
 
@@ -871,45 +1084,23 @@ tests/test_model_selection.py
 def build_model_comparison(
     markov_candidates: list[dict[str, object]],
     hmm_candidates: list[dict[str, object]],
-) -> pandas.DataFrame:
-    ...
+) -> pandas.DataFrame: ...
 
 
 def select_preferred_model(
     comparison: pandas.DataFrame,
     markov_candidates: list[dict[str, object]],
     hmm_candidates: list[dict[str, object]],
-) -> dict[str, object]:
-    ...
+) -> dict[str, object]: ...
 ```
 
-Comparison columns must be exactly:
-
-```text
-family
-n_states
-log_likelihood
-n_parameters
-n_observations
-aic
-bic
-converged
-criterion_scope
-```
-
-`criterion_scope` values must be:
-
-```text
-within_markov_family
-within_hmm_family
-```
-
-Selected-model dictionary keys must be exactly:
+Exact selected-result keys:
 
 ```text
 family
 n_states
 states
+state_source
 selection_reason
 markov_best_n_states
 hmm_best_n_states
@@ -917,31 +1108,31 @@ hmm_best_n_states
 
 ### Tasks
 
-- [ ] T15.1 Build one four-row table for MC2, MC3, HMM2 and HMM3.
-- [ ] T15.2 Mark information-criterion scope explicitly by family.
-- [ ] T15.3 Select the minimum-BIC state count independently inside each family.
-- [ ] T15.4 Apply exactly the HMM validity checks specified in this backlog.
-- [ ] T15.5 Prefer valid HMM; otherwise select best-BIC Markov candidate.
-- [ ] T15.6 Return the exact selected-model keys and a human-readable deterministic reason.
-- [ ] T15.7 Add tests for valid-HMM selection and every HMM-fallback condition.
+- [ ] T17.1 Validate exactly one 2-state and one 3-state candidate exist for each family and build the fixed four-row comparison schema.
+- [ ] T17.2 Assign exact family-specific `criterion_scope` values and do not implement cross-family AIC/BIC ranking.
+- [ ] T17.3 Select minimum-BIC state count independently within Markov and HMM families with deterministic lower-state-count tie break when BIC is equal within `1e-12`.
+- [ ] T17.4 Implement every HMM validity condition from section 3.11.
+- [ ] T17.5 Select valid HMM or fallback Markov exactly according to section 3.11.
+- [ ] T17.6 Return exact selected-result keys, correct `state_source`, exact selected state Series and non-empty deterministic selection reason.
+- [ ] T17.7 Add tests for BIC choice/tie, valid HMM selection and each individual HMM fallback condition.
 
 ### Acceptance criteria
 
-- [ ] AC15.1 (`T15.1`) comparison contains exactly four candidate rows and fixed columns.
-- [ ] AC15.2 (`T15.2`) no code ranks MC AIC/BIC numerically against HMM AIC/BIC.
-- [ ] AC15.3 (`T15.3`) family-specific state-count selection uses minimum BIC exactly.
-- [ ] AC15.4 (`T15.4`) all six HMM validity checks are implemented.
-- [ ] AC15.5 (`T15.5`) preferred family follows the exact rule.
-- [ ] AC15.6 (`T15.6`) selected result has exact keys and non-empty reason.
-- [ ] AC15.7 (`T15.7`) tests cover HMM success and every fallback branch.
+- [ ] AC17.1 (`T17.1`) malformed candidate sets fail; valid input yields exactly four rows and fixed columns.
+- [ ] AC17.2 (`T17.2`) code contains no raw cross-family IC winner calculation and criterion scopes are exact.
+- [ ] AC17.3 (`T17.3`) each family's state count follows minimum BIC and fixed tie rule.
+- [ ] AC17.4 (`T17.4`) tests independently trigger every HMM validity condition.
+- [ ] AC17.5 (`T17.5`) preferred family follows the fixed project rule in all tested branches.
+- [ ] AC17.6 (`T17.6`) returned keys/state source/state sequence/reason match the contract.
+- [ ] AC17.7 (`T17.7`) all selection tests pass offline.
 
 ---
 
-## PR-16 — Implement Step 3 state-conditional ETF statistics and visualization
+## PR-18 — Implement preferred-state ETF statistics
 
-**Agent lane:** B
+**Agent lane:** A or B
 
-**Dependencies:** Step 1 data contract only; may be developed in parallel with PR-15
+**Dependencies:** Step 1 data contract; independent of PR-17 implementation
 
 **Files owned:**
 
@@ -950,62 +1141,82 @@ src/vix_regime_allocation/state_statistics.py
 tests/test_state_statistics.py
 ```
 
-### Public interfaces
+### Public interface
 
 ```python
 def compute_state_asset_statistics(
     data: pandas.DataFrame,
     states: pandas.Series,
-) -> pandas.DataFrame:
-    ...
-
-
-def plot_state_asset_statistics(
-    statistics: pandas.DataFrame,
-    output_path: pathlib.Path,
-) -> None:
-    ...
-```
-
-Statistics columns must be exactly:
-
-```text
-state
-asset
-mean_log_return
-std_log_return
-observations
+) -> pandas.DataFrame: ...
 ```
 
 ### Tasks
 
-- [ ] T16.1 Align states and Step 1 data by index and reject missing alignment.
-- [ ] T16.2 Compute daily mean log return by state for TLT, GLD and SPY.
-- [ ] T16.3 Compute sample standard deviation (`ddof=1`) by state for each ETF.
-- [ ] T16.4 Count observations by state/asset.
-- [ ] T16.5 Return the exact tidy schema sorted by state then fixed asset order.
-- [ ] T16.6 Create one figure with separate mean-return and standard-deviation panels.
-- [ ] T16.7 Add titles, axis labels and legends; save and close the figure.
-- [ ] T16.8 Add hand-computable deterministic tests.
+- [ ] T18.1 Validate required Step 1 return columns, exact index equality with states, no missing/non-finite values and at least two observations per state.
+- [ ] T18.2 Compute mean daily log return for TLT, GLD and SPY by state.
+- [ ] T18.3 Compute sample standard deviation with `ddof=1` for each state/asset.
+- [ ] T18.4 Count observations for each state/asset.
+- [ ] T18.5 Return exact tidy schema sorted by state then fixed asset order `TLT, GLD, SPY`.
+- [ ] T18.6 Add hand-computable deterministic tests including index mismatch and insufficient-state-observation failure.
 
 ### Acceptance criteria
 
-- [ ] AC16.1 (`T16.1`) misaligned/missing state dates fail clearly.
-- [ ] AC16.2 (`T16.2`) all state/asset means equal hand calculations.
-- [ ] AC16.3 (`T16.3`) standard deviations use `ddof=1` and equal hand calculations.
-- [ ] AC16.4 (`T16.4`) observation counts are exact.
-- [ ] AC16.5 (`T16.5`) schema/order match the contract.
-- [ ] AC16.6 (`T16.6`) one figure shows both required statistics.
-- [ ] AC16.7 (`T16.7`) labels are non-empty, file is non-empty and figure is closed.
-- [ ] AC16.8 (`T16.8`) tests pass offline.
+- [ ] AC18.1 (`T18.1`) malformed/misaligned/non-finite/too-small-state input fails clearly.
+- [ ] AC18.2 (`T18.2`) every mean equals hand calculation.
+- [ ] AC18.3 (`T18.3`) every std equals `ddof=1` hand calculation.
+- [ ] AC18.4 (`T18.4`) observation counts are exact and equal across assets within each state for complete Step 1 data.
+- [ ] AC18.5 (`T18.5`) schema and state/asset order match exactly.
+- [ ] AC18.6 (`T18.6`) all statistics tests pass offline.
 
 ---
 
-## PR-17 — Implement Step 4 deterministic state-to-allocation mapping
+## PR-19 — Implement Step 3 grouped bar chart
+
+**Agent lane:** A
+
+**Dependencies:** PR-18
+
+**Files owned:**
+
+```text
+src/vix_regime_allocation/state_statistics_plot.py
+tests/test_state_statistics_plot.py
+```
+
+### Public interface
+
+```python
+def plot_state_asset_statistics(
+    statistics: pandas.DataFrame,
+    output_path: pathlib.Path,
+) -> None: ...
+```
+
+### Tasks
+
+- [ ] T19.1 Validate exact state-statistics schema and one row per state/asset.
+- [ ] T19.2 Plot grouped state bars for TLT/GLD/SPY with mean log return as bar height.
+- [ ] T19.3 Use state-conditional standard deviation as bar error bars and add horizontal zero line.
+- [ ] T19.4 Add title, state x-axis, daily-log-return y-axis, visible scales/ticks and complete asset legend.
+- [ ] T19.5 Create directories, save non-empty PNG and close the figure.
+- [ ] T19.6 Add deterministic plotting tests.
+
+### Acceptance criteria
+
+- [ ] AC19.1 (`T19.1`) malformed/duplicate/incomplete statistics fail clearly.
+- [ ] AC19.2 (`T19.2`) each state contains exactly three bars whose heights equal canonical means.
+- [ ] AC19.3 (`T19.3`) error bars equal canonical standard deviations and zero line is present.
+- [ ] AC19.4 (`T19.4`) title/axes/scales/legend are complete.
+- [ ] AC19.5 (`T19.5`) non-empty image is created and figure is closed.
+- [ ] AC19.6 (`T19.6`) tests pass offline.
+
+---
+
+## PR-20 — Implement Step 4 state-to-allocation mapping
 
 **Agent lane:** B
 
-**Dependencies:** PR-16
+**Dependencies:** PR-18
 
 **Files owned:**
 
@@ -1017,163 +1228,248 @@ tests/test_allocation.py
 ### Public interface
 
 ```python
-def build_state_allocation(statistics: pandas.DataFrame) -> pandas.DataFrame:
-    ...
-```
-
-Output columns must be exactly:
-
-```text
-state
-selected_asset
-selection_mean_log_return
-TLT_weight
-GLD_weight
-SPY_weight
+def build_state_allocation(statistics: pandas.DataFrame) -> pandas.DataFrame: ...
 ```
 
 ### Tasks
 
-- [ ] T17.1 Validate that every state contains exactly one statistics row for TLT, GLD and SPY.
-- [ ] T17.2 Select the asset with maximum `mean_log_return` in each state.
-- [ ] T17.3 Apply the fixed TLT -> GLD -> SPY exact-tie rule.
-- [ ] T17.4 Set selected-asset weight to 1.0 and all others to 0.0.
-- [ ] T17.5 Return exact schema sorted by state.
-- [ ] T17.6 Add tests for each winning asset and exact ties.
+- [ ] T20.1 Validate every state has exactly one row for each fixed asset and finite mean returns.
+- [ ] T20.2 Select the asset with maximum mean daily log return in every state.
+- [ ] T20.3 Apply exact tie rule `TLT -> GLD -> SPY`.
+- [ ] T20.4 Set selected weight to `1.0` and other weights to `0.0`.
+- [ ] T20.5 Return exact allocation schema sorted by state.
+- [ ] T20.6 Add deterministic tests for each possible winner, two-way ties and three-way tie.
 
 ### Acceptance criteria
 
-- [ ] AC17.1 (`T17.1`) incomplete/duplicate state-asset inputs fail clearly.
-- [ ] AC17.2 (`T17.2`) winner equals the largest state-conditional mean.
-- [ ] AC17.3 (`T17.3`) exact ties follow TLT -> GLD -> SPY deterministically.
-- [ ] AC17.4 (`T17.4`) every weight row sums exactly to 1 and contains only 0/1 weights.
-- [ ] AC17.5 (`T17.5`) columns and ordering match exactly.
-- [ ] AC17.6 (`T17.6`) tests pass offline.
+- [ ] AC20.1 (`T20.1`) incomplete/duplicate/non-finite state-asset inputs fail clearly.
+- [ ] AC20.2 (`T20.2`) selected asset equals maximum mean for every non-tied test state.
+- [ ] AC20.3 (`T20.3`) every exact tie follows the fixed priority order.
+- [ ] AC20.4 (`T20.4`) each row contains only 0/1 weights and sums exactly to 1.
+- [ ] AC20.5 (`T20.5`) columns/order/state sorting match the canonical schema.
+- [ ] AC20.6 (`T20.6`) all allocation tests pass offline.
 
 ---
 
-## PR-18 — Build and execute the canonical notebook for complete Steps 2-4
+# 6. Canonical notebook integration PRs
 
-**Agent lane:** A after implementation PRs are merged
+Only one notebook PR may be open at a time. Each notebook PR starts from the executed notebook on current `main`, appends/updates only its assigned section, executes the full notebook from top to bottom and commits stored outputs.
 
-**Dependencies:** PR-07 through PR-17 and completed Step 1 notebook/data
+## PR-21 — Add notebook Step 2 Markov analysis
+
+**Agent lane:** A
+
+**Dependencies:** completed Step 1 notebook/data, PR-12, PR-14
 
 **Files owned:**
 
 ```text
 notebooks/gwp2_vix_regime_allocation.ipynb
-reports/tables/*step2*
-reports/tables/*step3*
-reports/tables/*step4*
-reports/figures/step2_*.png
-reports/figures/step3_*.png
-reports/generated/steps_2_4_manifest.json
-reports/generated/step3_selected_model.json
-```
-
-No other PR may edit the canonical notebook while PR-18 is open.
-
-### Required notebook structure
-
-```text
-Step 2: Modeling VIX Regimes
-  2.1 Observation definition and assumptions
-  2.2 Discrete Markov chain - 2 states
-  2.3 Discrete Markov chain - 3 states
-  2.4 Gaussian HMM - 2 states
-  2.5 Gaussian HMM - 3 states
-  2.6 Regime visual comparison
-
-Step 3: State Selection and Interpretation
-  3.1 Log-likelihood, AIC and BIC equations
-  3.2 Candidate comparison table
-  3.3 Within-family state-count selection
-  3.4 Preferred method selection and scientific rationale
-  3.5 State-conditional ETF return statistics
-  3.6 State-conditional return visualization
-  3.7 Interpretation and limitations
-
-Step 4: Designing the Rotation Strategy
-  4.1 Decision-rule equation
-  4.2 State-to-allocation table
-  4.3 Economic interpretation
-  4.4 Lookahead/execution-lag note for Step 5
+reports/tables/step2_markov_2_thresholds.csv
+reports/tables/step2_markov_2_transition.csv
+reports/tables/step2_markov_2_stationary.csv
+reports/tables/step2_markov_3_thresholds.csv
+reports/tables/step2_markov_3_transition.csv
+reports/tables/step2_markov_3_stationary.csv
+reports/figures/step2_markov_vix_states.png
 ```
 
 ### Tasks
 
-- [ ] T18.1 Load the frozen Step 1 clean data and show shape/date range/missing-value validation.
-- [ ] T18.2 Show the observation equation `X_t = VIX_change_t` and explain why change rather than level is modeled in this assignment implementation.
-- [ ] T18.3 For Markov 2-state model, display quantile thresholds, transition matrix and stationary distribution.
-- [ ] T18.4 For Markov 3-state model, display quantile thresholds, transition matrix and stationary distribution.
-- [ ] T18.5 Show the Markov transition-probability and stationary-distribution equations with Greek-letter pronunciation where required.
-- [ ] T18.6 For HMM 2-state model, display fitted mean, variance, initial probability and transition matrix.
-- [ ] T18.7 For HMM 3-state model, display fitted mean, variance, initial probability and transition matrix.
-- [ ] T18.8 Show the Gaussian HMM emission equation and explain EM estimation, Viterbi state decoding and posterior probabilities without exposing library implementation detail as theory.
-- [ ] T18.9 Display both Step 2 state-colored VIX figures and the HMM posterior-probability figure.
-- [ ] T18.10 Show log-likelihood, AIC and BIC equations and explicit parameter counts for every candidate.
-- [ ] T18.11 Display the four-row model comparison table.
-- [ ] T18.12 Explain explicitly why AIC/BIC are compared only within model family.
-- [ ] T18.13 Display the preferred model family/state count and exact selection reason returned by project code.
-- [ ] T18.14 Compute and display the preferred-state ETF mean/std/count table.
-- [ ] T18.15 Display the state-conditional statistics figure.
-- [ ] T18.16 Interpret each selected state from observed/fitted VIX behavior and ETF behavior; do not assign unsupported causal meaning.
-- [ ] T18.17 Show the Step 4 `argmax` allocation equation and exact 100% rule.
-- [ ] T18.18 Display the complete state-to-allocation mapping table.
-- [ ] T18.19 Explain the economic rationale for every mapping using the displayed state-conditional means.
-- [ ] T18.20 State explicitly that Step 5 must shift the selected state-driven position by one trading day; do not implement Step 5.
-- [ ] T18.21 Write all canonical tables/figures to the exact paths in this backlog.
-- [ ] T18.22 Write selected-model JSON and the complete Step 2-4 manifest.
-- [ ] T18.23 Add scientific-paper-style assumptions/limitations, including in-sample state-conditioned mapping and model-selection caveats.
-- [ ] T18.24 Include in-text citations and a bibliography section; do not invent a source not actually consulted by the team.
-- [ ] T18.25 Execute every notebook cell successfully and store outputs in the committed notebook.
+- [ ] T21.1 Add `Step 2: Modeling VIX Regimes` and `2.1 Observation definition and assumptions` with `X_t = VIX_change_t` and precise definitions.
+- [ ] T21.2 Add 2-state Markov subsection calling project functions and displaying thresholds, transition matrix, stationary distribution and likelihood/AIC/BIC.
+- [ ] T21.3 Add 3-state Markov subsection with the same complete outputs.
+- [ ] T21.4 Show transition-probability, stationary-distribution and conditional-likelihood equations; list/pronounce Greek letters before equations.
+- [ ] T21.5 Explain quantile discretization, conditional-likelihood convention, state ordering and limitations without narrating library code.
+- [ ] T21.6 Display and save the canonical two-panel Markov VIX-state figure with axes/scales/legend.
+- [ ] T21.7 Serialize all six Markov CSVs using the exact canonical schemas.
+- [ ] T21.8 Execute the complete notebook successfully and store all outputs.
 
 ### Acceptance criteria
 
-- [ ] AC18.1 (`T18.1`) notebook visibly validates Step 1 input before modeling.
-- [ ] AC18.2 (`T18.2`) the modeled observation is visibly and exclusively `VIX_change`.
-- [ ] AC18.3 (`T18.3`) all three required MC2 outputs are visible and saved.
-- [ ] AC18.4 (`T18.4`) all three required MC3 outputs are visible and saved.
-- [ ] AC18.5 (`T18.5`) Markov equations are correct and Greek letters are identified/pronounced first.
-- [ ] AC18.6 (`T18.6`) all required HMM2 parameters are visible and saved.
-- [ ] AC18.7 (`T18.7`) all required HMM3 parameters are visible and saved.
-- [ ] AC18.8 (`T18.8`) HMM theory distinguishes emissions, EM fitting, Viterbi states and posterior probabilities precisely.
-- [ ] AC18.9 (`T18.9`) all three Step 2 figures are visible in notebook and exist at canonical paths.
-- [ ] AC18.10 (`T18.10`) information-criterion equations/parameter counts are visible and numerically consistent with code.
-- [ ] AC18.11 (`T18.11`) comparison table contains exactly four rows and canonical columns.
-- [ ] AC18.12 (`T18.12`) cross-family AIC/BIC non-comparability is explicitly stated.
-- [ ] AC18.13 (`T18.13`) selected family/state count exactly matches `select_preferred_model()` output.
-- [ ] AC18.14 (`T18.14`) statistics table contains every preferred state x ETF combination.
-- [ ] AC18.15 (`T18.15`) statistics figure is visible and saved.
-- [ ] AC18.16 (`T18.16`) state interpretation is tied to displayed evidence rather than hard-coded labels.
-- [ ] AC18.17 (`T18.17`) Step 4 decision equation and 100% rule are explicit.
-- [ ] AC18.18 (`T18.18`) allocation table has one row per preferred state and weights sum to 1.
-- [ ] AC18.19 (`T18.19`) each allocation choice is justified by the corresponding displayed maximum mean.
-- [ ] AC18.20 (`T18.20`) Step 5 lag is noted but no Step 5 backtest exists.
-- [ ] AC18.21 (`T18.21`) every canonical table/figure exists and is non-empty.
-- [ ] AC18.22 (`T18.22`) both generated JSON files are valid and complete.
-- [ ] AC18.23 (`T18.23`) limitations include in-sample mapping and IC-scope caveats.
-- [ ] AC18.24 (`T18.24`) notebook contains citations plus bibliography and no fabricated source.
-- [ ] AC18.25 (`T18.25`) notebook has no failed/unexecuted Step 2-4 cells and stored outputs are present.
+- [ ] AC21.1 (`T21.1`) Step 2 observation is visibly/exclusively `VIX_change` and assumptions are explicit.
+- [ ] AC21.2 (`T21.2`) all required MC2 numerical/function outputs are visible and internally consistent.
+- [ ] AC21.3 (`T21.3`) all required MC3 numerical/function outputs are visible and internally consistent.
+- [ ] AC21.4 (`T21.4`) equations match project definitions and Greek-letter pronunciation rule is satisfied.
+- [ ] AC21.5 (`T21.5`) methodology/limitations are precise and contain no unsupported interpretation.
+- [ ] AC21.6 (`T21.6`) canonical figure is visible in notebook and exists non-empty at the fixed path.
+- [ ] AC21.7 (`T21.7`) all six Markov CSVs exist, are non-empty and match fixed schemas.
+- [ ] AC21.8 (`T21.8`) notebook has no failed/unexecuted cell and stores outputs.
 
 ---
 
-## PR-19 — Synchronize README sidecar with executed notebook outputs
+## PR-22 — Add notebook Step 2 HMM analysis
 
 **Agent lane:** B
 
-**Dependencies:** PR-18
+**Dependencies:** PR-21, PR-13, PR-15, PR-16
 
 **Files owned:**
 
 ```text
-README.md
+notebooks/gwp2_vix_regime_allocation.ipynb
+reports/tables/step2_hmm_2_parameters.csv
+reports/tables/step2_hmm_2_transition.csv
+reports/tables/step2_hmm_3_parameters.csv
+reports/tables/step2_hmm_3_transition.csv
+reports/figures/step2_hmm_vix_states.png
+reports/figures/step2_hmm_smoothed_probabilities.png
+```
+
+### Tasks
+
+- [ ] T22.1 Add 2-state HMM subsection displaying selected restart seed, log-likelihood, fitted mean, variance, start probability, transition matrix, Viterbi occupancy and posterior summary.
+- [ ] T22.2 Add 3-state HMM subsection with the same complete outputs.
+- [ ] T22.3 Show Gaussian emission equation and HMM transition/initial-probability notation; list/pronounce every Greek letter before use.
+- [ ] T22.4 Explain EM estimation, Viterbi decoding and smoothed/posterior probabilities precisely, while keeping library names out of explanatory prose.
+- [ ] T22.5 Explain deterministic restarts/state relabeling and the role of convergence/occupancy diagnostics.
+- [ ] T22.6 Display/save HMM state-colored VIX figure.
+- [ ] T22.7 Display/save HMM smoothed-probability figure.
+- [ ] T22.8 Serialize four HMM CSVs using the exact canonical schemas.
+- [ ] T22.9 Execute the full notebook successfully and store all outputs.
+
+### Acceptance criteria
+
+- [ ] AC22.1 (`T22.1`) all fixed HMM2 parameters/diagnostics are visibly displayed and consistent with project output.
+- [ ] AC22.2 (`T22.2`) all fixed HMM3 parameters/diagnostics are visibly displayed and consistent with project output.
+- [ ] AC22.3 (`T22.3`) equations/notation are correct and every Greek symbol is introduced/pronounced first.
+- [ ] AC22.4 (`T22.4`) explanation clearly distinguishes estimation, decoded most-likely states and smoothed probabilities.
+- [ ] AC22.5 (`T22.5`) reproducibility/convergence/state-order rules are documented accurately.
+- [ ] AC22.6 (`T22.6`) HMM state figure is visible and canonical file exists non-empty.
+- [ ] AC22.7 (`T22.7`) posterior figure is visible and canonical file exists non-empty.
+- [ ] AC22.8 (`T22.8`) all four HMM CSVs exist/non-empty and match exact schemas.
+- [ ] AC22.9 (`T22.9`) full notebook executes without failed/unexecuted cells and stores outputs.
+
+---
+
+## PR-23 — Add notebook Step 3 model comparison and preferred-model decision
+
+**Agent lane:** A
+
+**Dependencies:** PR-22, PR-17
+
+**Files owned:**
+
+```text
+notebooks/gwp2_vix_regime_allocation.ipynb
+reports/tables/step3_model_comparison.csv
+reports/generated/step3_selected_model.json
+```
+
+### Tasks
+
+- [ ] T23.1 Add `Step 3: State Selection and Interpretation` with log-likelihood/AIC/BIC equations and explicit K=2/3 parameter counts.
+- [ ] T23.2 Display one four-row candidate comparison table and save the canonical CSV.
+- [ ] T23.3 Explain observation-space difference and why IC ranking is within-family only.
+- [ ] T23.4 Display each within-family BIC winner including deterministic tie behavior if relevant.
+- [ ] T23.5 Apply `select_preferred_model()` and display preferred family/state count/state source and exact selection reason.
+- [ ] T23.6 Explain that HMM preference when valid is a project decision rule based on continuous-observation modeling/posterior information, not a cross-family IC proof.
+- [ ] T23.7 Compute SHA-256 of the exact Step 1 CSV bytes and save selected-model JSON with exact required keys.
+- [ ] T23.8 Execute the full notebook successfully and store outputs.
+
+### Acceptance criteria
+
+- [ ] AC23.1 (`T23.1`) formulas/parameter counts are visible, correct and satisfy Greek-symbol pronunciation rules.
+- [ ] AC23.2 (`T23.2`) comparison table has exactly four rows/fixed columns and canonical CSV matches displayed values.
+- [ ] AC23.3 (`T23.3`) cross-family IC non-comparability is explicit and no raw cross-family IC winner is claimed.
+- [ ] AC23.4 (`T23.4`) displayed family winners match code selection exactly.
+- [ ] AC23.5 (`T23.5`) displayed preferred result exactly matches selected-result function output.
+- [ ] AC23.6 (`T23.6`) method-level rationale is scientifically qualified exactly as specified.
+- [ ] AC23.7 (`T23.7`) JSON keys are exact and `input_data_sha256` equals the actual Step 1 file hash.
+- [ ] AC23.8 (`T23.8`) full notebook executes without failed/unexecuted cells and stores outputs.
+
+---
+
+## PR-24 — Add notebook Step 3 state-conditional ETF analysis
+
+**Agent lane:** B
+
+**Dependencies:** PR-23, PR-18, PR-19
+
+**Files owned:**
+
+```text
+notebooks/gwp2_vix_regime_allocation.ipynb
+reports/tables/step3_state_asset_statistics.csv
+reports/figures/step3_state_asset_statistics.png
+```
+
+### Tasks
+
+- [ ] T24.1 Retrieve exactly the preferred state sequence from the selected candidate; do not recompute an alternative state sequence.
+- [ ] T24.2 Display mean/std/count table for every preferred state x TLT/GLD/SPY and save canonical CSV.
+- [ ] T24.3 Display/save the grouped mean-return bar chart with standard-deviation error bars.
+- [ ] T24.4 Interpret every preferred state using displayed VIX-change/state evidence and ETF statistics; avoid unsupported causal labels.
+- [ ] T24.5 Explain daily-log-return units, `ddof=1`, non-annualization and state-sample-size limitations.
+- [ ] T24.6 Execute the full notebook successfully and store outputs.
+
+### Acceptance criteria
+
+- [ ] AC24.1 (`T24.1`) state Series identity/source matches `step3_selected_model.json` and selected candidate exactly.
+- [ ] AC24.2 (`T24.2`) table contains every state x asset combination, canonical schema and values matching project function output.
+- [ ] AC24.3 (`T24.3`) bar chart is visible, canonical file exists and bars/error bars match table means/stds.
+- [ ] AC24.4 (`T24.4`) state interpretation is explicitly tied to displayed evidence and contains no unsupported causal claim.
+- [ ] AC24.5 (`T24.5`) all four statistical interpretation points are explicit.
+- [ ] AC24.6 (`T24.6`) full notebook executes without failed/unexecuted cells and stores outputs.
+
+---
+
+## PR-25 — Add notebook Step 4 allocation and finalize Steps 2-4 manifest
+
+**Agent lane:** A
+
+**Dependencies:** PR-24, PR-20
+
+**Files owned:**
+
+```text
+notebooks/gwp2_vix_regime_allocation.ipynb
+reports/tables/step4_allocation_mapping.csv
+reports/generated/steps_2_4_manifest.json
+```
+
+### Tasks
+
+- [ ] T25.1 Add `Step 4: Designing the Rotation Strategy` and show the state-wise `argmax` decision equation with all symbols defined/Greek pronunciations listed first.
+- [ ] T25.2 Call `build_state_allocation()` on the canonical Step 3 statistics and display/save exact allocation mapping.
+- [ ] T25.3 Justify each state choice by explicitly pointing to the corresponding maximum displayed historical mean return.
+- [ ] T25.4 State the exact 100/0/0 rule and deterministic tie rule; state that the optional 60/40 rule is not used.
+- [ ] T25.5 Explain the in-sample mapping/lookahead limitation and state that Step 5 must lag state-driven positions by one trading day.
+- [ ] T25.6 Add concise economic interpretation/practical takeaways and identify relevant factors affecting SPY/TLT/GLD only when supported by authoritative sources actually cited.
+- [ ] T25.7 Add/refresh MLA in-text citations and bibliography for all sources actually used in Steps 1-4; do not copy assignment prompt wording.
+- [ ] T25.8 Create manifest with exact keys/schema, exact canonical paths and Step 1 SHA-256 matching selected-model JSON.
+- [ ] T25.9 Execute the entire notebook from first cell to last cell, store outputs and verify all canonical Step 1-4 files remain consistent.
+
+### Acceptance criteria
+
+- [ ] AC25.1 (`T25.1`) decision equation is correct, symbols are defined and Greek pronunciation rule is satisfied.
+- [ ] AC25.2 (`T25.2`) displayed allocation equals canonical CSV and has one row per selected state with row weights summing exactly to 1.
+- [ ] AC25.3 (`T25.3`) every selection justification cites the actual highest displayed mean for that state.
+- [ ] AC25.4 (`T25.4`) 100% rule/tie rule/no-60-40 decision are explicit and consistent with code.
+- [ ] AC25.5 (`T25.5`) both in-sample-lookahead limitation and future one-day execution lag are explicit; no Step 5 backtest is implemented.
+- [ ] AC25.6 (`T25.6`) practical takeaways/factor discussion are supported by cited authoritative sources and do not exceed observed evidence.
+- [ ] AC25.7 (`T25.7`) notebook has MLA-formatted citations/bibliography and no fabricated source/copied assignment question.
+- [ ] AC25.8 (`T25.8`) manifest keys/paths are exact, every canonical Step 2-4 artifact appears exactly once and input hashes agree.
+- [ ] AC25.9 (`T25.9`) complete notebook contains no failed/unexecuted cell and all canonical outputs match the stored notebook analysis.
+
+---
+
+# 7. README, report, HTML and parity PRs
+
+## PR-26 — Implement deterministic README analysis synchronizer
+
+**Agent lane:** A
+
+**Dependencies:** PR-25
+
+**Files owned:**
+
+```text
 scripts/sync_readme_analysis.py
-scripts/check_readme_sidecar.py
 tests/test_sync_readme_analysis.py
 ```
 
-### Fixed generated README markers
+Fixed markers:
 
 ```text
 <!-- BEGIN NOTEBOOK ANALYSIS OUTPUT -->
@@ -1182,198 +1478,333 @@ tests/test_sync_readme_analysis.py
 
 ### Tasks
 
-- [ ] T19.1 Add a generated analysis section between the fixed markers.
-- [ ] T19.2 Populate the section from canonical Step 2-4 tables/figures and selected-model JSON; do not refit any model.
-- [ ] T19.3 Show the same equations and methodological cautions as the notebook in concise form.
-- [ ] T19.4 Embed/link all four canonical figures.
-- [ ] T19.5 Render the model comparison, preferred-model statement, state statistics and allocation mapping from canonical files.
-- [ ] T19.6 Update repository status/layout to reflect actual implemented files.
-- [ ] T19.7 Extend the README sidecar checker so required notebook/report/backlog paths and generated markers cannot silently disappear.
-- [ ] T19.8 Add deterministic tests for README generation from fixture artifacts.
+- [ ] T26.1 Implement a synchronizer that reads only manifest/canonical CSV/JSON/PNG paths and never fits/recomputes a model.
+- [ ] T26.2 Generate one Markdown block containing the same technical equations/cautions, comparison values, preferred result, state statistics, allocation mapping and all four figure links.
+- [ ] T26.3 Apply Greek-letter name/pronunciation rule before generated equations.
+- [ ] T26.4 Make replacement deterministic between exactly one pair of fixed markers and idempotent on repeated execution.
+- [ ] T26.5 Add fixture-based offline tests for content parity, no estimation imports/calls, missing artifacts, marker errors and idempotence.
 
 ### Acceptance criteria
 
-- [ ] AC19.1 (`T19.1`) exactly one generated analysis block exists.
-- [ ] AC19.2 (`T19.2`) synchronization performs zero model fitting and reads only canonical output files.
-- [ ] AC19.3 (`T19.3`) equations/caveats are consistent with notebook definitions.
-- [ ] AC19.4 (`T19.4`) README references all four canonical figures.
-- [ ] AC19.5 (`T19.5`) numerical tables/model choice/allocation equal canonical files exactly.
-- [ ] AC19.6 (`T19.6`) repository status/layout descriptions are factually current.
-- [ ] AC19.7 (`T19.7`) sidecar checker fails when required markers/paths are removed.
-- [ ] AC19.8 (`T19.8`) tests pass offline.
+- [ ] AC26.1 (`T26.1`) synchronizer has no model-fitting path and fails if required canonical artifacts are missing.
+- [ ] AC26.2 (`T26.2`) generated block contains every fixed technical result/figure category and values equal fixture canonical files.
+- [ ] AC26.3 (`T26.3`) generated equations satisfy the Greek pronunciation rule.
+- [ ] AC26.4 (`T26.4`) exactly one marker block is replaced and a second identical run creates no content change.
+- [ ] AC26.5 (`T26.5`) all synchronizer tests pass offline.
 
 ---
 
-## PR-20 — Generate synchronized PDF report from the populated template
+## PR-27 — Synchronize README sidecar to executed notebook
 
 **Agent lane:** A
 
-**Dependencies:** PR-18
+**Dependencies:** PR-26
 
 **Files owned:**
 
 ```text
-reports/Stochastic_Modeling_GWP2_Report.pdf
-reports/Stochastic_Modeling_GWP2_Report.md
+README.md
+scripts/check_readme_sidecar.py
+```
+
+### Tasks
+
+- [ ] T27.1 Ensure README contains exactly one generated-analysis marker pair and run the synchronizer against canonical Step 2-4 artifacts.
+- [ ] T27.2 Update repository status/commands/artifact paths so README describes actual implemented state through Step 4 and explicitly says Step 5 is not implemented.
+- [ ] T27.3 Preserve quality-gate documentation and >=90% coverage contract.
+- [ ] T27.4 Extend `check_readme_sidecar.py` to require the marker pair, Steps 2-4 manifest, selected-model JSON and executed notebook path without requiring artifacts that belong to later PRs.
+
+### Acceptance criteria
+
+- [ ] AC27.1 (`T27.1`) README has exactly one generated block and its technical numerical content/figure links equal canonical notebook artifacts.
+- [ ] AC27.2 (`T27.2`) status/commands/paths are factually current and no Step 5 result is claimed.
+- [ ] AC27.3 (`T27.3`) README still documents parallel lint/type/unit/integration, coverage and aggregate quality gate correctly.
+- [ ] AC27.4 (`T27.4`) sidecar checker passes current repository and fails fixture mutations removing required markers/paths.
+
+---
+
+## PR-28 — Implement non-technical PDF report builder
+
+**Agent lane:** B
+
+**Dependencies:** PR-25
+
+**Files owned:**
+
+```text
 scripts/build_pdf_report.py
 tests/test_build_pdf_report.py
 ```
 
 ### Tasks
 
-- [ ] T20.1 Use the populated template PDF as the report cover source.
-- [ ] T20.2 Copy only template page 1 into the final report; never include template page 2.
-- [ ] T20.3 Build a no-code report body covering Steps 1-4, with complete Steps 2-4 equations, outputs and scientific interpretation.
-- [ ] T20.4 Read numerical tables, selected model and allocation only from canonical files produced by PR-18.
-- [ ] T20.5 Embed the exact same four canonical Step 2-4 figures used by notebook/README.
-- [ ] T20.6 Keep the three team names already present on the cover.
-- [ ] T20.7 Include citations and bibliography consistent with the notebook sources actually used.
-- [ ] T20.8 Generate the final fixed-path PDF.
-- [ ] T20.9 Render the final PDF to images and verify no clipped text, overlap, broken glyphs, blank figures or accidental instruction page.
-- [ ] T20.10 Add tests verifying page-1 template usage, exclusion of page 2, existence of required report text and successful non-empty PDF creation.
+- [ ] T28.1 Implement builder that takes the populated template page 1 plus a Markdown/text report body and produces a PDF; never copy template page 2.
+- [ ] T28.2 Implement canonical-artifact readers for decision-relevant tables/figures without model refitting/recalculation.
+- [ ] T28.3 Enforce a report-body validation that rejects code fences/source-code listings and verifies required decision-result sections exist.
+- [ ] T28.4 Implement PDF text inspection verifying the three team names and absence of distinctive instruction-page text.
+- [ ] T28.5 Implement page rendering to PNG images with PyMuPDF for later visual QA.
+- [ ] T28.6 Add fixture-based offline tests for cover page, page-2 exclusion, required sections, artifact embedding, non-empty output and renderability.
 
 ### Acceptance criteria
 
-- [ ] AC20.1 (`T20.1`) final first page derives from the populated project template.
-- [ ] AC20.2 (`T20.2`) template instruction page is absent from the final report.
-- [ ] AC20.3 (`T20.3`) report body contains no source-code listings and covers all Step 2-4 required outputs.
-- [ ] AC20.4 (`T20.4`) report performs no independent estimation and numerical values equal canonical artifacts.
-- [ ] AC20.5 (`T20.5`) all four canonical figures are embedded.
-- [ ] AC20.6 (`T20.6`) cover visibly contains Umuhoza Denyse Graine, Opeyemi Waliyilah Oladipupo and Sergej Schweizer.
-- [ ] AC20.7 (`T20.7`) citations/bibliography are present and consistent with notebook sources.
-- [ ] AC20.8 (`T20.8`) `reports/Stochastic_Modeling_GWP2_Report.pdf` exists and is non-empty.
-- [ ] AC20.9 (`T20.9`) render verification finds no visual defects and no template instruction page.
-- [ ] AC20.10 (`T20.10`) automated tests pass offline.
+- [ ] AC28.1 (`T28.1`) generated fixture PDF begins with populated template page 1 and never contains template page 2.
+- [ ] AC28.2 (`T28.2`) builder reads canonical artifact values/files and contains no model estimation path.
+- [ ] AC28.3 (`T28.3`) source-code/code-fence body fails and a complete non-technical body passes.
+- [ ] AC28.4 (`T28.4`) tests detect missing team names or leaked instruction-page text.
+- [ ] AC28.5 (`T28.5`) every generated PDF page can be rendered to a non-empty image.
+- [ ] AC28.6 (`T28.6`) all report-builder tests pass offline.
 
 ---
 
-## PR-21 — Add notebook/README/PDF sidecar parity quality gate
+## PR-29 — Generate and visually verify Steps 1-4 non-technical PDF sidecar
 
-**Agent lane:** B after PR-19 and PR-20
+**Agent lane:** B
 
-**Dependencies:** PR-19, PR-20
+**Dependencies:** PR-28
+
+**Files owned:**
+
+```text
+reports/Stochastic_Modeling_GWP2_Report.md
+reports/Stochastic_Modeling_GWP2_Report.pdf
+reports/rendered/Stochastic_Modeling_GWP2_Report/*.png
+```
+
+### Tasks
+
+- [ ] T29.1 Write original non-technical report prose covering results through Step 4 without copying assignment questions.
+- [ ] T29.2 Avoid model names, algorithm names, library names and unnecessary parameter mechanics in report prose, as required by the rubric.
+- [ ] T29.3 Include the same decision-relevant state statistics, selected regime result and allocation mapping as canonical notebook files.
+- [ ] T29.4 Include canonical decision-relevant figures with axes/labels/scales and explanations of how to read them; do not split a chart/table across report pages.
+- [ ] T29.5 Include clear recommendations, practical takeaways, limitations and factors affecting each portfolio, supported by MLA in-text citations/bibliography to sources actually consulted.
+- [ ] T29.6 Generate fixed-path PDF using populated template page 1 and preserve the three team names/blank unknown fields.
+- [ ] T29.7 Render every final PDF page to PNG and manually/visually verify no clipping, overlap, broken glyphs, blank figures, split tables/charts or instruction page.
+- [ ] T29.8 State in the report source/README workflow that this report covers Steps 1-4 and must be regenerated after Step 5 before final submission.
+
+### Acceptance criteria
+
+- [ ] AC29.1 (`T29.1`) prose is original, covers Step 1-4 answers/results and contains no copied assignment-question text.
+- [ ] AC29.2 (`T29.2`) non-technical prose contains no model/algorithm/library naming that violates the rubric.
+- [ ] AC29.3 (`T29.3`) decision-result numbers/tables equal canonical notebook artifacts exactly.
+- [ ] AC29.4 (`T29.4`) included figures are canonical, readable, explained, and no chart/table is split across pages.
+- [ ] AC29.5 (`T29.5`) report contains recommendation/takeaways/limitations/portfolio factors plus MLA citations/bibliography with no fabricated source.
+- [ ] AC29.6 (`T29.6`) PDF exists/non-empty, first page preserves populated cover and unknown fields remain blank.
+- [ ] AC29.7 (`T29.7`) all rendered pages are inspected and free of the listed visual defects/instruction page.
+- [ ] AC29.8 (`T29.8`) interim-through-Step4 status and required Step5 regeneration are explicit.
+
+---
+
+## PR-30 — Export executed notebook duplicate to HTML
+
+**Agent lane:** A
+
+**Dependencies:** PR-25
+
+**Files owned:**
+
+```text
+scripts/export_notebook_html.py
+tests/test_export_notebook_html.py
+reports/gwp2_vix_regime_allocation.html
+```
+
+### Tasks
+
+- [ ] T30.1 Implement deterministic HTML export from the committed notebook using its stored outputs; do not execute/refit during export.
+- [ ] T30.2 Fail if the notebook contains a failed cell, unexecuted code cell or missing stored output expected by the Step 1-4 sections.
+- [ ] T30.3 Export to exact fixed path `reports/gwp2_vix_regime_allocation.html`.
+- [ ] T30.4 Validate HTML contains Step 1, Step 2, Step 3 and Step 4 headings plus references/embedded representations of canonical figures/tables.
+- [ ] T30.5 Add fixture-based offline export/failure tests and generate the actual HTML.
+
+### Acceptance criteria
+
+- [ ] AC30.1 (`T30.1`) exporter reads the committed notebook and performs no notebook execution/model fitting.
+- [ ] AC30.2 (`T30.2`) failed/unexecuted/missing-output fixture notebooks are rejected.
+- [ ] AC30.3 (`T30.3`) fixed-path HTML exists and is non-empty.
+- [ ] AC30.4 (`T30.4`) HTML visibly contains all four step headings and stored analysis outputs.
+- [ ] AC30.5 (`T30.5`) tests pass offline and actual HTML is generated from current notebook.
+
+---
+
+## PR-31 — Implement artifact/sidecar parity checker
+
+**Agent lane:** B
+
+**Dependencies:** PR-27, PR-29, PR-30
 
 **Files owned:**
 
 ```text
 scripts/check_analysis_sidecars.py
 tests/test_analysis_sidecars.py
-.github/workflows/quality-gates.yml
-README.md
 ```
 
 ### Tasks
 
-- [ ] T21.1 Add a checker that loads `steps_2_4_manifest.json` and validates every canonical output exists.
-- [ ] T21.2 Validate notebook contains references/displays for every manifest artifact.
-- [ ] T21.3 Validate README generated block references every manifest figure and required table/model/allocation outputs.
-- [ ] T21.4 Validate final PDF exists and its extracted text contains the selected model and all state allocation rows.
-- [ ] T21.5 Add a `analysis-sidecars` CI job.
-- [ ] T21.6 Make aggregate `quality-gate` depend on `analysis-sidecars`.
-- [ ] T21.7 Keep lint, type, unit and integration jobs parallel and keep combined coverage threshold at 90%.
-- [ ] T21.8 Document the new gate in README.
-- [ ] T21.9 Add deterministic failure-mode tests for missing/stale artifacts.
+- [ ] T31.1 Validate manifest schema, Step 1 SHA-256 and existence/non-emptiness of every listed canonical artifact.
+- [ ] T31.2 Validate notebook references/displays every manifest table/figure and selected-model/allocation result.
+- [ ] T31.3 Validate README generated block has exact technical parity for model comparison, preferred result, state statistics, allocation and all four figures.
+- [ ] T31.4 Validate HTML is a duplicate export of current notebook by checking notebook content hash stored/embedded by exporter plus required step/output markers.
+- [ ] T31.5 Validate standalone PDF has decision parity: selected state-count/result wording, every allocation row, state statistics and required decision figures; do not require technical model names/transition matrices in the non-technical report.
+- [ ] T31.6 Add deterministic failure tests for stale/missing/hash-mismatched notebook, README, HTML, PDF, table, figure and input data.
 
 ### Acceptance criteria
 
-- [ ] AC21.1 (`T21.1`) missing canonical output causes checker failure.
-- [ ] AC21.2 (`T21.2`) notebook omission of a required artifact causes checker failure.
-- [ ] AC21.3 (`T21.3`) README omission of a required output causes checker failure.
-- [ ] AC21.4 (`T21.4`) missing/stale PDF selected-model or allocation content causes checker failure.
-- [ ] AC21.5 (`T21.5`) workflow contains an independent `analysis-sidecars` job.
-- [ ] AC21.6 (`T21.6`) `quality-gate` cannot pass unless `analysis-sidecars` succeeds.
-- [ ] AC21.7 (`T21.7`) lint/type/unit/integration remain independent parallel jobs and coverage remains `>=90%`.
-- [ ] AC21.8 (`T21.8`) README accurately documents the gate.
-- [ ] AC21.9 (`T21.9`) failure-mode tests pass offline.
+- [ ] AC31.1 (`T31.1`) any manifest/schema/hash/missing/empty artifact defect causes checker failure.
+- [ ] AC31.2 (`T31.2`) omission of a canonical technical output from notebook causes failure.
+- [ ] AC31.3 (`T31.3`) any technical-result mismatch/omission in README generated block causes failure.
+- [ ] AC31.4 (`T31.4`) stale HTML from a different notebook revision causes failure.
+- [ ] AC31.5 (`T31.5`) stale/missing decision result in PDF causes failure without incorrectly requiring forbidden technical prose.
+- [ ] AC31.6 (`T31.6`) all parity failure-mode tests pass offline.
 
 ---
 
-# Parallel execution schedule
+## PR-32 — Add final Steps 1-4 sidecar CI gate
 
-The two weak agents must use this exact sequencing to avoid file conflicts.
+**Agent lane:** A
+
+**Dependencies:** PR-31
+
+**Files owned:**
 
 ```text
-Wave 0 - sequential setup
-PR-06
-
-Wave 1 - parallel
-Agent A: PR-07
-Agent B: PR-09
-
-Wave 2 - parallel
-Agent A: PR-08
-Agent B: PR-10
-
-Wave 3 - parallel
-Agent A: PR-11
-Agent B: PR-12
-
-Wave 4 - parallel
-Agent A: PR-13
-Agent B: PR-14
-
-Wave 5 - parallel
-Agent A: PR-15
-Agent B: PR-16
-
-Wave 6
-Agent B: PR-17
-Agent A: wait for PR-15/16/17 to merge
-
-Wave 7 - canonical integration
-Agent A: PR-18
-
-Wave 8 - parallel sidecars
-Agent B: PR-19 README
-Agent A: PR-20 PDF
-
-Wave 9 - final parity gate
-Agent B: PR-21
+.github/workflows/quality-gates.yml
+README.md
+scripts/check_readme_sidecar.py
 ```
 
-No agent may start a PR before its listed dependencies are merged to `main`.
+### Tasks
+
+- [ ] T32.1 Add independent CI job named exactly `analysis-sidecars` that runs `scripts/check_analysis_sidecars.py`.
+- [ ] T32.2 Make aggregate `quality-gate` depend on successful `analysis-sidecars`.
+- [ ] T32.3 Preserve independent parallel lint, type-check, unit-test and integration-test jobs.
+- [ ] T32.4 Preserve combined source coverage threshold >=90%.
+- [ ] T32.5 Update README quality/status text to document notebook/README/HTML/PDF parity levels and current Steps 1-4 completion state.
+- [ ] T32.6 Extend README checker so workflow must contain `analysis-sidecars` and README must reference the notebook HTML/report/manifest/parity policy.
+
+### Acceptance criteria
+
+- [ ] AC32.1 (`T32.1`) workflow contains an independent job key/name `analysis-sidecars` executing the checker.
+- [ ] AC32.2 (`T32.2`) `quality-gate` cannot succeed when `analysis-sidecars` fails/skips.
+- [ ] AC32.3 (`T32.3`) lint/type/unit/integration jobs have no dependency on one another and remain parallel-start capable.
+- [ ] AC32.4 (`T32.4`) `fail_under=90` and workflow `--fail-under=90` remain unchanged.
+- [ ] AC32.5 (`T32.5`) README accurately documents parity/status with no Step 5 result claim.
+- [ ] AC32.6 (`T32.6`) README checker verifies the new workflow/path contracts and passes on current repository.
 
 ---
 
-# Merge rules
+# 8. Parallel execution schedule
 
-For every implementation PR:
+Exactly two weak agents are assumed.
 
-1. Rebase/update from current `main` before final validation.
-2. Run the full repository quality suite.
-3. Confirm every task checkbox and its matching acceptance criterion.
-4. Confirm no files outside the PR-owned list were changed unless explicitly allowed by the sidecar policy.
-5. Merge only after `quality-gate` succeeds.
-6. Delete the feature branch after merge.
+```text
+Wave 0 - sequential foundation
+PR-06 dependencies
+PR-07 fixed configuration
 
-The final result of PR-21 must be merged to `main` before Steps 2-4 are considered complete.
+Wave 1 - parallel
+Agent A: PR-08 Markov discretization
+Agent B: PR-09 HMM fitter
+
+Wave 2 - parallel
+Agent A: PR-10 Markov transition/stationary
+Agent B: PR-11 information criteria
+
+Wave 3 - parallel
+Agent A: PR-12 Markov evaluation
+Agent B: PR-13 HMM evaluation
+
+Wave 4 - parallel
+Agent A: PR-14 Markov state figure
+Agent B: PR-15 HMM state figure
+
+Wave 5 - parallel
+Agent A: PR-17 model comparison/selection
+Agent B: PR-16 HMM posterior figure
+
+Wave 6
+Either agent: PR-18 state statistics
+
+Wave 7 - parallel after PR-18
+Agent A: PR-19 state-statistics bar chart
+Agent B: PR-20 allocation mapping
+
+Notebook waves - serialized because one file is canonical
+Wave 8  Agent A: PR-21 notebook Markov
+Wave 9  Agent B: PR-22 notebook HMM
+Wave 10 Agent A: PR-23 notebook selection
+Wave 11 Agent B: PR-24 notebook state statistics
+Wave 12 Agent A: PR-25 notebook allocation + manifest + full execution
+
+Sidecar tooling - parallel
+Wave 13
+Agent A: PR-26 README synchronizer
+Agent B: PR-28 PDF builder
+
+Sidecar generation - parallel
+Wave 14
+Agent A: PR-27 README synchronization
+Agent B: PR-29 PDF generation/visual QA
+
+Wave 15
+Agent A: PR-30 notebook HTML export
+
+Wave 16
+Agent B: PR-31 parity checker
+
+Wave 17
+Agent A: PR-32 CI integration/final sidecar documentation
+```
+
+No notebook PR may be parallelized with another notebook PR.
 
 ---
 
-# Steps 2-4 Definition of Done
+# 9. Merge rules
 
-Steps 2-4 are complete only when all conditions below are true.
+For every PR:
 
-- [ ] PR-06 through PR-21 are merged to `main`.
-- [ ] Both 2-state and 3-state discrete Markov-chain models are implemented.
-- [ ] Both 2-state and 3-state Gaussian HMMs are implemented with deterministic restart/state-ordering rules.
-- [ ] Markov transition matrices and stationary distributions are displayed.
-- [ ] HMM fitted parameters, decoded states and smoothed/posterior probabilities are displayed.
-- [ ] VIX is plotted with color-coded Markov states and color-coded HMM states.
-- [ ] HMM smoothed probabilities are plotted.
-- [ ] Log-likelihood, AIC and BIC are computed for all four candidates.
-- [ ] Information criteria are used only within model family and the notebook explains why.
-- [ ] One preferred model family/state count is selected by the fixed deterministic rule.
-- [ ] Mean and standard deviation of ETF log returns are computed by preferred state.
-- [ ] State-conditional ETF statistics are visualized.
-- [ ] One deterministic 100%-allocation ETF is selected for every preferred state.
-- [ ] The state-to-allocation mapping is displayed and scientifically justified.
-- [ ] Step 5 execution lag is explicitly deferred and not implemented.
-- [ ] The canonical notebook is fully executed and contains equations, function outputs, tables, plots, interpretation, limitations, citations and bibliography.
-- [ ] README displays the same canonical Step 2-4 outputs as the notebook.
-- [ ] `reports/Stochastic_Modeling_GWP2_Report.pdf` is based on the populated template cover and displays the same canonical outputs without code.
-- [ ] Template instruction page 2 is absent from the final report.
-- [ ] Notebook/README/PDF parity is enforced by CI.
-- [ ] Combined source coverage remains at least 90%.
-- [ ] Lint, type, unit and integration jobs continue to run in parallel.
+1. start from current `main` after dependencies are merged;
+2. change only PR-owned files;
+3. run the complete repository quality suite;
+4. verify every `Txx.n` has its matching `ACxx.n` and both are satisfied;
+5. verify no later-step feature was added;
+6. update from current `main` before final validation;
+7. merge only after `quality-gate` succeeds;
+8. delete the feature branch after merge.
+
+If GitHub `main` branch protection is not enabled, the repository owner must still apply these merge rules manually. The workflow itself cannot prevent a privileged direct push without a branch/ruleset configuration.
+
+---
+
+# 10. Steps 2-4 Definition of Done
+
+Steps 2-4 are complete only when all conditions are true:
+
+- [ ] PR-06 through PR-32 are merged to `main`.
+- [ ] Both 2-state and 3-state discrete Markov candidates are implemented from `VIX_change` quantiles.
+- [ ] Both Markov transition matrices and unique stationary distributions are computed/displayed.
+- [ ] Both 2-state and 3-state Gaussian HMMs are fit with deterministic restarts/relabeling.
+- [ ] HMM fitted parameters, Viterbi states and smoothed probabilities are displayed.
+- [ ] VIX-level color-coded state figures exist for both model families.
+- [ ] HMM posterior-probability figure exists.
+- [ ] Log-likelihood/AIC/BIC are computed for all four candidates with explicit parameter counts/observation definitions.
+- [ ] AIC/BIC state-count selection occurs within family only and the methodological reason is stated.
+- [ ] One preferred family/state count/state sequence is selected by the fixed project rule.
+- [ ] Mean/std/count of ETF log returns are computed for every preferred state and TLT/GLD/SPY.
+- [ ] Required grouped bar chart with std error bars exists.
+- [ ] One 100%-allocation ETF is selected for every preferred state with deterministic ties.
+- [ ] Step 4 mapping and economic justification are visible.
+- [ ] In-sample mapping/lookahead limitation and future Step 5 one-day execution lag are explicit.
+- [ ] Canonical notebook is fully executed, stores outputs and contains technical equations, function output, parameters, plots, interpretation, limitations, citations and MLA bibliography.
+- [ ] README has exact technical-result parity with the notebook canonical outputs.
+- [ ] `reports/gwp2_vix_regime_allocation.html` duplicates the executed notebook through Step 4 and is marked for regeneration after Step 5.
+- [ ] `reports/Stochastic_Modeling_GWP2_Report.pdf` uses populated template page 1, excludes instruction page 2, contains no code and has non-technical decision parity with notebook results.
+- [ ] Standalone report avoids model/algorithm/library names in non-technical prose, includes recommendation/portfolio factors and MLA citations.
+- [ ] Report pages have been rendered/visually checked; graphs/tables are not split and all axes/labels/scales are readable.
+- [ ] Manifest and selected-model JSON hashes/paths are valid.
+- [ ] `analysis-sidecars` parity CI passes.
+- [ ] Combined source coverage remains >=90%.
+- [ ] Lint/type/unit/integration remain parallel.
 - [ ] Aggregate `quality-gate` passes on final `main`.
+- [ ] Step 5 is not implemented by this backlog.
