@@ -20,63 +20,56 @@ def main() -> None:
         raise SystemExit(f"Coverage threshold must remain 90, found {threshold!r}.")
 
     required_readme_fragments = (
+        "BACKLOG.md",
+        "PR-01 through PR-49",
+        "scripts/check_backlog_contract.py",
         "90%",
         "ruff check .",
         "ruff format --check .",
         "mypy src",
         "unit-tests",
         "integration-tests",
-        "coverage",
         "quality-gate",
-        "README technical sidecar policy",
-        "single canonical backlog",
-        "BACKLOG.md",
-        "Step 5 - Backtesting and Evaluation",
-        "PR-33",
-        "PR-47",
+        "Backlog contract",
         "notebooks/gwp2_vix_regime_allocation.ipynb",
         "reports/gwp2_vix_regime_allocation.html",
         "reports/Stochastic_Modeling_GWP2_Report.pdf",
         "reports/Template_Stochastic_Modeling_Group_Work_Project.pdf",
-        "reports/generated/steps_2_4_manifest.json",
-        "reports/generated/step3_selected_model.json",
-        "reports/tables/step5_performance_summary.csv",
-        "reports/tables/step5_state_count_sensitivity.csv",
-        "reports/figures/step5_cumulative_performance.png",
-        "reports/generated/step5_manifest.json",
-        "analysis-sidecars",
+        "reports/tables/step3_selected_states.csv",
+        "dist/MScFE_622_GWP2_submission.zip",
+        "reports/generated/submission_manifest.json",
         "Notebook <-> README: exact technical-result parity",
         "Notebook <-> HTML: exact executed-notebook duplicate",
         "Notebook <-> standalone PDF: decision-result parity",
+        "does **not** make this implementation causal or out-of-sample",
     )
-    missing_fragments = [
-        fragment for fragment in required_readme_fragments if fragment not in readme_text
-    ]
-    if missing_fragments:
-        raise SystemExit(
-            "README sidecar is missing required contract text: " + ", ".join(missing_fragments)
-        )
+    missing = [fragment for fragment in required_readme_fragments if fragment not in readme_text]
+    if missing:
+        raise SystemExit("README is missing required contract text: " + ", ".join(missing))
 
     if "BACKLOG_STEPS_2_4.md" in readme_text:
-        raise SystemExit("README must reference only the unified BACKLOG.md backlog.")
+        raise SystemExit("README must reference only the canonical BACKLOG.md backlog.")
 
     required_jobs = (
         "lint",
         "type-check",
         "unit-tests",
         "integration-tests",
-        "coverage",
         "readme-sidecar",
+        "backlog-contract",
+        "coverage",
         "quality-gate",
     )
     for job in required_jobs:
         if re.search(rf"^  {re.escape(job)}:\s*$", workflow_text, flags=re.MULTILINE) is None:
             raise SystemExit(f"Workflow is missing required job: {job}")
 
-    if "fail-under=90" not in workflow_text:
+    if "python scripts/check_backlog_contract.py" not in workflow_text:
+        raise SystemExit("Workflow must execute scripts/check_backlog_contract.py.")
+    if "coverage report --fail-under=90" not in workflow_text:
         raise SystemExit("Workflow must enforce coverage with --fail-under=90.")
 
-    print("README sidecar contract is consistent with repository quality configuration.")
+    print("README planning sidecar is consistent with the canonical backlog and quality gates.")
 
 
 if __name__ == "__main__":
