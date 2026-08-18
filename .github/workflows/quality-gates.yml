@@ -169,10 +169,10 @@ jobs:
       - name: Require every quality gate
         env:
           LINT: ${{ needs.lint.result }}
-          TYPE_CHECK: ${{ needs.type-check.result }}
-          UNIT_TESTS: ${{ needs.unit-tests.result }}
-          INTEGRATION_TESTS: ${{ needs.integration-tests.result }}
-          README_SIDECAR: ${{ needs.readme-sidecar.result }}
+          TYPE_CHECK: ${{ needs['type-check'].result }}
+          UNIT_TESTS: ${{ needs['unit-tests'].result }}
+          INTEGRATION_TESTS: ${{ needs['integration-tests'].result }}
+          README_SIDECAR: ${{ needs['readme-sidecar'].result }}
           COVERAGE: ${{ needs.coverage.result }}
         run: |
           test "$LINT" = "success"
