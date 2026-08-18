@@ -1,0 +1,66 @@
+[build-system]
+requires = ["setuptools>=69", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "vix-regime-allocation"
+version = "0.1.0"
+description = "VIX-based volatility regime analysis and allocation for MScFE 622 GWP2"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "matplotlib>=3.8",
+    "numpy>=1.26",
+    "pandas>=2.2",
+    "yfinance>=0.2.40",
+]
+
+[project.optional-dependencies]
+dev = [
+    "coverage[toml]>=7.6",
+    "mypy>=1.11",
+    "pandas-stubs>=2.2",
+    "pytest>=8.3",
+    "ruff>=0.6",
+]
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+ignore_missing_imports = true
+warn_unused_configs = true
+files = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = [
+    "integration: tests that verify integration between repository/application components",
+]
+
+[tool.coverage.run]
+branch = true
+source = ["src/vix_regime_allocation"]
+relative_files = true
+
+[tool.coverage.report]
+fail_under = 90
+precision = 2
+show_missing = true
+skip_covered = false
+exclude_lines = [
+    "pragma: no cover",
+    "if TYPE_CHECKING:",
+]
