@@ -1,8 +1,8 @@
 from __future__ import annotations
 
+import subprocess
+import sys
 from pathlib import Path
-
-from check_notebook_orchestration import validate_orchestration
 
 ROOT = Path(__file__).resolve().parents[1]
 FORBIDDEN_PREFIXES = (
@@ -29,7 +29,11 @@ def main() -> None:
     if forbidden:
         joined = "\n".join(f"- {path}" for path in forbidden)
         raise SystemExit(f"Forbidden temporary repository files detected:\n{joined}")
-    validate_orchestration()
+    subprocess.run(
+        [sys.executable, str(ROOT / "scripts/check_notebook_orchestration.py")],
+        cwd=ROOT,
+        check=True,
+    )
     print("Repository hygiene check passed.")
 
 
