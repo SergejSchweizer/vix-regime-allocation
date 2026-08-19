@@ -188,13 +188,15 @@ Windows PowerShell:
 
 | Gate | Command | Requirement |
 |---|---|---|
-| Lint | `ruff check .` + `ruff format --check .` | pass |
+| Lint | `ruff check .` + `ruff format --check src tests scripts` | pass |
 | Type check | `mypy src` | pass |
 | Unit tests (`unit-tests`) | `coverage run -m pytest -m "not integration"` | pass |
 | Integration tests (`integration-tests`) | `coverage run -m pytest -m integration` | pass |
 | README sidecar | `python scripts/check_readme_sidecar.py` | pass |
 | Backlog contract | `python scripts/check_backlog_contract.py` | pass |
 | Coverage | combined unit + integration | `>=90%` |
+
+Ruff lint still examines supported Python and notebook code across the repository. The formatter gate is intentionally limited to the Python source, test, and script trees so the formatter does not rewrite the executed scientific notebook as a side effect of CI.
 
 The aggregate `quality-gate` requires all current jobs. PR-32 later adds the first `analysis-sidecars` parity job after the corresponding notebook/README/HTML/PDF artifacts exist; PR-47 extends that checker through Step 5.
 
@@ -204,7 +206,7 @@ Local planning-stage checks:
 
 ```bash
 ruff check .
-ruff format --check .
+ruff format --check src tests scripts
 mypy src
 coverage erase
 coverage run --data-file=.coverage.unit -m pytest -q -m "not integration"
