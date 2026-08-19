@@ -86,9 +86,13 @@ def plot_cumulative_performance(comparison: pd.DataFrame, output_path: Path) -> 
         drawdown_axis.yaxis.set_major_formatter(PercentFormatter(xmax=1.0))
         drawdown_axis.grid(True, alpha=0.22)
 
-        locator = mdates.AutoDateLocator(minticks=5, maxticks=9)
+        locator = mdates.AutoDateLocator(  # type: ignore[no-untyped-call]
+            minticks=5,
+            maxticks=9,
+        )
         drawdown_axis.xaxis.set_major_locator(locator)
-        drawdown_axis.xaxis.set_major_formatter(mdates.ConciseDateFormatter(locator))
+        formatter = mdates.ConciseDateFormatter(locator)  # type: ignore[no-untyped-call]
+        drawdown_axis.xaxis.set_major_formatter(formatter)
         figure.tight_layout()
         figure.savefig(output_path, dpi=190, bbox_inches="tight")
     finally:
