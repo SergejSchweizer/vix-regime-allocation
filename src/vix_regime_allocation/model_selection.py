@@ -103,7 +103,9 @@ def _validate_comparison(comparison: pd.DataFrame) -> None:
         zip(comparison["family"].astype(str), comparison["n_states"].astype(int), strict=True)
     )
     if actual_pairs != expected_pairs:
-        raise ValueError("comparison must contain Markov/HMM candidates for K=2 and K=3 exactly once.")
+        raise ValueError(
+            "comparison must contain Markov/HMM candidates for K=2 and K=3 exactly once."
+        )
     if not (comparison["criterion_scope"] == "within_family_only").all():
         raise ValueError("Information criteria may only be interpreted within model family.")
     numeric = comparison[["log_likelihood", "aic", "bic"]].to_numpy(dtype=float)
