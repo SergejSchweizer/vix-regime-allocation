@@ -18,6 +18,8 @@ jobs:
       github.actor != 'github-actions[bot]' &&
       github.head_ref == 'notebook-thin-helper-calls'
     runs-on: ubuntu-latest
+    env:
+      MPLBACKEND: Agg
     steps:
       - name: Checkout feature branch
         uses: actions/checkout@v4
@@ -36,6 +38,9 @@ jobs:
           python -m pip install --upgrade pip
           pip install -e '.[dev]'
 
+      - name: Rebuild canonical analysis artifacts
+        run: python scripts/rebuild_analysis_review.py
+
       - name: Rebuild thin notebook
         run: python scripts/rebuild_thin_notebook.py
 
@@ -53,13 +58,22 @@ jobs:
 
       - name: Focused quality checks
         run: |
-          ruff check src/vix_regime_allocation/notebook_helpers.py scripts/rebuild_thin_notebook.py scripts/check_notebook_thin.py tests/test_notebook_helpers.py
+          ruff check src/vix_regime_allocation/notebook_helpers.py scripts/rebuild_analysis_review.py scripts/rebuild_thin_notebook.py scripts/check_notebook_thin.py tests/test_notebook_helpers.py
           pytest -q tests/test_notebook_helpers.py
 
-      - name: Commit executed notebook
+      - name: Commit generated canonical artifacts
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add notebooks/gwp2_vix_regime_allocation.ipynb
-          git commit -m 'NOTEBOOK — Rebuild as helper-call-only technical report'
+          git add \
+            notebooks/gwp2_vix_regime_allocation.ipynb \
+            reports/tables/step5_state_count_sensitivity.csv \
+            reports/generated/step5_manifest.json \
+            reports/figures/step1_etf_log_returns.png \
+            reports/figures/step1_vix_change.png \
+            reports/figures/step2_markov_vix_states.png \
+            reports/figures/step2_hmm_vix_states.png \
+            reports/figures/step3_state_asset_statistics.png \
+            reports/figures/step5_cumulative_performance.png
+          git commit -m 'NOTEBOOK — Rebuild helper-call report and canonical artifacts'
           git push origin HEAD:notebook-thin-helper-calls
