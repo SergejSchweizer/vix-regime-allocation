@@ -4,13 +4,16 @@ on:
   push:
     branches:
       - pr-docs-scientific-citation-contract
+  pull_request:
+    branches:
+      - main
 
 permissions:
   contents: write
 
 jobs:
   apply:
-    if: github.event.head_commit.message == 'PR-DOCS — Scientific citation contract: execute updater'
+    if: github.ref_name == 'pr-docs-scientific-citation-contract' || github.head_ref == 'pr-docs-scientific-citation-contract'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout branch
