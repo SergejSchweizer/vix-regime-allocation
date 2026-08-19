@@ -46,6 +46,9 @@ extend-exclude = ["*.md"]
 [tool.ruff.lint]
 select = ["E", "F", "I", "B", "UP"]
 
+[tool.ruff.lint.per-file-ignores]
+"scripts/rebuild_analysis_review.py" = ["E501"]
+
 [tool.mypy]
 python_version = "3.11"
 strict = true

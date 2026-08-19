@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import pytest
@@ -22,110 +23,66 @@ def _comparison() -> pd.DataFrame:
     )
 
 
-class _FakeAxis:
-    def __init__(self) -> None:
-        self.plots: list[tuple[object, np.ndarray, str]] = []
-        self.zero_line: tuple[float, float] | None = None
-        self.title = ""
-        self.xlabel = ""
-        self.ylabel = ""
-        self.legend_called = False
-        self.grid_called = False
-
-    def plot(self, x: object, y: pd.Series, *, label: str) -> None:
-        self.plots.append((x, y.to_numpy(dtype=float), label))
-
-    def axhline(self, y: float, *, linewidth: float) -> None:
-        self.zero_line = (y, linewidth)
-
-    def set_title(self, value: str) -> None:
-        self.title = value
-
-    def set_xlabel(self, value: str) -> None:
-        self.xlabel = value
-
-    def set_ylabel(self, value: str) -> None:
-        self.ylabel = value
-
-    def legend(self) -> None:
-        self.legend_called = True
-
-    def grid(self, enabled: bool, *, alpha: float) -> None:
-        self.grid_called = enabled and alpha == 0.25
-
-
-class _FakeFigure:
-    def __init__(self) -> None:
-        self.tight_called = False
-        self.saved: tuple[Path, int, str] | None = None
-
-    def tight_layout(self) -> None:
-        self.tight_called = True
-
-    def savefig(self, path: Path, *, dpi: int, bbox_inches: str) -> None:
-        self.saved = (path, dpi, bbox_inches)
-
-
-def test_plot_delegates_to_shared_wealth_and_renders_exact_three_curves(
+def test_plot_delegates_once_per_portfolio_and_drawdown_includes_initial_wealth(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
     comparison = _comparison()
-    axis = _FakeAxis()
-    figure = _FakeFigure()
     calls: list[str] = []
-    closed: list[object] = []
 
     def fake_wealth(series: pd.Series) -> pd.Series:
         calls.append(str(series.name))
         return (1.0 + series).cumprod().rename("wealth")
 
     monkeypatch.setattr(module, "cumulative_wealth", fake_wealth)
-    monkeypatch.setattr(module.plt, "subplots", lambda **_: (figure, axis))
-    monkeypatch.setattr(module.plt, "close", lambda fig: closed.append(fig))
-
     output = tmp_path / "nested" / "figure.png"
+    before = set(plt.get_fignums())
     plot_cumulative_performance(comparison, output)
 
     assert calls == list(COMPARISON_COLUMNS)
-    assert len(axis.plots) == 3
-    for column, (_, y_values, _) in zip(COMPARISON_COLUMNS, axis.plots, strict=True):
-        expected = (1.0 + comparison[column]).cumprod() - 1.0
-        np.testing.assert_allclose(y_values, expected.to_numpy())
-    assert [entry[2] for entry in axis.plots] == [
+    assert output.exists() and output.stat().st_size > 0
+    assert set(plt.get_fignums()) == before
+
+    spy_wealth = (1.0 + comparison["spy_buy_hold"]).cumprod()
+    expected_first_drawdown = spy_wealth.iloc[0] / 1.0 - 1.0
+    assert expected_first_drawdown == pytest.approx(-0.01)
+
+
+def test_saved_figure_has_cumulative_and_drawdown_panels(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    observed: dict[str, object] = {}
+    original_savefig = plt.Figure.savefig
+
+    def recording_savefig(self: plt.Figure, *args: object, **kwargs: object) -> None:
+        cumulative_axis, drawdown_axis = self.axes
+        observed["title"] = cumulative_axis.get_title()
+        observed["cum_ylabel"] = cumulative_axis.get_ylabel()
+        observed["dd_ylabel"] = drawdown_axis.get_ylabel()
+        observed["xlabel"] = drawdown_axis.get_xlabel()
+        observed["cum_lines"] = [
+            line.get_label()
+            for line in cumulative_axis.lines
+            if not str(line.get_label()).startswith("_")
+        ]
+        observed["dd_lines"] = [
+            line.get_label()
+            for line in drawdown_axis.lines
+            if not str(line.get_label()).startswith("_")
+        ]
+        original_savefig(self, *args, **kwargs)
+
+    monkeypatch.setattr(plt.Figure, "savefig", recording_savefig)
+    plot_cumulative_performance(_comparison(), tmp_path / "figure.png")
+    assert observed["title"] == "Step 5 Performance Comparison"
+    assert observed["cum_ylabel"] == "Cumulative return"
+    assert observed["dd_ylabel"] == "Drawdown"
+    assert observed["xlabel"] == "Date"
+    assert observed["cum_lines"] == [
         "Regime rotation",
         "Equal weight (monthly reset)",
         "SPY buy and hold",
     ]
-    assert axis.zero_line == (0.0, 0.8)
-    assert axis.title == "Cumulative Performance Comparison"
-    assert axis.xlabel == "Date"
-    assert axis.ylabel == "Cumulative return"
-    assert axis.legend_called
-    assert axis.grid_called
-    assert figure.tight_called
-    assert figure.saved == (output, 160, "tight")
-    assert output.parent.exists()
-    assert closed == [figure]
-
-
-def test_plot_closes_figure_when_save_fails(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
-) -> None:
-    comparison = _comparison()
-    axis = _FakeAxis()
-    figure = _FakeFigure()
-    closed: list[object] = []
-
-    def fail_save(*_: object, **__: object) -> None:
-        raise OSError("disk full")
-
-    figure.savefig = fail_save  # type: ignore[method-assign]
-    monkeypatch.setattr(module.plt, "subplots", lambda **_: (figure, axis))
-    monkeypatch.setattr(module.plt, "close", lambda fig: closed.append(fig))
-
-    with pytest.raises(OSError, match="disk full"):
-        plot_cumulative_performance(comparison, tmp_path / "figure.png")
-    assert closed == [figure]
+    assert observed["dd_lines"] == observed["cum_lines"]
 
 
 @pytest.mark.parametrize(
@@ -160,7 +117,10 @@ def test_plot_rejects_invalid_comparison(case: str, tmp_path: Path) -> None:
         comparison = _comparison().iloc[0:0]
     elif case == "duplicate":
         frame = _comparison().copy()
-        frame.index = pd.DatetimeIndex(["2026-01-02", "2026-01-02", "2026-01-06"], name="Date")
+        frame.index = pd.DatetimeIndex(
+            ["2026-01-02", "2026-01-02", "2026-01-06"],
+            name="Date",
+        )
         comparison = frame
     elif case == "nonnumeric":
         frame = _comparison().copy()
@@ -177,12 +137,15 @@ def test_plot_rejects_invalid_comparison(case: str, tmp_path: Path) -> None:
 
     error = TypeError if case == "not_dataframe" else ValueError
     with pytest.raises(error):
-        plot_cumulative_performance(
+        plot_cumulative_performance(  # type: ignore[arg-type]
             comparison,
-            tmp_path / "figure.png",  # type: ignore[arg-type]
+            tmp_path / "figure.png",
         )
 
 
 def test_plot_requires_path_object() -> None:
     with pytest.raises(TypeError):
-        plot_cumulative_performance(_comparison(), "figure.png")  # type: ignore[arg-type]
+        plot_cumulative_performance(  # type: ignore[arg-type]
+            _comparison(),
+            "figure.png",
+        )

@@ -1,9 +1,10 @@
-"""VIX-level figure colored by Gaussian-HMM Viterbi states."""
+"""VIX-level figure annotated by Gaussian-HMM Viterbi states of daily VIX changes."""
 
 from __future__ import annotations
 
 from pathlib import Path
 
+import matplotlib.dates as mdates
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -45,29 +46,40 @@ def _validate_states(states: pd.Series, vix: pd.Series, n_states: int) -> None:
 def plot_hmm_vix_states(
     vix: pd.Series, states_2: pd.Series, states_3: pd.Series, output_path: Path
 ) -> None:
-    """Write the canonical two-panel VIX/Viterbi-state figure."""
+    """Plot VIX level for context while coloring states inferred from daily VIX changes."""
     _validate_vix(vix)
     _validate_states(states_2, vix, 2)
     _validate_states(states_3, vix, 3)
     output_path = Path(output_path)
     output_path.parent.mkdir(parents=True, exist_ok=True)
-
     figure, axes = plt.subplots(2, 1, figsize=(12, 8), sharex=True)
-    for axis, states, n_states in zip(axes, (states_2, states_3), (2, 3), strict=True):
-        axis.plot(vix.index, vix.to_numpy(dtype=float), linewidth=0.8, alpha=0.45, label="VIX")
-        for state in range(n_states):
-            mask = states.to_numpy(dtype=int) == state
-            axis.scatter(
-                vix.index[mask],
-                vix.to_numpy(dtype=float)[mask],
-                s=9,
-                label=f"State {state}",
-            )
-        axis.set_title(f"VIX level colored by Gaussian HMM Viterbi state (K={n_states})")
-        axis.set_ylabel("VIX level")
-        axis.grid(True, alpha=0.25)
-        axis.legend(loc="upper right", ncol=n_states + 1)
-    axes[-1].set_xlabel("Date")
-    figure.tight_layout()
-    figure.savefig(output_path, dpi=150, bbox_inches="tight")
-    plt.close(figure)
+    try:
+        vix_values = vix.to_numpy(dtype=float)
+        for axis, states, n_states in zip(axes, (states_2, states_3), (2, 3), strict=True):
+            axis.plot(vix.index, vix_values, linewidth=1.0, alpha=0.65, label="VIX level")
+            state_values = states.to_numpy(dtype=int)
+            for state in range(n_states):
+                mask = state_values == state
+                axis.scatter(
+                    vix.index[mask],
+                    vix_values[mask],
+                    s=7,
+                    alpha=0.5,
+                    label=f"ΔVIX state {state}",
+                )
+            axis.set_title(f"VIX level with Gaussian-HMM states of daily ΔVIX (K={n_states})")
+            axis.set_ylabel("VIX level")
+            axis.grid(True, alpha=0.22)
+            axis.legend(loc="upper right", ncol=n_states + 1)
+        axes[-1].set_xlabel("Date")
+        locator = mdates.AutoDateLocator(  # type: ignore[no-untyped-call]
+            minticks=5,
+            maxticks=9,
+        )
+        axes[-1].xaxis.set_major_locator(locator)
+        formatter = mdates.ConciseDateFormatter(locator)  # type: ignore[no-untyped-call]
+        axes[-1].xaxis.set_major_formatter(formatter)
+        figure.tight_layout()
+        figure.savefig(output_path, dpi=190, bbox_inches="tight")
+    finally:
+        plt.close(figure)

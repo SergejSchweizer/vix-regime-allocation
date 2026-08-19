@@ -25,7 +25,10 @@ def test_plot_writes_nonempty_file_and_closes_figure(tmp_path: Path) -> None:
     assert set(plt.get_fignums()) == before
 
 
-def test_each_state_is_plotted_once(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+def test_each_delta_vix_state_is_plotted_once(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
     vix, states_2, states_3 = _inputs()
     labels: list[str] = []
     original_scatter = plt.Axes.scatter
@@ -36,7 +39,13 @@ def test_each_state_is_plotted_once(monkeypatch: pytest.MonkeyPatch, tmp_path: P
 
     monkeypatch.setattr(plt.Axes, "scatter", recording_scatter)
     plot_markov_vix_states(vix, states_2, states_3, tmp_path / "plot.png")
-    assert labels == ["State 0", "State 1", "State 0", "State 1", "State 2"]
+    assert labels == [
+        "ΔVIX state 0",
+        "ΔVIX state 1",
+        "ΔVIX state 0",
+        "ΔVIX state 1",
+        "ΔVIX state 2",
+    ]
 
 
 def test_index_and_data_validation_failures(tmp_path: Path) -> None:
@@ -45,20 +54,14 @@ def test_index_and_data_validation_failures(tmp_path: Path) -> None:
     shifted.index = shifted.index + pd.Timedelta(days=1)
     with pytest.raises(ValueError, match="exactly match"):
         plot_markov_vix_states(vix, shifted, states_3, tmp_path / "x.png")
-
-    wrong_name = states_2.rename("wrong")
     with pytest.raises(ValueError, match="named"):
-        plot_markov_vix_states(vix, wrong_name, states_3, tmp_path / "x.png")
-
+        plot_markov_vix_states(vix, states_2.rename("wrong"), states_3, tmp_path / "x.png")
     bad_labels = states_3.copy()
     bad_labels.iloc[0] = 3
     with pytest.raises(ValueError, match="0..2"):
         plot_markov_vix_states(vix, states_2, bad_labels, tmp_path / "x.png")
-
-    bad_dtype = states_2.astype(float)
     with pytest.raises(ValueError, match="integer"):
-        plot_markov_vix_states(vix, bad_dtype, states_3, tmp_path / "x.png")
-
+        plot_markov_vix_states(vix, states_2.astype(float), states_3, tmp_path / "x.png")
     nonfinite = vix.copy()
     nonfinite.iloc[0] = np.nan
     with pytest.raises(ValueError, match="finite"):
