@@ -1,0 +1,70 @@
+name: Remove notebook Steps 2-4 manifest
+
+on:
+  push:
+    branches:
+      - agent/remove-notebook-step2-4-manifest
+    paths:
+      - .github/workflows/remove-notebook-manifest.yml
+
+permissions:
+  contents: write
+
+jobs:
+  edit-notebook:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Remove manifest cells
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          path = Path("notebooks/gwp2_vix_regime_allocation.ipynb")
+          notebook = json.loads(path.read_text(encoding="utf-8"))
+
+          removed = []
+          kept = []
+          for cell in notebook["cells"]:
+              source = "".join(cell.get("source", []))
+              is_manifest_cell = (
+                  "Deterministic Steps 2–4 artifact manifest" in source
+                  or "nb.deterministic_steps_2_4_artifact_manifest_029()" in source
+              )
+              if is_manifest_cell:
+                  removed.append((cell.get("id"), cell.get("cell_type"), source.strip()))
+              else:
+                  kept.append(cell)
+
+          if len(removed) != 2:
+              raise SystemExit(f"Expected exactly 2 manifest cells, found {len(removed)}: {removed}")
+
+          notebook["cells"] = kept
+          rendered = json.dumps(notebook, ensure_ascii=False, indent=1) + "\n"
+
+          forbidden = (
+              "Deterministic Steps 2–4 artifact manifest",
+              "nb.deterministic_steps_2_4_artifact_manifest_029()",
+          )
+          for needle in forbidden:
+              if needle in rendered:
+                  raise SystemExit(f"Notebook still contains forbidden manifest reference: {needle}")
+
+          path.write_text(rendered, encoding="utf-8")
+          print("Removed cells:")
+          for item in removed:
+              print(item)
+          PY
+      - name: Commit notebook change
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add notebooks/gwp2_vix_regime_allocation.ipynb
+          git diff --cached --check
+          git commit -m "Remove Steps 2-4 manifest from notebook"
+          git push
