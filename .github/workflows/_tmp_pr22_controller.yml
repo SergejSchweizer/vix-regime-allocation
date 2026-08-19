@@ -1,0 +1,81 @@
+name: Temp PR22 Controller
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    if: ${{ github.event.head_commit.message == 'OPS — Rebuild PR-22 notebook with staged verification' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout PR-22 branch
+        uses: actions/checkout@v4
+        with:
+          ref: pr-22-notebook-step-2-hmm-canonical-states
+          fetch-depth: 0
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - name: Install project and notebook kernel
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]" ipykernel
+          python -m ipykernel install --user --name python3 --display-name "Python 3"
+      - name: Build and execute canonical notebook
+        run: |
+          python scripts/_tmp_build_pr22.py
+          jupyter nbconvert --to notebook --execute --inplace \
+            --ExecutePreprocessor.timeout=1200 \
+            notebooks/gwp2_vix_regime_allocation.ipynb
+      - name: Verify generated content and stage exact outputs
+        run: |
+          required=(
+            reports/tables/step2_hmm_2_parameters.csv
+            reports/tables/step2_hmm_3_parameters.csv
+            reports/tables/step2_hmm_2_transition.csv
+            reports/tables/step2_hmm_3_transition.csv
+            reports/tables/step2_hmm_2_states.csv
+            reports/tables/step2_hmm_3_states.csv
+            reports/figures/step2_hmm_vix_states.png
+            reports/figures/step2_hmm_smoothed_probabilities.png
+          )
+          for path in "${required[@]}"; do test -s "$path"; done
+          grep -q "Gaussian Hidden Markov Models" notebooks/gwp2_vix_regime_allocation.ipynb
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm scripts/_tmp_build_pr22.py
+          git add -f notebooks/gwp2_vix_regime_allocation.ipynb
+          git add -f "${required[@]}"
+          git status --short
+          staged="$(git diff --cached --name-only)"
+          echo "$staged"
+          for path in "${required[@]}" notebooks/gwp2_vix_regime_allocation.ipynb; do
+            echo "$staged" | grep -Fx "$path"
+          done
+          git commit -m "PR-22 — Notebook Step 2 HMM + canonical states [generated]"
+          git push origin HEAD:pr-22-notebook-step-2-hmm-canonical-states
+
+  cleanup:
+    needs: build
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - name: Remove controller from main
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/_tmp_pr22_controller.yml
+          git commit -m "OPS — Cleanup PR-22 staged-verification controller"
+          git push origin HEAD:main
