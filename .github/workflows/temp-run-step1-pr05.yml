@@ -1,4 +1,4 @@
-name: Temporary run Step 1 PR05 notebook
+name: Temporary diagnose Step 1 PR05 notebook
 
 on:
   push:
@@ -9,8 +9,8 @@ permissions:
   contents: write
 
 jobs:
-  run-notebook:
-    if: github.event.head_commit.message == 'CHORE — run Step1 PR05 notebook'
+  diagnose:
+    if: github.event.head_commit.message == 'CHORE — diagnose Step1 PR05'
     runs-on: ubuntu-latest
     env:
       MPLBACKEND: Agg
@@ -22,62 +22,28 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-          cache: pip
-      - name: Install
-        run: |
-          python -m pip install --upgrade pip
-          pip install -e ".[dev]"
-          pip install nbformat nbclient nbconvert ipykernel
-      - name: Update README
+      - name: Execute and persist diagnostic
         shell: bash
         run: |
-          python - <<'PY'
-          from pathlib import Path
-          p = Path('README.md')
-          t = p.read_text(encoding='utf-8')
-          t = t.replace(
-              '| Step 1 implementation | PR-01 Yahoo adjusted-close loader implemented; PR-02 through PR-05 pending |',
-              '| Step 1 implementation | Complete - PR-01 Yahoo adjusted-close loader implemented; PR-02 common-sample transformation, PR-03 figures, PR-04 executable pipeline/artifacts, and PR-05 executed notebook/citations complete |',
-              1,
-          )
-          t = t.replace(
-              'Use Yahoo Finance adjusted closes for `TLT`, `GLD`, `SPY`, and `^VIX`, maximum common dates, no imputation, ETF daily log returns, and daily VIX first difference. PR-01 implements the deterministic adjusted-close loader with explicit Yahoo arguments, `Adj Close` extraction, `^VIX`→`VIX` renaming, canonical column order, timezone-naive sorted unique `Date` index, positive/finite non-missing price validation, and mocked offline tests. Missing price observations are intentionally preserved for PR-02, which constructs the common-date sample.',
-              'Step 1 is complete. PR-01 downloads Yahoo Finance adjusted closes for `TLT`, `GLD`, `SPY`, and `^VIX`; PR-02 constructs the maximum common sample with no imputation and computes ETF daily log returns plus the VIX first difference; PR-03 produces the two required figures; PR-04 executes the pipeline and persists the canonical data/figures; PR-05 provides the fully executed technical notebook and verified scientific-source registry. Step 2 and later results are not claimed here.',
-              1,
-          )
-          t = t.replace(
-              '''Canonical Step 1 outputs planned across PR-01 through PR-05 are:
-
-```text
-data/processed/step1_data.csv
-reports/figures/step1_etf_log_returns.png
-reports/figures/step1_vix_change.png
-```''',
-              '''Canonical Step 1 artifacts are:
-
-```text
-data/processed/step1_data.csv
-reports/figures/step1_etf_log_returns.png
-reports/figures/step1_vix_change.png
-notebooks/gwp2_vix_regime_allocation.ipynb
-reports/references.bib
-```''',
-              1,
-          )
-          p.write_text(t, encoding='utf-8')
-          PY
-      - name: Execute notebook
-        run: jupyter nbconvert --to notebook --execute notebooks/gwp2_vix_regime_allocation.ipynb --inplace --ExecutePreprocessor.timeout=600
-      - name: Push finalized PR05
-        shell: bash
-        run: |
-          set -euo pipefail
+          set +e
+          LOG=.step1-notebook-execution.log
+          : > "$LOG"
+          python -m pip install --upgrade pip >> "$LOG" 2>&1
+          INSTALL1=$?
+          pip install -e ".[dev]" >> "$LOG" 2>&1
+          INSTALL2=$?
+          pip install nbformat nbclient nbconvert ipykernel >> "$LOG" 2>&1
+          INSTALL3=$?
+          if [ "$INSTALL1" -eq 0 ] && [ "$INSTALL2" -eq 0 ] && [ "$INSTALL3" -eq 0 ]; then
+            jupyter nbconvert --to notebook --execute notebooks/gwp2_vix_regime_allocation.ipynb --inplace --ExecutePreprocessor.timeout=600 >> "$LOG" 2>&1
+            NB=$?
+          else
+            NB=99
+          fi
+          printf '\nINSTALL1=%s INSTALL2=%s INSTALL3=%s NOTEBOOK=%s\n' "$INSTALL1" "$INSTALL2" "$INSTALL3" "$NB" >> "$LOG"
           git config user.name "SSC"
           git config user.email "sergej.schweizer@gmail.com"
-          git fetch origin main
-          git checkout origin/main -- .github/workflows/quality-gates.yml
-          git rm -f .github/workflows/finalize-step1-notebook.yml
-          git rm -f .step1-notebook-finalization-trigger
-          git add README.md notebooks/gwp2_vix_regime_allocation.ipynb reports/references.bib .github/workflows/quality-gates.yml
-          git commit -m "PR-05 — Canonical notebook Step 1"
+          git add "$LOG" notebooks/gwp2_vix_regime_allocation.ipynb
+          git commit -m "DIAG — Step 1 notebook execution" || true
           git push origin HEAD:pr-05-canonical-notebook-step-1
+          exit 0
