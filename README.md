@@ -16,7 +16,8 @@ The assignment studies a VIX-driven allocation rule across `TLT`, `GLD`, and `SP
 | Auto-complete after successful Quality Gates | Configured in `.github/workflows/auto-complete.yml` |
 | Combined source coverage threshold | 90% |
 | Step 1 implementation | Complete: PR-01 through PR-05 merged; canonical dataset, figures, notebook, and scientific references available |
-| Steps 2–4 implementation | Not started |
+| Step 2 implementation | Complete: PR-06 through PR-16 and PR-21/PR-22 merged; Markov/HMM tables, figures, canonical state paths, executed notebook, and scientific references available |
+| Steps 3–4 implementation | Not started |
 | Step 5 implementation | Not started |
 | Final submission bundle | Planned in PR-48/PR-49 |
 | `main` branch protection | Repository ruleset still must be enabled in GitHub settings |
@@ -73,7 +74,7 @@ reports/figures/step1_vix_change.png
 
 ### Step 2 — Modeling VIX Regimes
 
-Implement both assignment families with exactly two and three states:
+Implemented both assignment families with exactly two and three states:
 
 - quantile-discretized Markov chains with transition matrices and stationary distributions;
 - univariate Gaussian HMMs with deterministic restarts, fitted parameters, Viterbi states, and smoothed probabilities.
