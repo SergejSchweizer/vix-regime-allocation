@@ -9,9 +9,11 @@ description = "VIX-based volatility regime analysis and allocation for MScFE 622
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
+    "hmmlearn>=0.3.3",
     "matplotlib>=3.8",
     "numpy>=1.26",
     "pandas>=2.2",
+    "scipy>=1.13",
     "yfinance>=0.2.40",
 ]
 
@@ -19,8 +21,14 @@ dependencies = [
 dev = [
     "coverage[toml]>=7.6",
     "mypy>=1.11",
+    "nbclient>=0.10",
+    "nbconvert>=7.16",
+    "nbformat>=5.10",
     "pandas-stubs>=2.2",
+    "pymupdf>=1.24",
+    "pypdf>=5.0",
     "pytest>=8.3",
+    "reportlab>=4.2",
     "ruff>=0.6",
 ]
 
