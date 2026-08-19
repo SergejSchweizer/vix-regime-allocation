@@ -20,7 +20,11 @@ def _source_text(cell: dict[str, Any]) -> str:
 
 def _helper_functions() -> set[str]:
     tree = ast.parse(HELPER.read_text(encoding="utf-8"), filename=str(HELPER))
-    return {node.name for node in tree.body if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))}
+    return {
+        node.name
+        for node in tree.body
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+    }
 
 
 def _call_name(source: str) -> str | None:
@@ -77,7 +81,10 @@ def validate_orchestration() -> int:
     if violations:
         raise SystemExit("Notebook orchestration contract failed:\n- " + "\n- ".join(violations))
 
-    print(f"Notebook orchestration contract passed: {len(calls)} helper calls, no implementation code.")
+    print(
+        f"Notebook orchestration contract passed: {len(calls)} helper calls, "
+        "no implementation code."
+    )
     return len(calls)
 
 
