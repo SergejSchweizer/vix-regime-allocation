@@ -8,6 +8,7 @@ import matplotlib.dates as mdates
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+from matplotlib.axes import Axes
 from matplotlib.ticker import PercentFormatter
 from pandas.api.types import is_numeric_dtype
 
@@ -45,10 +46,11 @@ def _validate_output_path(output_path: Path) -> None:
         raise ValueError("output_path must have a .png suffix.")
 
 
-def _format_dates(axis: plt.Axes) -> None:
-    locator = mdates.AutoDateLocator(minticks=5, maxticks=9)
+def _format_dates(axis: Axes) -> None:
+    locator = mdates.AutoDateLocator(minticks=5, maxticks=9)  # type: ignore[no-untyped-call]
     axis.xaxis.set_major_locator(locator)
-    axis.xaxis.set_major_formatter(mdates.ConciseDateFormatter(locator))
+    formatter = mdates.ConciseDateFormatter(locator)  # type: ignore[no-untyped-call]
+    axis.xaxis.set_major_formatter(formatter)
 
 
 def plot_etf_log_returns(data: pd.DataFrame, output_path: Path) -> None:
