@@ -139,7 +139,11 @@ from IPython.display import Markdown, display
 
 from vix_regime_allocation.sensitivity import build_state_count_sensitivity
 
-repo_root_sensitivity = Path.cwd().resolve().parent if Path.cwd().name == "notebooks" else Path.cwd().resolve()
+repo_root_sensitivity = (
+    Path.cwd().resolve().parent
+    if Path.cwd().name == "notebooks"
+    else Path.cwd().resolve()
+)
 selected_model_sensitivity = json.loads(
     (repo_root_sensitivity / "reports/generated/step3_selected_model.json").read_text(
         encoding="utf-8"
