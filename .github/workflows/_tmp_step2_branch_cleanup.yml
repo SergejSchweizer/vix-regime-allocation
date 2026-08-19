@@ -1,0 +1,31 @@
+name: Temp Step2 Branch Cleanup
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  cleanup:
+    if: ${{ github.event.head_commit.message == 'OPS — Run Step 2 branch cleanup' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - name: Delete fully merged stale remote branch and self-clean
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git fetch origin main ops-auto-complete-after-quality-gate
+          test "$(git rev-list --count origin/main..origin/ops-auto-complete-after-quality-gate)" = "0"
+          git push origin --delete ops-auto-complete-after-quality-gate
+          git rm .github/workflows/_tmp_step2_branch_cleanup.yml
+          git commit -m "OPS — Complete Step 2 branch cleanup"
+          git push origin HEAD:main
