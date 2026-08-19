@@ -1,0 +1,107 @@
+name: Temp PR23 Diagnostic
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    if: ${{ github.event.head_commit.message == 'OPS — Diagnose PR-23 notebook build' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout PR-23 branch
+        uses: actions/checkout@v4
+        with:
+          ref: pr-23-notebook-step-3-model-selection-selected-state-provenance
+          fetch-depth: 0
+      - name: Synchronize with main
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git fetch origin main
+          git merge --no-edit origin/main
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - name: Install project and kernel
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]" ipykernel
+          python -m ipykernel install --user --name python3 --display-name "Python 3"
+      - name: Build, execute, diagnose, and commit
+        run: |
+          set +e
+          {
+            set -euo pipefail
+            python scripts/_tmp_build_pr23.py
+            jupyter nbconvert --to notebook --execute --inplace \
+              --ExecutePreprocessor.timeout=1200 \
+              notebooks/gwp2_vix_regime_allocation.ipynb
+            test -s reports/tables/step3_model_comparison.csv
+            test -s reports/tables/step3_selected_states.csv
+            test -s reports/generated/step3_selected_model.json
+            python - <<'PY'
+          import hashlib
+          import json
+          from pathlib import Path
+          import pandas as pd
+          root = Path('.')
+          comparison = pd.read_csv(root / 'reports/tables/step3_model_comparison.csv')
+          assert list(comparison.columns) == ['family','n_states','log_likelihood','n_parameters','n_observations','aic','bic','converged','criterion_scope']
+          assert list(zip(comparison['family'], comparison['n_states'])) == [('markov',2),('markov',3),('hmm',2),('hmm',3)]
+          assert (comparison['criterion_scope'] == 'within_family_only').all()
+          selected = pd.read_csv(root / 'reports/tables/step3_selected_states.csv')
+          source_data = pd.read_csv(root / 'data/processed/step1_data.csv')
+          assert list(selected.columns) == ['Date','state']
+          assert len(selected) == len(source_data)
+          assert selected['Date'].equals(source_data['Date'])
+          metadata = json.loads((root / 'reports/generated/step3_selected_model.json').read_text())
+          assert list(metadata) == ['family','n_states','state_source','selection_reason','markov_best_n_states','hmm_best_n_states','input_data_sha256','selected_states_path']
+          actual_hash = hashlib.sha256((root / 'data/processed/step1_data.csv').read_bytes()).hexdigest()
+          assert metadata['input_data_sha256'] == actual_hash
+          assert metadata['selected_states_path'] == 'reports/tables/step3_selected_states.csv'
+          source = pd.read_csv(root / metadata['state_source'])
+          assert selected.equals(source)
+          PY
+          } > _tmp_pr23_build.log 2>&1
+          status=$?
+          cat _tmp_pr23_build.log
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if [ "$status" -ne 0 ]; then
+            git add -f _tmp_pr23_build.log
+            git commit -m "PR-23 — Capture notebook build failure" || true
+            git push origin HEAD:pr-23-notebook-step-3-model-selection-selected-state-provenance
+            exit "$status"
+          fi
+          rm _tmp_pr23_build.log
+          git rm scripts/_tmp_build_pr23.py
+          git add -f notebooks/gwp2_vix_regime_allocation.ipynb reports/references.bib \
+            reports/tables/step3_model_comparison.csv \
+            reports/tables/step3_selected_states.csv \
+            reports/generated/step3_selected_model.json
+          git commit -m "PR-23 — Notebook Step 3 model selection + selected-state provenance [generated]"
+          git push origin HEAD:pr-23-notebook-step-3-model-selection-selected-state-provenance
+
+  cleanup:
+    needs: build
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - name: Remove diagnostic controller
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/_tmp_pr23_diagnostic.yml
+          git commit -m "OPS — Cleanup PR-23 diagnostic controller"
+          git push origin HEAD:main
