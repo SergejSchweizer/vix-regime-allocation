@@ -69,9 +69,7 @@ def test_likelihood_tie_uses_smallest_seed(monkeypatch: pytest.MonkeyPatch) -> N
     class FakeModel:
         monitor_ = SimpleNamespace(converged=True)
 
-    def fake_restart(
-        observations: np.ndarray, n_states: int, seed: int
-    ) -> tuple[FakeModel, float]:
+    def fake_restart(observations: np.ndarray, n_states: int, seed: int) -> tuple[FakeModel, float]:
         del observations, n_states
         score = 10.0 if seed in (42, 43) else 9.0
         return FakeModel(), score
@@ -86,9 +84,7 @@ def test_no_converged_restart_fails(monkeypatch: pytest.MonkeyPatch) -> None:
     class FakeModel:
         monitor_ = SimpleNamespace(converged=False)
 
-    def fake_restart(
-        observations: np.ndarray, n_states: int, seed: int
-    ) -> tuple[FakeModel, float]:
+    def fake_restart(observations: np.ndarray, n_states: int, seed: int) -> tuple[FakeModel, float]:
         del observations, n_states, seed
         return FakeModel(), -1.0
 
