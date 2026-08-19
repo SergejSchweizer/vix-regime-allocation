@@ -100,3 +100,46 @@ def test_plotters_reject_invalid_data_and_output_path(tmp_path: Path) -> None:
 
     with pytest.raises(ValueError, match=".png suffix"):
         plots.plot_etf_log_returns(_step1_data(), tmp_path / "etf.pdf")
+
+    with pytest.raises(TypeError, match="pandas DataFrame"):
+        plots.plot_etf_log_returns([], tmp_path / "etf.png")  # type: ignore[arg-type]
+
+    with pytest.raises(TypeError, match="pathlib.Path"):
+        plots.plot_etf_log_returns(_step1_data(), "etf.png")  # type: ignore[arg-type]
+
+
+def test_plotters_reject_invalid_index_contract(tmp_path: Path) -> None:
+    non_datetime = _step1_data().copy()
+    non_datetime.index = pd.Index([1, 2, 3], name="Date")
+    with pytest.raises(ValueError, match="DatetimeIndex"):
+        plots.plot_etf_log_returns(non_datetime, tmp_path / "etf.png")
+
+    unnamed = _step1_data().rename_axis(None)
+    with pytest.raises(ValueError, match="named 'Date'"):
+        plots.plot_etf_log_returns(unnamed, tmp_path / "etf.png")
+
+    timezone_aware = _step1_data().tz_localize("UTC")
+    with pytest.raises(ValueError, match="timezone-naive"):
+        plots.plot_etf_log_returns(timezone_aware, tmp_path / "etf.png")
+
+    duplicated = _step1_data().copy()
+    duplicated.index = pd.DatetimeIndex(
+        ["2020-01-02", "2020-01-02", "2020-01-06"], name="Date"
+    )
+    with pytest.raises(ValueError, match="duplicate"):
+        plots.plot_etf_log_returns(duplicated, tmp_path / "etf.png")
+
+    unsorted = _step1_data().iloc[[1, 0, 2]]
+    with pytest.raises(ValueError, match="sorted"):
+        plots.plot_etf_log_returns(unsorted, tmp_path / "etf.png")
+
+
+def test_plotters_reject_empty_and_non_numeric_data(tmp_path: Path) -> None:
+    empty = _step1_data().iloc[0:0]
+    with pytest.raises(ValueError, match="at least one observation"):
+        plots.plot_vix_change(empty, tmp_path / "vix.png")
+
+    non_numeric = _step1_data().copy()
+    non_numeric["TLT_log_return"] = non_numeric["TLT_log_return"].astype(str)
+    with pytest.raises(ValueError, match="must be numeric"):
+        plots.plot_etf_log_returns(non_numeric, tmp_path / "etf.png")
