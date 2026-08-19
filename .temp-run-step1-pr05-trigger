@@ -1,1 +1,1 @@
-trigger finalize clean
+trigger force finalize
