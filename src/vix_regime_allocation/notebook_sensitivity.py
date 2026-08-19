@@ -15,7 +15,9 @@ def step_5_state_count_sensitivity() -> Any:  # pragma: no cover
 
     from vix_regime_allocation.sensitivity import build_state_count_sensitivity
 
-    repo_root = Path.cwd().resolve().parent if Path.cwd().name == "notebooks" else Path.cwd().resolve()
+    repo_root = (
+        Path.cwd().resolve().parent if Path.cwd().name == "notebooks" else Path.cwd().resolve()
+    )
     selected_model = json.loads(
         (repo_root / "reports/generated/step3_selected_model.json").read_text(encoding="utf-8")
     )
