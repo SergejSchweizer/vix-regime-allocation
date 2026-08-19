@@ -1,0 +1,21 @@
+name: Temp PR23 Force
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    if: false
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo staged
+  cleanup:
+    if: false
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo staged
