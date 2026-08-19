@@ -8,9 +8,7 @@ from vix_regime_allocation.transform import OUTPUT_COLUMNS, prepare_step1_data
 
 
 def _prices() -> pd.DataFrame:
-    index = pd.DatetimeIndex(
-        ["2020-01-01", "2020-01-02", "2020-01-03", "2020-01-04"], name="Date"
-    )
+    index = pd.DatetimeIndex(["2020-01-01", "2020-01-02", "2020-01-03", "2020-01-04"], name="Date")
     return pd.DataFrame(
         {
             "TLT": [100.0, 110.0, np.nan, 121.0],
