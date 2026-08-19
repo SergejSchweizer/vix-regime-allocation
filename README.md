@@ -15,15 +15,16 @@ The assignment studies a VIX-driven allocation rule across `TLT`, `GLD`, and `SP
 | Push / pull-request quality gates | Configured |
 | Auto-complete after successful Quality Gates | Configured in `.github/workflows/auto-complete.yml` |
 | Combined source coverage threshold | 90% |
-| Step 1 implementation | Complete: PR-01 through PR-05 merged; canonical dataset, figures, notebook, and scientific references available |
-| Step 2 implementation | Complete: PR-06 through PR-16 and PR-21/PR-22 merged; Markov/HMM tables, figures, canonical state paths, executed notebook, and scientific references available |
-| Step 3 implementation | Complete: PR-17 through PR-19 and PR-23/PR-24 merged; model comparison, selected-state provenance, state-conditional ETF statistics, figure, executed notebook, and scientific references available |
-| Step 4 implementation | Complete: PR-20 and PR-25 merged; canonical state-to-allocation mapping, Steps 2–4 manifest, executed notebook, scientific references, and in-sample limitations available |
-| Step 5 implementation | Not started |
+| Step 1 implementation | Complete: PR-01 through PR-05 merged; canonical dataset, figures, notebook outputs, and scientific references available |
+| Step 2 implementation | Complete: PR-06 through PR-16 and PR-21/PR-22 merged; Markov/HMM tables, figures, canonical state paths, notebook outputs, and scientific references available |
+| Step 3 implementation | Complete: PR-17 through PR-19 and PR-23/PR-24 merged; model comparison, selected-state provenance, state-conditional ETF statistics, figure, notebook outputs, and scientific references available |
+| Step 4 implementation | Complete: PR-20 and PR-25 merged; canonical state-to-allocation mapping, Steps 2–4 manifest, notebook outputs, scientific references, and in-sample limitations available |
+| Step 5 implementation | Core analysis complete: one-row-lagged rotation, monthly equal-weight and SPY benchmarks, required performance metrics, cumulative comparison, and K=2/K=3 sensitivity artifacts available |
+| Canonical notebook architecture | Thin executed report: explanatory Markdown plus one import and one-line presentation-helper calls only; no analysis implementation in notebook cells |
 | Final submission bundle | Planned in PR-48/PR-49 |
 | `main` branch protection | Repository ruleset still must be enabled in GitHub settings |
 
-No uncomputed assignment result is claimed in this README.
+All numerical values shown by the notebook are produced from committed canonical artifacts or project helper functions; no assignment result is manually invented in the notebook.
 
 ## Canonical backlog
 
@@ -59,6 +60,20 @@ Every notebook/PDF citation must resolve to `reports/references.bib`; every entr
 
 The standalone PDF remains non-technical in its narrative. Bibliographic titles may naturally contain technical terminology; the no-model/no-algorithm wording rule applies to report narrative, not to Works Cited metadata. PR-31 introduces Step1–4 citation-integrity checks and PR-47 extends them through the final Step1–5 notebook, HTML, and PDF.
 
+## Thin notebook contract
+
+`notebooks/gwp2_vix_regime_allocation.ipynb` is an **academic report and output surface, not an implementation file**. It contains explanatory Markdown, equations, scientific interpretation, citations, one import of `vix_regime_allocation.notebook_helpers`, and one-line calls such as `nb.show_step3_state_statistics()`. It does not contain data-loading pipelines, model fitting, state decoding, backtest arithmetic, plotting implementation, table construction, manual numerical calculations, or ad-hoc result formatting.
+
+The separation is deliberate:
+
+- `src/vix_regime_allocation/` contains reusable quantitative and plotting functions;
+- `src/vix_regime_allocation/notebook_helpers.py` loads canonical artifacts, validates them, formats outputs, and generates result-dependent explanatory text for the notebook;
+- `scripts/rebuild_analysis_review.py` regenerates canonical figures, Step 5 sensitivity, and the Step 5 manifest without editing notebook cells;
+- `scripts/rebuild_thin_notebook.py` deterministically creates the Markdown-and-helper-call notebook structure;
+- `scripts/check_notebook_thin.py` rejects notebook implementation code, non-helper code cells, unexecuted helper-call cells, or missing persisted output.
+
+The committed notebook is executed before acceptance, so its helper-call outputs are stored directly in the `.ipynb`. This preserves the requested report-like reading experience while keeping the computational implementation testable and reusable outside Jupyter.
+
 ## Assignment implementation plan
 
 ### Step 1 — Data Preparation and Exploration
@@ -84,7 +99,7 @@ All four candidate state sequences are persisted as canonical `Date,state` CSVs 
 
 ### Step 3 — State Selection and Interpretation
 
-Implemented log-likelihood, AIC, and BIC comparison. Because Markov and HMM likelihoods are defined on different observation spaces, state count is selected by BIC **within family**, not by raw cross-family AIC/BIC comparison. The preferred-method rule selected **Markov K=2**: HMM K=3 won within the HMM family by BIC but failed the fixed minimum 5% decoded-state-occupancy diagnostic, so the deterministic Markov fallback was used.
+Implemented log-likelihood, AIC, and BIC comparison. Because Markov and HMM likelihoods are defined on different observation spaces, state count is selected by BIC **within family**, not by raw cross-family AIC/BIC comparison. The preferred-method rule selected **Markov K=2**: HMM K=3 won within the HMM family by BIC but failed the fixed minimum 5% decoded-state-occupancy diagnostic, so the deterministic Markov fallback was used. The notebook also makes explicit that this occupancy cutoff is a pre-declared project diagnostic, not a formal proof that the HMM candidate is statistically invalid.
 
 The preferred state sequence is persisted at:
 
@@ -113,11 +128,21 @@ The required backtest uses one **observed-trading-row** execution lag. ETF log r
 
 All three portfolios use identical comparison dates. Required metrics are cumulative return, annualized return, annualized volatility, zero-risk-free Sharpe ratio, and maximum drawdown. Maximum drawdown explicitly includes initial wealth `W_0 = 1` in the running peak so an initial loss is not incorrectly treated as zero drawdown.
 
-Sensitivity compares two versus three states **within the preferred model family** on common dates.
+Canonical Step 5 outputs include:
+
+```text
+reports/tables/step5_daily_returns.csv
+reports/tables/step5_performance_summary.csv
+reports/tables/step5_state_count_sensitivity.csv
+reports/figures/step5_cumulative_performance.png
+reports/generated/step5_manifest.json
+```
+
+Sensitivity compares two versus three states **within the preferred model family** on common dates. It is reported as a robustness check and does not retroactively replace the Step 3 state-count selection rule.
 
 ### Important in-sample qualification
 
-The assignment-required one-day lag delays execution but does **not** make this implementation causal or out-of-sample. The backlog requires the notebook/report to disclose that regime thresholds/model parameters are fitted on the full sample, HMM Viterbi states are full-sequence decoded when HMM is preferred, and state-conditional allocation means are full-sample estimates. A stronger validation would require rolling/expanding estimation, one-sided/filtered state inference, and decision-time-only allocation estimation; that is documented as future work rather than silently claimed as completed.
+The assignment-required one-day lag delays execution but does **not** make this implementation causal or out-of-sample. The notebook/report discloses that regime thresholds/model parameters are fitted on the full sample, HMM Viterbi states are full-sequence decoded when HMM is preferred, and state-conditional allocation means are full-sample estimates. A stronger validation would require rolling/expanding estimation, one-sided/filtered state inference, decision-time-only allocation estimation, explicit transaction costs, and additional robustness tests; that is documented as future work rather than silently claimed as completed.
 
 ## Canonical analysis artifacts
 
@@ -196,11 +221,13 @@ Windows PowerShell:
 | Integration tests (`integration-tests`) | `coverage run -m pytest -m integration` | pass |
 | README sidecar | `python scripts/check_readme_sidecar.py` | pass |
 | Backlog contract | `python scripts/check_backlog_contract.py` | pass |
+| Repository hygiene | `python scripts/check_repository_hygiene.py` | pass |
+| Notebook contract | `python scripts/check_notebook_thin.py` | helper-call-only notebook, executed outputs persisted |
 | Coverage | combined unit + integration | `>=90%` |
 
-Ruff lint still examines supported Python and notebook code across the repository. The formatter gate is intentionally limited to the Python source, test, and script trees so the formatter does not rewrite the executed scientific notebook as a side effect of CI.
+Ruff lint examines supported Python and notebook code across the repository. The formatter gate is intentionally limited to the Python source, test, and script trees so the formatter does not rewrite the executed scientific notebook as a side effect of CI. The dedicated notebook contract instead validates the notebook's architecture and execution state.
 
-The aggregate `quality-gate` requires all current jobs. PR-32 later adds the first `analysis-sidecars` parity job after the corresponding notebook/README/HTML/PDF artifacts exist; PR-47 extends that checker through Step 5.
+The aggregate `quality-gate` requires all current jobs, including repository hygiene and the thin-notebook contract. The permanent `Review Analysis Artifact Build` workflow independently rebuilds the canonical artifacts, reconstructs the thin notebook, executes it, validates the helper-call-only contract, and uploads the generated review artifacts without writing to the PR branch. PR-32 later adds the first `analysis-sidecars` parity job after the corresponding notebook/README/HTML/PDF artifacts exist; PR-47 extends that checker through Step 5.
 
 `.github/workflows/auto-complete.yml` listens only to completed **Quality Gates** runs originating from pull requests. After successful Quality Gates, **Auto Complete** merges only an open, non-draft PR targeting `main` whose current head SHA is exactly the SHA that passed validation. If `main` advanced after that validation, the workflow updates the PR branch and waits for a fresh Quality Gates run instead of merging stale validation. A successful auto-complete uses a merge commit and requests deletion of the feature branch. The workflow does not check out or execute PR code and therefore keeps its write-scoped token isolated from untrusted test execution.
 
@@ -217,6 +244,8 @@ coverage combine
 coverage report --fail-under=90
 python scripts/check_readme_sidecar.py
 python scripts/check_backlog_contract.py
+python scripts/check_repository_hygiene.py
+python scripts/check_notebook_thin.py
 ```
 
 ## Main-branch rule
