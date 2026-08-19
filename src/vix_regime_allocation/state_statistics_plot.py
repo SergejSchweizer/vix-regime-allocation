@@ -31,14 +31,18 @@ def _validate_statistics(statistics: pd.DataFrame) -> int:
             raise ValueError(f"statistics column {column!r} must be numeric.")
     states = np.sort(statistics["state"].unique().astype(int))
     if len(states) not in SUPPORTED_STATE_COUNTS:
-        raise ValueError(f"statistics must contain exactly one of {SUPPORTED_STATE_COUNTS} states.")
+        raise ValueError(
+            f"statistics must contain exactly one of {SUPPORTED_STATE_COUNTS} states."
+        )
     n_states = int(len(states))
     if not np.array_equal(states, np.arange(n_states, dtype=int)):
         raise ValueError("statistics states must be contiguous labels starting at zero.")
     expected = [(state, asset) for state in range(n_states) for asset in ASSET_ORDER]
     actual = list(zip(statistics["state"], statistics["asset"], strict=True))
     if actual != expected:
-        raise ValueError("statistics rows must use fixed state-major TLT/GLD/SPY order exactly once.")
+        raise ValueError(
+            "statistics rows must use fixed state-major TLT/GLD/SPY order exactly once."
+        )
     values = statistics[["mean_log_return", "std_log_return"]].to_numpy(dtype=float)
     if np.any(~np.isfinite(values)):
         raise ValueError("statistics mean and standard-deviation values must be finite.")
@@ -86,7 +90,10 @@ def plot_state_asset_statistics(statistics: pd.DataFrame, output_path: Path) -> 
         mean_axis.grid(True, axis="y", alpha=0.22)
         mean_axis.legend(title="ETF", ncol=3)
 
-        std_axis.set_xticks(state_positions, [f"State {state}" for state in range(n_states)])
+        std_axis.set_xticks(
+            state_positions,
+            [f"State {state}" for state in range(n_states)],
+        )
         std_axis.set_xlabel("Preferred-model state")
         std_axis.set_ylabel("Sample daily standard deviation (bp)")
         std_axis.grid(True, axis="y", alpha=0.22)
