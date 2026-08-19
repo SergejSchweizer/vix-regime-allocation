@@ -45,7 +45,9 @@ def test_sensitivity_delegates_all_shared_steps_and_uses_common_dates(
         calls.append(("allocation", k))
         return pd.DataFrame({"k": [k]})
 
-    def fake_rotation(_: pd.DataFrame, states: pd.Series, allocation: pd.DataFrame) -> pd.DataFrame:
+    def fake_rotation(
+        _: pd.DataFrame, states: pd.Series, allocation: pd.DataFrame
+    ) -> pd.DataFrame:
         k = int(states.nunique())
         assert int(allocation.loc[0, "k"]) == k
         calls.append(("rotation", k))
@@ -138,7 +140,17 @@ def test_sensitivity_rejects_invalid_states(case: str) -> None:
 
 
 @pytest.mark.parametrize(
-    "case", ["type", "schema", "index_type", "index_name", "duplicate", "short", "nonnumeric", "nonfinite"]
+    "case",
+    [
+        "type",
+        "schema",
+        "index_type",
+        "index_name",
+        "duplicate",
+        "short",
+        "nonnumeric",
+        "nonfinite",
+    ],
 )
 def test_sensitivity_rejects_invalid_data(case: str) -> None:
     data: object = _data().copy()
@@ -157,7 +169,15 @@ def test_sensitivity_rejects_invalid_data(case: str) -> None:
     elif case == "duplicate":
         frame = _data().copy()
         frame.index = pd.DatetimeIndex(
-            ["2026-01-02", "2026-01-02", "2026-01-06", "2026-01-07", "2026-01-08", "2026-01-09"], name="Date"
+            [
+                "2026-01-02",
+                "2026-01-02",
+                "2026-01-06",
+                "2026-01-07",
+                "2026-01-08",
+                "2026-01-09",
+            ],
+            name="Date",
         )
         data = frame
     elif case == "short":
