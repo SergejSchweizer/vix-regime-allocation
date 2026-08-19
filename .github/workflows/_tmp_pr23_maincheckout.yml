@@ -75,3 +75,5 @@ jobs:
           git rm .github/workflows/_tmp_pr23_maincheckout.yml
           git commit -m "OPS — Cleanup PR-23 main-checkout controller"
           git push origin HEAD:main
+
+# triggered after workflow registration
