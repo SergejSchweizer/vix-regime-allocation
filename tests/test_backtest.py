@@ -10,7 +10,9 @@ from vix_regime_allocation.transform import OUTPUT_COLUMNS
 
 
 def _data() -> pd.DataFrame:
-    index = pd.DatetimeIndex(["2026-01-02", "2026-01-05", "2026-01-06", "2026-01-07"], name="Date")
+    index = pd.DatetimeIndex(
+        ["2026-01-02", "2026-01-05", "2026-01-06", "2026-01-07"], name="Date"
+    )
     simple = {
         "TLT": np.array([0.00, 0.10, 0.20, 0.30]),
         "GLD": np.array([0.00, 0.01, 0.02, 0.03]),
@@ -25,6 +27,10 @@ def _data() -> pd.DataFrame:
         frame[f"{asset}_log_return"] = np.log1p(simple[asset])
     frame["VIX_change"] = [0.0, 1.0, -2.0, 3.0]
     return frame.loc[:, list(OUTPUT_COLUMNS)]
+
+
+def _states(data: pd.DataFrame) -> pd.Series:
+    return pd.Series([0, 1, 1, 0], index=data.index, name="state", dtype=int)
 
 
 def _allocation() -> pd.DataFrame:
@@ -53,9 +59,7 @@ def _allocation() -> pd.DataFrame:
 
 def test_build_rotation_returns_applies_exact_previous_observed_row_state() -> None:
     data = _data()
-    states = pd.Series([0, 1, 1, 0], index=data.index, name="state", dtype=int)
-
-    result = build_rotation_returns(data, states, _allocation())
+    result = build_rotation_returns(data, _states(data), _allocation())
 
     assert tuple(result.columns) == ROTATION_DETAIL_COLUMNS
     assert result.index.equals(data.index[1:])
@@ -90,31 +94,106 @@ def test_state_change_affects_only_next_trading_row() -> None:
 
 @pytest.mark.parametrize(
     "case",
-    ["state_index", "state_name", "allocation_state", "allocation_weights", "data_schema"],
+    [
+        "schema",
+        "index_type",
+        "index_name",
+        "timezone",
+        "duplicate_dates",
+        "unsorted_dates",
+        "too_short",
+        "nonnumeric",
+        "nonfinite",
+    ],
 )
-def test_build_rotation_returns_rejects_contract_violations(case: str) -> None:
-    data = _data()
-    states = pd.Series([0, 1, 1, 0], index=data.index, name="state", dtype=int)
-    allocation = _allocation()
-
-    if case == "state_index":
-        states = states.iloc[::-1]
-    elif case == "state_name":
-        states = states.rename("regime")
-    elif case == "allocation_state":
-        allocation.loc[1, "state"] = 2
-    elif case == "allocation_weights":
-        allocation.loc[0, "TLT_weight"] = 1.0
-    else:
+def test_build_rotation_returns_rejects_invalid_data(case: str) -> None:
+    data = _data().copy()
+    if case == "schema":
         data = data.drop(columns=["VIX_change"])
+    elif case == "index_type":
+        data.index = pd.Index(range(len(data)), name="Date")
+    elif case == "index_name":
+        data.index = data.index.rename("date")
+    elif case == "timezone":
+        data.index = pd.DatetimeIndex(data.index, name="Date").tz_localize("UTC")
+    elif case == "duplicate_dates":
+        data.index = pd.DatetimeIndex(
+            ["2026-01-02", "2026-01-05", "2026-01-05", "2026-01-07"], name="Date"
+        )
+    elif case == "unsorted_dates":
+        data = data.iloc[::-1]
+    elif case == "too_short":
+        data = data.iloc[:1]
+    elif case == "nonnumeric":
+        data["TLT"] = "bad"
+    else:
+        data.loc[data.index[0], "TLT"] = np.inf
+
+    states = pd.Series(np.zeros(len(data), dtype=int), index=data.index, name="state")
+    with pytest.raises(ValueError):
+        build_rotation_returns(data, states, _allocation())
+
+
+@pytest.mark.parametrize("case", ["index", "name", "dtype", "labels"])
+def test_build_rotation_returns_rejects_invalid_states(case: str) -> None:
+    data = _data()
+    states = _states(data)
+    if case == "index":
+        states = states.iloc[::-1]
+    elif case == "name":
+        states = states.rename("regime")
+    elif case == "dtype":
+        states = states.astype(float)
+    else:
+        states = pd.Series([0, 2, 2, 0], index=data.index, name="state", dtype=int)
 
     with pytest.raises(ValueError):
-        build_rotation_returns(data, states, allocation)
+        build_rotation_returns(data, states, _allocation())
+
+
+@pytest.mark.parametrize(
+    "case",
+    [
+        "schema",
+        "length",
+        "state_dtype",
+        "state_labels",
+        "asset",
+        "numeric_dtype",
+        "nonfinite",
+        "non_one_hot",
+        "asset_weight_mismatch",
+    ],
+)
+def test_build_rotation_returns_rejects_invalid_allocation(case: str) -> None:
+    data = _data()
+    allocation = _allocation().copy()
+    if case == "schema":
+        allocation = allocation.drop(columns=["selection_mean_log_return"])
+    elif case == "length":
+        allocation = allocation.iloc[:1]
+    elif case == "state_dtype":
+        allocation["state"] = allocation["state"].astype(float)
+    elif case == "state_labels":
+        allocation.loc[1, "state"] = 2
+    elif case == "asset":
+        allocation.loc[0, "selected_asset"] = "QQQ"
+    elif case == "numeric_dtype":
+        allocation["selection_mean_log_return"] = "bad"
+    elif case == "nonfinite":
+        allocation.loc[0, "selection_mean_log_return"] = np.inf
+    elif case == "non_one_hot":
+        allocation.loc[0, "TLT_weight"] = 1.0
+    else:
+        allocation.loc[0, "selected_asset"] = "GLD"
+
+    with pytest.raises(ValueError):
+        build_rotation_returns(data, _states(data), allocation)
 
 
 def test_build_rotation_returns_rejects_non_dataframe_inputs() -> None:
     data = _data()
-    states = pd.Series([0, 1, 1, 0], index=data.index, name="state", dtype=int)
+    states = _states(data)
     allocation = _allocation()
 
     with pytest.raises(TypeError):
