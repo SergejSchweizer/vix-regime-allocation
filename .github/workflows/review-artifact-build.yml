@@ -4,21 +4,24 @@ on:
   push:
     branches:
       - project-review-quality-improvements
+  pull_request:
+    branches:
+      - main
 
 permissions:
   contents: read
 
 jobs:
   rebuild:
-    if: github.event.head_commit.message == 'REVIEW — Trigger analysis rebuild'
+    if: >-
+      github.event_name == 'pull_request' ||
+      github.event.head_commit.message == 'REVIEW — Trigger analysis rebuild'
     runs-on: ubuntu-latest
     env:
       MPLBACKEND: Agg
     steps:
       - name: Checkout review branch
         uses: actions/checkout@v4
-        with:
-          ref: project-review-quality-improvements
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
