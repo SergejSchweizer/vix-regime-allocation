@@ -31,9 +31,7 @@ def _validate_statistics(statistics: pd.DataFrame) -> int:
             raise ValueError(f"statistics column {column!r} must be numeric.")
     states = np.sort(statistics["state"].unique().astype(int))
     if len(states) not in SUPPORTED_STATE_COUNTS:
-        raise ValueError(
-            f"statistics must contain exactly one of {SUPPORTED_STATE_COUNTS} states."
-        )
+        raise ValueError(f"statistics must contain exactly one of {SUPPORTED_STATE_COUNTS} states.")
     n_states = int(len(states))
     if not np.array_equal(states, np.arange(n_states, dtype=int)):
         raise ValueError("statistics states must be contiguous labels starting at zero.")
