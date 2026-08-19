@@ -40,13 +40,13 @@ jobs:
 
       - name: Format support files
         run: |
-          ruff check --fix \
+          ruff format \
             src/vix_regime_allocation/notebook_helpers.py \
             scripts/rebuild_analysis_review.py \
             scripts/rebuild_thin_notebook.py \
             scripts/check_notebook_thin.py \
             tests/test_notebook_helpers.py
-          ruff format \
+          ruff check --fix \
             src/vix_regime_allocation/notebook_helpers.py \
             scripts/rebuild_analysis_review.py \
             scripts/rebuild_thin_notebook.py \
