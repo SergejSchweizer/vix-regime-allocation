@@ -38,7 +38,9 @@ def _validate_statistics(statistics: pd.DataFrame) -> int:
     expected = [(state, asset) for state in range(n_states) for asset in ASSET_ORDER]
     actual = list(zip(statistics["state"], statistics["asset"], strict=True))
     if actual != expected:
-        raise ValueError("statistics rows must use fixed state-major TLT/GLD/SPY order exactly once.")
+        raise ValueError(
+            "statistics rows must use fixed state-major TLT/GLD/SPY order exactly once."
+        )
 
     values = statistics[["mean_log_return", "std_log_return"]].to_numpy(dtype=float)
     if np.any(~np.isfinite(values)):
@@ -75,7 +77,9 @@ def plot_state_asset_statistics(statistics: pd.DataFrame, output_path: Path) -> 
     axis.set_xticks(state_positions, [f"State {state}" for state in range(n_states)])
     axis.set_xlabel("Preferred-model state")
     axis.set_ylabel("Daily ETF log return")
-    axis.set_title("State-conditional ETF mean daily log returns with sample-standard-deviation bars")
+    axis.set_title(
+        "State-conditional ETF mean daily log returns with sample-standard-deviation bars"
+    )
     axis.grid(True, axis="y", alpha=0.25)
     axis.legend(title="ETF")
     figure.tight_layout()
