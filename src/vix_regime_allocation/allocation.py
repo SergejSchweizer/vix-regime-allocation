@@ -65,7 +65,9 @@ def build_state_allocation(statistics: pd.DataFrame) -> pd.DataFrame:
 
     for state in range(n_states):
         state_rows = statistics.loc[statistics["state"] == state].set_index("asset")
-        means = {asset: float(state_rows.loc[asset, "mean_log_return"]) for asset in ASSET_ORDER}
+        assets = state_rows.index.astype(str).tolist()
+        values = state_rows["mean_log_return"].to_numpy(dtype=float)
+        means = {asset: float(value) for asset, value in zip(assets, values, strict=True)}
         best_mean = max(means.values())
         selected_asset = next(asset for asset in ASSET_ORDER if means[asset] == best_mean)
         rows.append(
