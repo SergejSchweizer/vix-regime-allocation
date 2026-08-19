@@ -1,0 +1,48 @@
+name: PR23 Fix Notebook Lint
+
+on:
+  pull_request:
+    branches: [main]
+    types: [synchronize]
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    if: ${{ github.event.pull_request.head.ref == 'pr-23-notebook-step-3-model-selection-selected-state-provenance' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: pr-23-notebook-step-3-model-selection-selected-state-provenance
+          fetch-depth: 0
+      - name: Reorder imports in generated Step 3 cell
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          path = Path('notebooks/gwp2_vix_regime_allocation.ipynb')
+          notebook = json.loads(path.read_text(encoding='utf-8'))
+          changed = False
+          for cell in notebook['cells']:
+              if cell.get('cell_type') != 'code':
+                  continue
+              source = cell.get('source', [])
+              if source[:2] == ['from hashlib import sha256\n', 'import json\n']:
+                  source[:2] = ['import json\n', 'from hashlib import sha256\n']
+                  changed = True
+                  break
+          if not changed:
+              raise SystemExit('Target Step 3 import block not found.')
+          path.write_text(json.dumps(notebook, indent=1, ensure_ascii=False) + '\n', encoding='utf-8')
+          PY
+      - name: Commit lint fix and remove fixer
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/pr23-fix-lint.yml
+          git add -f notebooks/gwp2_vix_regime_allocation.ipynb
+          git commit -m "PR-23 — Fix generated notebook import order"
+          git push origin HEAD:pr-23-notebook-step-3-model-selection-selected-state-provenance
