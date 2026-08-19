@@ -160,9 +160,7 @@ def _hmm_invalid_reason(candidate: dict[str, object]) -> str | None:
         transition.shape != (n_states, n_states)
         or np.any(~np.isfinite(transition))
         or np.any(transition < -PROBABILITY_TOL)
-        or not np.allclose(
-            transition.sum(axis=1), 1.0, atol=PROBABILITY_TOL, rtol=0.0
-        )
+        or not np.allclose(transition.sum(axis=1), 1.0, atol=PROBABILITY_TOL, rtol=0.0)
     ):
         return "transition probabilities are invalid"
 
