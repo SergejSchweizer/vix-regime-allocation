@@ -72,9 +72,19 @@ def _fit_restart(observations: np.ndarray, n_states: int, seed: int) -> tuple[Ga
 
 
 def _select_restart(observations: np.ndarray, n_states: int) -> tuple[GaussianHMM, int, float]:
+    """Select the best converged restart without letting one failed seed abort the fit.
+
+    Numerical failures are local to one initialization. The deterministic restart policy
+    therefore evaluates every configured seed that can be fitted, ignores failed or
+    non-converged/non-finite restarts, then selects the highest finite log-likelihood.
+    Likelihood ties within the configured tolerance are resolved by the smallest seed.
+    """
     successful: list[tuple[float, int, GaussianHMM]] = []
     for seed in HMM_SEEDS:
-        model, score = _fit_restart(observations, n_states, seed)
+        try:
+            model, score = _fit_restart(observations, n_states, seed)
+        except (FloatingPointError, OverflowError, ValueError, np.linalg.LinAlgError):
+            continue
         if bool(model.monitor_.converged) and np.isfinite(score):
             successful.append((score, seed, model))
     if not successful:
