@@ -8,7 +8,11 @@ ROOT = Path(__file__).resolve().parents[1]
 NOTEBOOK = ROOT / "notebooks/gwp2_vix_regime_allocation.ipynb"
 nb = nbformat.read(NOTEBOOK, as_version=4)
 works_index = next(
-    (i for i, cell in enumerate(nb.cells) if cell.cell_type == "markdown" and "## Works Cited" in cell.source),
+    (
+        i
+        for i, cell in enumerate(nb.cells)
+        if cell.cell_type == "markdown" and "## Works Cited" in cell.source
+    ),
     None,
 )
 if works_index is None:
@@ -71,11 +75,7 @@ The cumulative-performance figure uses the same shared compounding function as t
 )
 
 metrics_code = nbformat.v4.new_code_cell(
-    """from pathlib import Path
-
-from IPython.display import Image, Markdown, display
-
-from vix_regime_allocation.backtest_plot import plot_cumulative_performance
+    """from vix_regime_allocation.backtest_plot import plot_cumulative_performance
 from vix_regime_allocation.backtest_summary import build_performance_summary
 
 repo_root_step5 = Path.cwd().resolve().parent if Path.cwd().name == "notebooks" else Path.cwd().resolve()
@@ -92,7 +92,7 @@ plot_cumulative_performance(step5_daily, figure_path)
 
 display(Markdown("### Required performance summary"))
 display(performance_summary)
-display(Image(filename=str(figure_path)))
+display(Markdown(f"![Cumulative performance comparison]({figure_path.as_posix()})"))
 
 rows = performance_summary.set_index("portfolio")
 lines = []
