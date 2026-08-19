@@ -6,11 +6,13 @@ ROOT = Path(__file__).resolve().parents[1]
 README = ROOT / "README.md"
 PYPROJECT = ROOT / "pyproject.toml"
 WORKFLOW = ROOT / ".github" / "workflows" / "quality-gates.yml"
+AUTO_COMPLETE_WORKFLOW = ROOT / ".github" / "workflows" / "auto-complete.yml"
 
 
 def main() -> None:
     readme_text = README.read_text(encoding="utf-8")
     workflow_text = WORKFLOW.read_text(encoding="utf-8")
+    auto_complete_text = AUTO_COMPLETE_WORKFLOW.read_text(encoding="utf-8")
 
     with PYPROJECT.open("rb") as handle:
         pyproject = tomllib.load(handle)
@@ -26,15 +28,18 @@ def main() -> None:
         "Git workflow per backlog PR",
         "git status --short --branch",
         "PR-01 — Yahoo adjusted-close loader",
-        "PR-01 Yahoo adjusted-close loader implemented",
+        "Step 1 implementation | Complete",
         "90%",
         "ruff check .",
-        "ruff format --check .",
+        "ruff format --check src tests scripts",
         "mypy src",
         "unit-tests",
         "integration-tests",
         "quality-gate",
         "Backlog contract",
+        ".github/workflows/auto-complete.yml",
+        "Auto Complete",
+        "successful Quality Gates",
         "notebooks/gwp2_vix_regime_allocation.ipynb",
         "reports/gwp2_vix_regime_allocation.html",
         "reports/Stochastic_Modeling_GWP2_Report.pdf",
@@ -78,8 +83,38 @@ def main() -> None:
         raise SystemExit("Workflow must execute scripts/check_backlog_contract.py.")
     if "coverage report --fail-under=90" not in workflow_text:
         raise SystemExit("Workflow must enforce coverage with --fail-under=90.")
+    if "ruff format --check src tests scripts" not in workflow_text:
+        raise SystemExit("Workflow must format-check the Python source/test/script trees.")
 
-    print("README planning sidecar is consistent with the canonical backlog and quality gates.")
+    required_auto_complete_fragments = (
+        "name: Auto Complete",
+        "workflow_run:",
+        "- Quality Gates",
+        "pull-requests: write",
+        "contents: write",
+        "github.event.workflow_run.conclusion == 'success'",
+        "github.event.workflow_run.event == 'pull_request'",
+        "VERIFIED_HEAD_SHA",
+        "VERIFIED_BASE_SHA",
+        "gh pr update-branch",
+        "gh pr merge",
+        "--delete-branch",
+    )
+    missing_auto_complete = [
+        fragment
+        for fragment in required_auto_complete_fragments
+        if fragment not in auto_complete_text
+    ]
+    if missing_auto_complete:
+        raise SystemExit(
+            "Auto-complete workflow is missing required safety contract text: "
+            + ", ".join(missing_auto_complete)
+        )
+
+    print(
+        "README planning sidecar is consistent with the canonical backlog, quality gates, "
+        "and auto-complete workflow."
+    )
 
 
 if __name__ == "__main__":
