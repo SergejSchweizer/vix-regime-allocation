@@ -4,13 +4,16 @@ on:
   push:
     branches:
       - pr-05-canonical-notebook-step-1
+  pull_request:
+    branches:
+      - main
 
 permissions:
   contents: write
 
 jobs:
   finalize:
-    if: github.event.head_commit.message == 'CHORE — trigger Step 1 notebook finalization'
+    if: github.ref_name == 'pr-05-canonical-notebook-step-1' || github.head_ref == 'pr-05-canonical-notebook-step-1'
     runs-on: ubuntu-latest
     env:
       MPLBACKEND: Agg
