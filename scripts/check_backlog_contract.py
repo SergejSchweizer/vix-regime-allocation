@@ -9,7 +9,29 @@ EXPECTED_FIRST_PR = 1
 EXPECTED_LAST_PR = 49
 MAX_TASKS_PER_PR = 3
 REFERENCE_OWNER_PRS = {5, 21, 22, 23, 24, 25, 40, 41, 42}
-CITATION_REQUIRED_PRS = {5, 21, 22, 23, 24, 25, 28, 29, 30, 31, 32, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49}
+CITATION_REQUIRED_PRS = {
+    5,
+    21,
+    22,
+    23,
+    24,
+    25,
+    28,
+    29,
+    30,
+    31,
+    32,
+    40,
+    41,
+    42,
+    43,
+    44,
+    45,
+    46,
+    47,
+    48,
+    49,
+}
 
 REQUIRED_CITATION_CONTRACT_FRAGMENTS = (
     "## Scientific citation contract",
