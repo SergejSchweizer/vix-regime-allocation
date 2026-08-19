@@ -115,7 +115,7 @@ assert tuple(selected_model) == (
     "input_data_sha256",
     "selected_states_path",
 )
-selected_model_path.write_text(json.dumps(selected_model, indent=2) + "\n", encoding="utf-8")
+selected_model_path.write_text(json.dumps(selected_model, indent=2) + chr(10), encoding="utf-8")
 
 display(Markdown("### Four-candidate information-criterion table"))
 display(step3_comparison)
