@@ -150,7 +150,7 @@ def _with_bad_posterior(fit: HMMFitResult) -> HMMFitResult:
 
 
 def _with_low_occupancy(fit: HMMFitResult) -> HMMFitResult:
-    states = pd.Series([0] * 19 + [1], index=fit.states.index, name="state", dtype="int64")
+    states = pd.Series([0] * len(fit.states), index=fit.states.index, name="state", dtype="int64")
     return replace(fit, states=states)
 
 
