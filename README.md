@@ -24,7 +24,7 @@ No uncomputed assignment result is claimed in this README.
 
 ## Canonical backlog
 
-`BACKLOG.md` is the **single canonical planning source**. It fixes PR dependencies, file ownership, public interfaces, schemas, numerical conventions, tie rules, test evidence, notebook serialization, sidecar parity, Step 5 backtesting semantics, final submission packaging, and the Git branch/status/commit contract for every PR.
+`BACKLOG.md` is the **single canonical planning source**. It fixes PR dependencies, file ownership, public interfaces, schemas, numerical conventions, tie rules, test evidence, notebook serialization, sidecar parity, Step 5 backtesting semantics, scientific-citation integrity, final submission packaging, and the Git branch/status/commit contract for every PR.
 
 The backlog is deliberately optimized for two weak coding agents. Every PR has explicit lower-numbered dependencies (or `none`), a complete write set, contiguous numbered tasks, one matching acceptance criterion for every task, an exact feature-branch name, an explicit `git status --short --branch` clean-tree check, and an exact commit message containing the PR number and PR name. `scripts/check_backlog_contract.py` verifies PR-01..PR-49, backward-only dependencies, contiguous task IDs, one-to-one acceptance coverage, and this Git metadata.
 
@@ -45,6 +45,16 @@ git status --short --branch
 ```
 
 Immediately before commit and immediately before merge, it must show the branch declared by that PR and no staged, modified, or untracked files. Branch names start with the matching lowercase PR identifier (for example `pr-01-...`), and commit messages start with the matching uppercase PR identifier and exact PR name (for example `PR-01 — Yahoo adjusted-close loader`).
+
+## Scientific citation policy
+
+The technical notebook and standalone PDF report must both contain **verifiable scientific source attribution**. `reports/references.bib` is the canonical bibliography registry and is created in PR-05, then maintained only by serialized notebook PRs when a new source is required.
+
+The required citation standard is **MLA 9**: in-text citations are placed adjacent to externally sourced definitions, equations, methodological claims, and interpretations, and each artifact ends with a **Works Cited** section. Peer-reviewed papers and scholarly books/textbooks provide the academic support for Markov chains, HMM/EM/decoding, information criteria, performance metrics, and backtesting limitations. Official primary sources may additionally document Yahoo/Cboe/index/data definitions, but a bare URL or data-provider page does not substitute for scholarly support of theory or methodology.
+
+Every notebook/PDF citation must resolve to `reports/references.bib`; every entry rendered in an artifact's Works Cited must be cited in that artifact. Duplicate keys, invented metadata, unresolved citations, bibliography-only orphan entries, and URL-only pseudo-citations are invalid. Figures and tables include concise source notes distinguishing the team's own calculations from external data or methodology.
+
+The standalone PDF remains non-technical in its narrative. Bibliographic titles may naturally contain technical terminology; the no-model/no-algorithm wording rule applies to report narrative, not to Works Cited metadata. PR-31 introduces Step1–4 citation-integrity checks and PR-47 extends them through the final Step1–5 notebook, HTML, and PDF.
 
 ## Assignment implementation plan
 
@@ -126,7 +136,13 @@ Standalone no-code report:
 reports/Stochastic_Modeling_GWP2_Report.pdf
 ```
 
-The PDF uses page 1 of `reports/Template_Stochastic_Modeling_Group_Work_Project.pdf` as its cover and excludes the template instruction page. It is non-technical: decision results, recommended action, portfolio-impact factors, limitations, and practical takeaways without model/algorithm/library prose.
+Canonical scientific-source registry:
+
+```text
+reports/references.bib
+```
+
+The PDF uses page 1 of `reports/Template_Stochastic_Modeling_Group_Work_Project.pdf` as its cover and excludes the template instruction page. It is non-technical: decision results, recommended action, portfolio-impact factors, limitations, and practical takeaways without model/algorithm/library prose. It nevertheless includes MLA 9 in-text scholarly citations, source notes, and a final Works Cited derived from the canonical registry.
 
 Parity policy:
 
@@ -134,6 +150,7 @@ Parity policy:
 Notebook <-> README: exact technical-result parity
 Notebook <-> HTML: exact executed-notebook duplicate
 Notebook <-> standalone PDF: decision-result parity with non-technical wording
+Notebook/PDF citations -> reports/references.bib: resolved citation and Works-Cited integrity
 ```
 
 ## Final submission package
@@ -145,7 +162,7 @@ dist/MScFE_622_GWP2_submission.zip
 reports/generated/submission_manifest.json
 ```
 
-The ZIP contains the notebook, HTML duplicate, README, `pyproject.toml`, Step 1 processed data, and the local `src/vix_regime_allocation` Python package needed to keep the notebook executable. The standalone PDF is explicitly excluded from the ZIP and remains a separate upload. The bundle is deterministic and hash-manifested.
+The ZIP contains the notebook, HTML duplicate, README, `pyproject.toml`, canonical `reports/references.bib`, Step 1 processed data, and the local `src/vix_regime_allocation` Python package needed to keep the notebook executable. The standalone PDF is explicitly excluded from the ZIP and remains a separate upload. The bundle is deterministic and hash-manifested.
 
 ## Development setup
 
