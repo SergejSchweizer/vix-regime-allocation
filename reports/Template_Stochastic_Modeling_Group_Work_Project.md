@@ -4,9 +4,9 @@
 
 | FULL LEGAL NAME | LOCATION (COUNTRY) | EMAIL ADDRESS | MARK X FOR ANY NON-CONTRIBUTING MEMBER |
 |---|---|---|---|
-| Umuhoza Denyse Graine |  |  |  |
-| Opeyemi Waliyilah Oladipupo |  |  |  |
-| Sergej Schweizer |  |  |  |
+| Umuhoza Denyse Graine |  | umuhozagraine2018@gmail.com |  |
+| Opeyemi Waliyilah Oladipupo |  | walylad@gmail.com |  |
+| Sergej Schweizer |  | sergej.schweizer@gmail.com |  |
 
 ## Statement of integrity
 
@@ -22,4 +22,4 @@ By typing the names of all group members in the text boxes below, you confirm th
 
 Use this section to explain any attempts to reach out to a non-contributing member. Enter `N/A` if all members contributed.
 
-
+N/A
