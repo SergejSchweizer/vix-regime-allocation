@@ -105,3 +105,5 @@ jobs:
           git rm .github/workflows/_tmp_pr23_diagnostic.yml
           git commit -m "OPS — Cleanup PR-23 diagnostic controller"
           git push origin HEAD:main
+
+# explicit second push triggers this diagnostic workflow
