@@ -57,9 +57,7 @@ def _validated_vix_change(vix_change: pd.Series, n_states: int) -> np.ndarray:
     return values.reshape(-1, 1)
 
 
-def _fit_restart(
-    observations: np.ndarray, n_states: int, seed: int
-) -> tuple[GaussianHMM, float]:
+def _fit_restart(observations: np.ndarray, n_states: int, seed: int) -> tuple[GaussianHMM, float]:
     model = GaussianHMM(
         n_components=n_states,
         covariance_type="diag",
@@ -73,9 +71,7 @@ def _fit_restart(
     return model, score
 
 
-def _select_restart(
-    observations: np.ndarray, n_states: int
-) -> tuple[GaussianHMM, int, float]:
+def _select_restart(observations: np.ndarray, n_states: int) -> tuple[GaussianHMM, int, float]:
     successful: list[tuple[float, int, GaussianHMM]] = []
     for seed in HMM_SEEDS:
         model, score = _fit_restart(observations, n_states, seed)
