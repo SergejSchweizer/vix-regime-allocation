@@ -1,0 +1,74 @@
+name: Step3 README Sync
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    if: ${{ github.event.pull_request.head.ref == 'ops-step-3-readme-status' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ops-step-3-readme-status
+          fetch-depth: 0
+      - name: Synchronize README status
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path('README.md')
+          text = path.read_text(encoding='utf-8')
+          old = '| Steps 3–4 implementation | Not started |'
+          new = (
+              '| Step 3 implementation | Complete: PR-17 through PR-19 and PR-23/PR-24 merged; '
+              'model comparison, selected-state provenance, state-conditional ETF statistics, figure, '
+              'executed notebook, and scientific references available |\n'
+              '| Step 4 implementation | Not started |'
+          )
+          if old not in text:
+              raise SystemExit('Expected Steps 3–4 status line was not found.')
+          text = text.replace(old, new, 1)
+          old_intro = (
+              'Report log-likelihood, AIC, and BIC. Because Markov and HMM likelihoods are defined '
+              'on different observation spaces, state count is selected by BIC **within family**, '
+              'not by raw cross-family AIC/BIC comparison. The preferred-method rule in `BACKLOG.md` '
+              'then selects a valid HMM or Markov fallback transparently.'
+          )
+          new_intro = (
+              'Implemented log-likelihood, AIC, and BIC comparison. Because Markov and HMM likelihoods '
+              'are defined on different observation spaces, state count is selected by BIC **within family**, '
+              'not by raw cross-family AIC/BIC comparison. The preferred-method rule selected **Markov K=2**: '
+              'HMM K=3 won within the HMM family by BIC but failed the fixed minimum 5% decoded-state-occupancy '
+              'diagnostic, so the deterministic Markov fallback was used.'
+          )
+          if old_intro not in text:
+              raise SystemExit('Expected Step 3 introduction was not found.')
+          text = text.replace(old_intro, new_intro, 1)
+          old_tail = (
+              'State-conditional TLT/GLD/SPY mean daily log return, sample standard deviation (`ddof=1`), '
+              'and count are computed and visualized.'
+          )
+          new_tail = (
+              'State-conditional TLT/GLD/SPY mean daily log return, sample standard deviation (`ddof=1`), '
+              'and count are computed and visualized in `reports/tables/step3_state_asset_statistics.csv` '
+              'and `reports/figures/step3_state_asset_statistics.png`.'
+          )
+          if old_tail not in text:
+              raise SystemExit('Expected Step 3 statistics sentence was not found.')
+          text = text.replace(old_tail, new_tail, 1)
+          path.write_text(text, encoding='utf-8')
+          PY
+      - name: Commit README and remove one-shot workflow
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/step3-readme-sync.yml
+          git add README.md
+          git commit -m "OPS — Mark Step 3 complete"
+          git push origin HEAD:ops-step-3-readme-status
