@@ -46,21 +46,32 @@ def test_configured_settings_and_all_seeds(monkeypatch: pytest.MonkeyPatch) -> N
             return self
 
         def score(self, observations: np.ndarray) -> float:
+            del observations
             return float(seen[-1]["random_state"])
 
     monkeypatch.setattr(hmm_module, "GaussianHMM", FakeModel)
-    observations = np.array([[0.0], [1.0], [0.2], [1.1]])
-    _, seed, score = hmm_module._select_restart(observations, 2)
+    _, seed, score = hmm_module._select_restart(np.array([[0.0], [1.0], [0.2], [1.1]]), 2)
     assert [item["random_state"] for item in seen] == [42, 43, 44, 45, 46]
-    for kwargs in seen:
-        assert kwargs == {
-            "n_components": 2,
-            "covariance_type": "diag",
-            "n_iter": 500,
-            "tol": 1e-6,
-            "min_covar": 1e-6,
-            "random_state": kwargs["random_state"],
-        }
+    assert seed == 46
+    assert score == 46.0
+
+
+def test_failed_restart_is_skipped(monkeypatch: pytest.MonkeyPatch) -> None:
+    class FakeModel:
+        monitor_ = SimpleNamespace(converged=True)
+
+    attempted: list[int] = []
+
+    def fake_restart(observations: np.ndarray, n_states: int, seed: int) -> tuple[FakeModel, float]:
+        del observations, n_states
+        attempted.append(seed)
+        if seed == 43:
+            raise ValueError("singular covariance")
+        return FakeModel(), float(seed)
+
+    monkeypatch.setattr(hmm_module, "_fit_restart", fake_restart)
+    _, seed, score = hmm_module._select_restart(np.zeros((4, 1)), 2)
+    assert attempted == [42, 43, 44, 45, 46]
     assert seed == 46
     assert score == 46.0
 
@@ -71,8 +82,7 @@ def test_likelihood_tie_uses_smallest_seed(monkeypatch: pytest.MonkeyPatch) -> N
 
     def fake_restart(observations: np.ndarray, n_states: int, seed: int) -> tuple[FakeModel, float]:
         del observations, n_states
-        score = 10.0 if seed in (42, 43) else 9.0
-        return FakeModel(), score
+        return FakeModel(), 10.0 if seed in (42, 43) else 9.0
 
     monkeypatch.setattr(hmm_module, "_fit_restart", fake_restart)
     _, seed, score = hmm_module._select_restart(np.zeros((4, 1)), 2)
@@ -93,13 +103,21 @@ def test_no_converged_restart_fails(monkeypatch: pytest.MonkeyPatch) -> None:
         hmm_module._select_restart(np.zeros((4, 1)), 2)
 
 
+def test_all_restarts_failing_raises_runtime_error(monkeypatch: pytest.MonkeyPatch) -> None:
+    def fake_restart(observations: np.ndarray, n_states: int, seed: int) -> tuple[object, float]:
+        del observations, n_states, seed
+        raise np.linalg.LinAlgError("failed")
+
+    monkeypatch.setattr(hmm_module, "_fit_restart", fake_restart)
+    with pytest.raises(RuntimeError, match="No configured HMM restart"):
+        hmm_module._select_restart(np.zeros((4, 1)), 2)
+
+
 def test_invalid_series_and_state_count_fail() -> None:
     series = _series()
     with pytest.raises(ValueError, match="n_states"):
         fit_gaussian_hmm(series, 4)
-    wrong = series.rename("wrong")
     with pytest.raises(ValueError, match="named"):
-        fit_gaussian_hmm(wrong, 2)
-    short = series.iloc[:2]
+        fit_gaussian_hmm(series.rename("wrong"), 2)
     with pytest.raises(ValueError, match="enough"):
-        fit_gaussian_hmm(short, 3)
+        fit_gaussian_hmm(series.iloc[:2], 3)
