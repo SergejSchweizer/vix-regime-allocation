@@ -1,0 +1,45 @@
+name: Temporary PR-41 Final Diagnostic
+on:
+  push:
+    branches: [main]
+permissions:
+  contents: write
+jobs:
+  diagnose:
+    if: github.event.head_commit.message == 'OPS — Trigger PR-41 final diagnostic'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: pr-41-notebook-step5-metrics-cumulative-comparison
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - shell: bash
+        run: |
+          set +e
+          LOG=.github/_tmp_pr41_diag3.log
+          : > "$LOG"
+          python -m pip install --upgrade pip >> "$LOG" 2>&1; s=$?
+          if [ "$s" -eq 0 ]; then pip install -e '.[dev]' ipykernel >> "$LOG" 2>&1; s=$?; fi
+          if [ "$s" -eq 0 ]; then python scripts/_tmp_fix_pr41.py >> "$LOG" 2>&1; s=$?; fi
+          if [ "$s" -eq 0 ]; then python -m jupyter nbconvert --to notebook --execute --inplace --ExecutePreprocessor.timeout=900 notebooks/gwp2_vix_regime_allocation.ipynb >> "$LOG" 2>&1; s=$?; fi
+          if [ "$s" -eq 0 ]; then ruff check notebooks/gwp2_vix_regime_allocation.ipynb >> "$LOG" 2>&1; s=$?; fi
+          echo STATUS=$s >> "$LOG"
+          git config user.name 'github-actions[bot]'; git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add "$LOG"; git commit -m "OPS — PR-41 final diagnostic $s"; git push origin HEAD:pr-41-notebook-step5-metrics-cumulative-comparison
+  cleanup:
+    if: always() && github.event.head_commit.message == 'OPS — Trigger PR-41 final diagnostic'
+    needs: diagnose
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - run: |
+          rm -f .github/workflows/_tmp_pr41_diag3.yml .github/_tmp_pr41_diag3_trigger
+          git config user.name 'github-actions[bot]'; git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A .github/workflows/_tmp_pr41_diag3.yml .github/_tmp_pr41_diag3_trigger
+          git commit -m 'OPS — Remove PR-41 final diagnostic'; git push origin HEAD:main
