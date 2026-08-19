@@ -12,9 +12,7 @@ def _fit(index: pd.DatetimeIndex, n_states: int, log_likelihood: float) -> HMMFi
         index=pd.Index(range(n_states), name="from_state"),
         columns=labels,
     )
-    states = pd.Series(
-        [state % n_states for state in range(len(index))], index=index, name="state"
-    )
+    states = pd.Series([state % n_states for state in range(len(index))], index=index, name="state")
     return HMMFitResult(
         n_states=n_states,
         seed=42,
