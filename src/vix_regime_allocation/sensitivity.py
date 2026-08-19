@@ -47,9 +47,7 @@ def _validate_data(data: pd.DataFrame) -> None:
         raise ValueError("data must contain only finite values.")
 
 
-def _validate_states(
-    states: pd.Series, data_index: pd.DatetimeIndex, n_states: int
-) -> pd.Series:
+def _validate_states(states: pd.Series, data_index: pd.DatetimeIndex, n_states: int) -> pd.Series:
     if not isinstance(states, pd.Series):
         raise TypeError(f"states_by_k[{n_states}] must be a pandas Series.")
     if states.name != "state":
