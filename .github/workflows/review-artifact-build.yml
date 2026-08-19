@@ -33,6 +33,8 @@ jobs:
           pip install -e '.[dev]' ipykernel
       - name: Rebuild analysis artifacts and notebook sources
         run: python scripts/rebuild_analysis_review.py
+      - name: Validate orchestration-only notebook
+        run: python scripts/check_notebook_orchestration.py
       - name: Execute full notebook
         run: >-
           python -m jupyter nbconvert --to notebook --execute --inplace
