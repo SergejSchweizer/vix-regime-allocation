@@ -123,9 +123,7 @@ def test_plotters_reject_invalid_index_contract(tmp_path: Path) -> None:
         plots.plot_etf_log_returns(timezone_aware, tmp_path / "etf.png")
 
     duplicated = _step1_data().copy()
-    duplicated.index = pd.DatetimeIndex(
-        ["2020-01-02", "2020-01-02", "2020-01-06"], name="Date"
-    )
+    duplicated.index = pd.DatetimeIndex(["2020-01-02", "2020-01-02", "2020-01-06"], name="Date")
     with pytest.raises(ValueError, match="duplicate"):
         plots.plot_etf_log_returns(duplicated, tmp_path / "etf.png")
 
