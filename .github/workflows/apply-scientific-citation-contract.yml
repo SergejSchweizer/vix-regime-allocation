@@ -1,0 +1,41 @@
+name: PR-DOCS scientific citation contract updater
+
+on:
+  push:
+    branches:
+      - pr-docs-scientific-citation-contract
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    if: github.event.head_commit.message == 'PR-DOCS — Scientific citation contract: execute updater'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@v4
+        with:
+          ref: pr-docs-scientific-citation-contract
+          fetch-depth: 0
+
+      - name: Apply deterministic citation-contract update
+        shell: bash
+        run: |
+          set -euo pipefail
+          python scripts/apply_scientific_citation_contract.py
+          python scripts/check_backlog_contract.py
+          python scripts/check_readme_sidecar.py
+
+      - name: Remove one-shot updater artifacts and commit
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "SSC"
+          git config user.email "sergej.schweizer@gmail.com"
+          git rm scripts/apply_scientific_citation_contract.py
+          git rm .github/workflows/apply-scientific-citation-contract.yml
+          git rm .scientific-citation-contract-trigger
+          git add BACKLOG.md README.md scripts/check_backlog_contract.py scripts/check_readme_sidecar.py
+          git commit -m "PR-DOCS — Scientific citation contract"
+          git push origin HEAD:pr-docs-scientific-citation-contract
