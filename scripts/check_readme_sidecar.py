@@ -7,6 +7,9 @@ README = ROOT / "README.md"
 PYPROJECT = ROOT / "pyproject.toml"
 WORKFLOW = ROOT / ".github" / "workflows" / "quality-gates.yml"
 AUTO_COMPLETE_WORKFLOW = ROOT / ".github" / "workflows" / "auto-complete.yml"
+STEP5_SUMMARY = ROOT / "reports" / "tables" / "step5_performance_summary.csv"
+STEP5_SENSITIVITY = ROOT / "reports" / "tables" / "step5_state_count_sensitivity.csv"
+STEP5_MANIFEST = ROOT / "reports" / "generated" / "step5_manifest.json"
 
 
 def main() -> None:
@@ -25,16 +28,19 @@ def main() -> None:
         "BACKLOG.md",
         "PR-01 through PR-49",
         "scripts/check_backlog_contract.py",
+        "scripts/check_repository_hygiene.py",
         "Git workflow per backlog PR",
         "git status --short --branch",
         "PR-01 — Yahoo adjusted-close loader",
         "Step 1 implementation | Complete",
+        "Step 5 computational implementation | Complete",
         "90%",
         "ruff check .",
         "ruff format --check src tests scripts",
         "mypy src",
         "unit-tests",
         "integration-tests",
+        "repository-hygiene",
         "quality-gate",
         "Backlog contract",
         ".github/workflows/auto-complete.yml",
@@ -51,11 +57,20 @@ def main() -> None:
         "Notebook/PDF citations -> reports/references.bib",
         "reports/Template_Stochastic_Modeling_Group_Work_Project.pdf",
         "reports/tables/step3_selected_states.csv",
+        "reports/tables/step5_daily_returns.csv",
+        "reports/tables/step5_performance_summary.csv",
+        "reports/tables/step5_state_count_sensitivity.csv",
+        "reports/figures/step5_cumulative_performance.png",
+        "reports/generated/step5_manifest.json",
         "dist/MScFE_622_GWP2_submission.zip",
         "reports/generated/submission_manifest.json",
         "Notebook <-> README: exact technical-result parity",
         "Notebook <-> HTML: exact executed-notebook duplicate",
         "Notebook <-> standalone PDF: decision-result parity",
+        "ΔVIX",
+        "one-observation lag",
+        "contemporaneous",
+        "in-sample",
         "does **not** make this implementation causal or out-of-sample",
     )
     missing = [fragment for fragment in required_readme_fragments if fragment not in readme_text]
@@ -65,6 +80,19 @@ def main() -> None:
     if "BACKLOG_STEPS_2_4.md" in readme_text:
         raise SystemExit("README must reference only the canonical BACKLOG.md backlog.")
 
+    if STEP5_SUMMARY.exists() and STEP5_SUMMARY.stat().st_size > 0:
+        stale_markers = (
+            "Step 5 implementation | Not started",
+            "Step 5 computational implementation | Not started",
+        )
+        stale = [marker for marker in stale_markers if marker in readme_text]
+        if stale:
+            raise SystemExit("README has stale Step 5 status text: " + ", ".join(stale))
+
+    for artifact in (STEP5_SUMMARY, STEP5_SENSITIVITY, STEP5_MANIFEST):
+        if not artifact.exists() or artifact.stat().st_size == 0:
+            raise SystemExit(f"Required Step 5 canonical artifact is missing or empty: {artifact}")
+
     required_jobs = (
         "lint",
         "type-check",
@@ -72,6 +100,7 @@ def main() -> None:
         "integration-tests",
         "readme-sidecar",
         "backlog-contract",
+        "repository-hygiene",
         "coverage",
         "quality-gate",
     )
@@ -79,12 +108,19 @@ def main() -> None:
         if re.search(rf"^  {re.escape(job)}:\s*$", workflow_text, flags=re.MULTILINE) is None:
             raise SystemExit(f"Workflow is missing required job: {job}")
 
-    if "python scripts/check_backlog_contract.py" not in workflow_text:
-        raise SystemExit("Workflow must execute scripts/check_backlog_contract.py.")
-    if "coverage report --fail-under=90" not in workflow_text:
-        raise SystemExit("Workflow must enforce coverage with --fail-under=90.")
-    if "ruff format --check src tests scripts" not in workflow_text:
-        raise SystemExit("Workflow must format-check the Python source/test/script trees.")
+    required_workflow_commands = (
+        "python scripts/check_backlog_contract.py",
+        "python scripts/check_repository_hygiene.py",
+        "coverage report --fail-under=90",
+        "ruff format --check src tests scripts",
+    )
+    missing_commands = [
+        command for command in required_workflow_commands if command not in workflow_text
+    ]
+    if missing_commands:
+        raise SystemExit(
+            "Workflow is missing required quality-gate commands: " + ", ".join(missing_commands)
+        )
 
     required_auto_complete_fragments = (
         "name: Auto Complete",
@@ -112,8 +148,8 @@ def main() -> None:
         )
 
     print(
-        "README planning sidecar is consistent with the canonical backlog, quality gates, "
-        "and auto-complete workflow."
+        "README sidecar is consistent with Step 1–5 artifacts, the canonical backlog, "
+        "quality gates, repository hygiene, and the auto-complete workflow."
     )
 
 
