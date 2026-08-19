@@ -14,7 +14,7 @@ The assignment studies a VIX-driven allocation rule across `TLT`, `GLD`, and `SP
 | Python package scaffold | Bootstrapped |
 | Push / pull-request quality gates | Configured |
 | Combined source coverage threshold | 90% |
-| Step 1 implementation | PR-01 Yahoo adjusted-close loader implemented; PR-02 through PR-05 pending |
+| Step 1 implementation | Complete: PR-01 through PR-05 merged; canonical dataset, figures, notebook, and scientific references available |
 | Steps 2–4 implementation | Not started |
 | Step 5 implementation | Not started |
 | Final submission bundle | Planned in PR-48/PR-49 |
@@ -62,7 +62,7 @@ The standalone PDF remains non-technical in its narrative. Bibliographic titles 
 
 Use Yahoo Finance adjusted closes for `TLT`, `GLD`, `SPY`, and `^VIX`, maximum common dates, no imputation, ETF daily log returns, and daily VIX first difference. PR-01 implements the deterministic adjusted-close loader with explicit Yahoo arguments, `Adj Close` extraction, `^VIX`→`VIX` renaming, canonical column order, timezone-naive sorted unique `Date` index, positive/finite non-missing price validation, and mocked offline tests. Missing price observations are intentionally preserved for PR-02, which constructs the common-date sample.
 
-Canonical Step 1 outputs planned across PR-01 through PR-05 are:
+Canonical Step 1 outputs generated across PR-01 through PR-05 are:
 
 ```text
 data/processed/step1_data.csv
