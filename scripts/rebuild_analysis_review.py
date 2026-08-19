@@ -134,9 +134,7 @@ The two sensitivity rows use the common lagged return-date intersection, so cumu
     sensitivity_import = nbformat.v4.new_code_cell(
         "from vix_regime_allocation import notebook_sensitivity as sensitivity_nb"
     )
-    sensitivity_code = nbformat.v4.new_code_cell(
-        "sensitivity_nb.step_5_state_count_sensitivity()"
-    )
+    sensitivity_code = nbformat.v4.new_code_cell("sensitivity_nb.step_5_state_count_sensitivity()")
     final_md = nbformat.v4.new_markdown_cell(
         """### Final Step 5 interpretation
 
