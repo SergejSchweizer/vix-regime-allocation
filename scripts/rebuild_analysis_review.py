@@ -8,7 +8,6 @@ import nbformat
 import pandas as pd
 
 from vix_regime_allocation.backtest_plot import plot_cumulative_performance
-from vix_regime_allocation.hmm_probability_plot import plot_hmm_smoothed_probabilities
 from vix_regime_allocation.hmm_state_plot import plot_hmm_vix_states
 from vix_regime_allocation.markov_plots import plot_markov_vix_states
 from vix_regime_allocation.plots import plot_etf_log_returns, plot_vix_change
@@ -29,13 +28,6 @@ def _load_indexed_csv(path: Path) -> pd.DataFrame:
     frame = pd.read_csv(path, parse_dates=["Date"]).set_index("Date")
     frame.index = pd.DatetimeIndex(frame.index, name="Date")
     return frame
-
-
-def _replace_once(text: str, old: str, new: str) -> str:
-    count = text.count(old)
-    if count != 1:
-        raise RuntimeError(f"Expected exactly one notebook occurrence, found {count}: {old[:70]!r}")
-    return text.replace(old, new, 1)
 
 
 def _update_notebook_markdown() -> None:
@@ -238,29 +230,15 @@ def _regenerate_figures() -> None:
         ROOT / "reports/figures/step2_markov_vix_states.png",
     )
 
-    hmm_2 = _load_indexed_csv(ROOT / "reports/tables/step2_hmm_2_states.csv")["state"].astype(
-        int
-    ).rename("state")
-    hmm_3 = _load_indexed_csv(ROOT / "reports/tables/step2_hmm_3_states.csv")["state"].astype(
-        int
-    ).rename("state")
+    hmm_2 = _load_indexed_csv(ROOT / "reports/tables/step2_hmm_2_states.csv")["state"]
+    hmm_2 = hmm_2.astype(int).rename("state")
+    hmm_3 = _load_indexed_csv(ROOT / "reports/tables/step2_hmm_3_states.csv")["state"]
+    hmm_3 = hmm_3.astype(int).rename("state")
     plot_hmm_vix_states(
         vix,
         hmm_2,
         hmm_3,
         ROOT / "reports/figures/step2_hmm_vix_states.png",
-    )
-
-    probabilities_2 = _load_indexed_csv(
-        ROOT / "reports/tables/step2_hmm_2_probabilities.csv"
-    )
-    probabilities_3 = _load_indexed_csv(
-        ROOT / "reports/tables/step2_hmm_3_probabilities.csv"
-    )
-    plot_hmm_smoothed_probabilities(
-        probabilities_2,
-        probabilities_3,
-        ROOT / "reports/figures/step2_hmm_smoothed_probabilities.png",
     )
 
     statistics = pd.read_csv(STATE_STATS)
