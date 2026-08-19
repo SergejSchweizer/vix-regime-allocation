@@ -1,0 +1,64 @@
+name: Temp Step4 README
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  update:
+    if: ${{ github.event.head_commit.message == 'OPS — Prepare Step 4 README status' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout status branch
+        uses: actions/checkout@v4
+        with:
+          ref: ops-step-4-readme-status
+          fetch-depth: 0
+      - name: Synchronize Step 4 status and result
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path('README.md')
+          text = path.read_text(encoding='utf-8')
+          old_status = '| Step 4 implementation | Not started |'
+          new_status = ('| Step 4 implementation | Complete: PR-20 and PR-25 merged; canonical state-to-allocation mapping, '
+                        'Steps 2–4 manifest, executed notebook, scientific references, and in-sample limitations available |')
+          if old_status not in text:
+              raise SystemExit('Expected Step 4 status line not found.')
+          text = text.replace(old_status, new_status, 1)
+
+          old_section = '''### Step 4 — Rotation Strategy\n\nFor every preferred state, allocate 100% to the ETF with the largest historical mean daily log return in that state. Exact ties use:\n\n```text\nTLT -> GLD -> SPY\n```\n\nThe optional 60/40 variant is not used.'''
+          new_section = '''### Step 4 — Rotation Strategy\n\nImplemented the deterministic 100% state-based rotation rule from the canonical Step 3 statistics. For the selected Markov K=2 specification, **State 0 maps to SPY** and **State 1 maps to TLT**; GLD is not selected by the maximum-conditional-mean rule in either state. Exact ties use:\n\n```text\nTLT -> GLD -> SPY\n```\n\nThe optional 60/40 variant is not used. The mapping is persisted at `reports/tables/step4_allocation_mapping.csv`, and `reports/generated/steps_2_4_manifest.json` records the frozen Step 1 SHA plus every canonical Step 2–4 table and figure. The notebook explicitly states that the mapping is full-sample/in-sample and is not a causal out-of-sample trading rule.'''
+          if old_section not in text:
+              raise SystemExit('Expected Step 4 section not found.')
+          text = text.replace(old_section, new_section, 1)
+          path.write_text(text, encoding='utf-8')
+          PY
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add README.md
+          git commit -m "OPS — Mark Step 4 complete"
+          git push origin HEAD:ops-step-4-readme-status
+
+  cleanup:
+    needs: update
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - name: Remove temporary controller
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/_tmp_step4_readme.yml
+          git commit -m "OPS — Cleanup Step 4 README controller"
+          git push origin HEAD:main
