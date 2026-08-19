@@ -107,3 +107,5 @@ jobs:
           git rm .github/workflows/_tmp_pr23_controller.yml
           git commit -m "OPS — Cleanup PR-23 controller"
           git push origin HEAD:main
+
+# second push explicitly triggers this controller
