@@ -30,9 +30,7 @@ def _validate_vix_change(vix_change: pd.Series) -> np.ndarray:
     return values
 
 
-def discretize_vix_change(
-    vix_change: pd.Series, n_states: int
-) -> tuple[pd.Series, pd.DataFrame]:
+def discretize_vix_change(vix_change: pd.Series, n_states: int) -> tuple[pd.Series, pd.DataFrame]:
     """Discretize ``VIX_change`` into two or three linear-quantile states."""
     values = _validate_vix_change(vix_change)
     if n_states not in SUPPORTED_STATE_COUNTS:
