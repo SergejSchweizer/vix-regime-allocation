@@ -284,6 +284,9 @@ def plot_vix_change(data: pandas.DataFrame, output_path: pathlib.Path) -> None: 
 ```text
 scripts/run_step1.py
 tests/test_run_step1.py
+data/processed/step1_data.csv
+reports/figures/step1_etf_log_returns.png
+reports/figures/step1_vix_change.png
 ```
 
 ### Tasks
