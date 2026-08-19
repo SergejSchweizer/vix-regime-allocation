@@ -10,7 +10,6 @@ import pytest
 import vix_regime_allocation.notebook_helpers as module
 from vix_regime_allocation.transform import OUTPUT_COLUMNS
 
-
 _PNG_1X1 = base64.b64decode(
     "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Y9Z1xkAAAAASUVORK5CYII="
 )
