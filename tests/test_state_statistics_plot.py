@@ -5,7 +5,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from vix_regime_allocation.state_statistics_plot import plot_state_asset_statistics
+from vix_regime_allocation.state_statistics_plot import BASIS_POINTS, plot_state_asset_statistics
 
 
 def _statistics() -> pd.DataFrame:
@@ -23,66 +23,55 @@ def _statistics() -> pd.DataFrame:
 def test_plot_writes_nonempty_file_and_closes_figure(tmp_path: Path) -> None:
     output = tmp_path / "nested" / "state_statistics.png"
     before = set(plt.get_fignums())
-
     plot_state_asset_statistics(_statistics(), output)
-
     assert output.exists() and output.stat().st_size > 0
     assert set(plt.get_fignums()) == before
 
 
-def test_bars_use_asset_means_and_standard_deviation_error_bars(
+def test_mean_and_standard_deviation_are_separate_basis_point_panels(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
-    recorded: list[tuple[str, np.ndarray, np.ndarray]] = []
+    recorded: list[tuple[str, np.ndarray]] = []
     original_bar = plt.Axes.bar
 
     def recording_bar(self: plt.Axes, *args: object, **kwargs: object) -> object:
-        recorded.append(
-            (
-                str(kwargs["label"]),
-                np.asarray(args[1], dtype=float),
-                np.asarray(kwargs["yerr"], dtype=float),
-            )
-        )
+        recorded.append((str(kwargs["label"]), np.asarray(args[1], dtype=float)))
         return original_bar(self, *args, **kwargs)
 
     monkeypatch.setattr(plt.Axes, "bar", recording_bar)
     plot_state_asset_statistics(_statistics(), tmp_path / "plot.png")
 
-    assert [entry[0] for entry in recorded] == ["TLT", "GLD", "SPY"]
-    np.testing.assert_allclose(recorded[0][1], [0.001, 0.003])
-    np.testing.assert_allclose(recorded[0][2], [0.01, 0.04])
-    np.testing.assert_allclose(recorded[1][1], [0.002, -0.002])
-    np.testing.assert_allclose(recorded[1][2], [0.02, 0.05])
-    np.testing.assert_allclose(recorded[2][1], [-0.001, 0.004])
-    np.testing.assert_allclose(recorded[2][2], [0.03, 0.06])
+    assert [label for label, _ in recorded] == ["TLT", "TLT", "GLD", "GLD", "SPY", "SPY"]
+    np.testing.assert_allclose(recorded[0][1], np.array([0.001, 0.003]) * BASIS_POINTS)
+    np.testing.assert_allclose(recorded[1][1], np.array([0.01, 0.04]) * BASIS_POINTS)
+    np.testing.assert_allclose(recorded[4][1], np.array([-0.001, 0.004]) * BASIS_POINTS)
+    np.testing.assert_allclose(recorded[5][1], np.array([0.03, 0.06]) * BASIS_POINTS)
 
 
-def test_figure_has_zero_line_labels_title_and_legend(
+def test_figure_labels_explain_mean_and_dispersion(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
     observed: dict[str, object] = {}
     original_savefig = plt.Figure.savefig
 
     def recording_savefig(self: plt.Figure, *args: object, **kwargs: object) -> None:
-        axis = self.axes[0]
-        observed["xlabel"] = axis.get_xlabel()
-        observed["ylabel"] = axis.get_ylabel()
-        observed["title"] = axis.get_title()
-        observed["legend"] = axis.get_legend() is not None
-        observed["zero_line"] = any(
-            np.allclose(line.get_ydata(), [0.0, 0.0]) for line in axis.get_lines()
+        mean_axis, std_axis = self.axes
+        observed["title"] = mean_axis.get_title()
+        observed["mean_ylabel"] = mean_axis.get_ylabel()
+        observed["std_ylabel"] = std_axis.get_ylabel()
+        observed["xlabel"] = std_axis.get_xlabel()
+        observed["mean_zero"] = any(
+            np.allclose(line.get_ydata(), [0.0, 0.0]) for line in mean_axis.get_lines()
         )
         original_savefig(self, *args, **kwargs)
 
     monkeypatch.setattr(plt.Figure, "savefig", recording_savefig)
     plot_state_asset_statistics(_statistics(), tmp_path / "plot.png")
-
+    assert observed["title"] == "State-conditional ETF return means and dispersion"
+    assert observed["mean_ylabel"] == "Mean daily log return (bp)"
+    assert observed["std_ylabel"] == "Sample daily standard deviation (bp)"
     assert observed["xlabel"] == "Preferred-model state"
-    assert observed["ylabel"] == "Daily ETF log return"
-    assert "State-conditional ETF mean daily log returns" in str(observed["title"])
-    assert observed["legend"] is True
-    assert observed["zero_line"] is True
+    assert observed["mean_zero"] is True
 
 
 @pytest.mark.parametrize(
@@ -100,10 +89,9 @@ def test_figure_has_zero_line_labels_title_and_legend(
     ],
 )
 def test_invalid_statistics_fail(mutator: object, tmp_path: Path) -> None:
-    transform = mutator
-    assert callable(transform)
+    assert callable(mutator)
     with pytest.raises((TypeError, ValueError)):
-        plot_state_asset_statistics(transform(_statistics()), tmp_path / "plot.png")  # type: ignore[operator]
+        plot_state_asset_statistics(mutator(_statistics()), tmp_path / "plot.png")  # type: ignore[operator]
 
 
 def test_non_dataframe_fails(tmp_path: Path) -> None:
