@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Callable
 from pathlib import Path
 
 import matplotlib.pyplot as plt
@@ -9,6 +10,8 @@ import pytest
 
 import vix_regime_allocation.plots as plots
 from vix_regime_allocation.transform import OUTPUT_COLUMNS
+
+Plotter = Callable[[pd.DataFrame, Path], None]
 
 
 def _step1_data() -> pd.DataFrame:
@@ -78,10 +81,10 @@ def test_vix_plot_contains_exact_change_series_and_presentation(
 
 
 @pytest.mark.parametrize("plotter", [plots.plot_etf_log_returns, plots.plot_vix_change])
-def test_plotters_close_figures_without_leaks(tmp_path: Path, plotter: object) -> None:
+def test_plotters_close_figures_without_leaks(tmp_path: Path, plotter: Plotter) -> None:
     before = set(plt.get_fignums())
-    output = tmp_path / f"{getattr(plotter, '__name__')}.png"
-    plotter(_step1_data(), output)  # type: ignore[operator]
+    output = tmp_path / f"{plotter.__name__}.png"
+    plotter(_step1_data(), output)
     assert set(plt.get_fignums()) == before
 
 
