@@ -25,7 +25,10 @@ def test_plot_writes_nonempty_file_and_closes_figure(tmp_path: Path) -> None:
     assert set(plt.get_fignums()) == before
 
 
-def test_each_delta_vix_state_is_plotted_once(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+def test_each_delta_vix_state_is_plotted_once(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
     vix, states_2, states_3 = _inputs()
     labels: list[str] = []
     original_scatter = plt.Axes.scatter
@@ -36,7 +39,13 @@ def test_each_delta_vix_state_is_plotted_once(monkeypatch: pytest.MonkeyPatch, t
 
     monkeypatch.setattr(plt.Axes, "scatter", recording_scatter)
     plot_markov_vix_states(vix, states_2, states_3, tmp_path / "plot.png")
-    assert labels == ["ΔVIX state 0", "ΔVIX state 1", "ΔVIX state 0", "ΔVIX state 1", "ΔVIX state 2"]
+    assert labels == [
+        "ΔVIX state 0",
+        "ΔVIX state 1",
+        "ΔVIX state 0",
+        "ΔVIX state 1",
+        "ΔVIX state 2",
+    ]
 
 
 def test_index_and_data_validation_failures(tmp_path: Path) -> None:
