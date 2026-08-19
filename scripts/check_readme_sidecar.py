@@ -31,7 +31,7 @@ def main() -> None:
         "Step 1 implementation | Complete",
         "90%",
         "ruff check .",
-        "ruff format --check .",
+        "ruff format --check src tests scripts",
         "mypy src",
         "unit-tests",
         "integration-tests",
@@ -83,6 +83,8 @@ def main() -> None:
         raise SystemExit("Workflow must execute scripts/check_backlog_contract.py.")
     if "coverage report --fail-under=90" not in workflow_text:
         raise SystemExit("Workflow must enforce coverage with --fail-under=90.")
+    if "ruff format --check src tests scripts" not in workflow_text:
+        raise SystemExit("Workflow must format-check the Python source/test/script trees.")
 
     required_auto_complete_fragments = (
         "name: Auto Complete",
