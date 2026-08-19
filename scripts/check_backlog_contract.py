@@ -8,6 +8,39 @@ BACKLOG = ROOT / "BACKLOG.md"
 EXPECTED_FIRST_PR = 1
 EXPECTED_LAST_PR = 49
 MAX_TASKS_PER_PR = 3
+REFERENCE_OWNER_PRS = {5, 21, 22, 23, 24, 25, 40, 41, 42}
+CITATION_REQUIRED_PRS = {
+    5,
+    21,
+    22,
+    23,
+    24,
+    25,
+    28,
+    29,
+    30,
+    31,
+    32,
+    40,
+    41,
+    42,
+    43,
+    44,
+    45,
+    46,
+    47,
+    48,
+    49,
+}
+
+REQUIRED_CITATION_CONTRACT_FRAGMENTS = (
+    "## Scientific citation contract",
+    "reports/references.bib",
+    "MLA 9",
+    "Peer-reviewed",
+    "Works Cited",
+    "No citation metadata may be invented",
+)
 
 PR_HEADER_RE = re.compile(r"^#{2,3}\s+PR-(\d{2})\s+—\s+(.+)$", re.MULTILINE)
 TASK_RE = re.compile(r"^- \[ \] T(\d{2})\.(\d+)\s+(.+)$", re.MULTILINE)
@@ -47,6 +80,15 @@ def _branch_slug(title: str) -> str:
 
 def main() -> None:
     text = BACKLOG.read_text(encoding="utf-8")
+    missing_citation_contract = [
+        fragment for fragment in REQUIRED_CITATION_CONTRACT_FRAGMENTS if fragment not in text
+    ]
+    if missing_citation_contract:
+        _fail(
+            "BACKLOG scientific citation contract is incomplete: "
+            + ", ".join(missing_citation_contract)
+        )
+
     matches = list(PR_HEADER_RE.finditer(text))
     numbers = [int(match.group(1)) for match in matches]
     expected = list(range(EXPECTED_FIRST_PR, EXPECTED_LAST_PR + 1))
@@ -127,6 +169,19 @@ def main() -> None:
             if path.startswith("/") or ".." in Path(path).parts:
                 _fail(f"PR-{pr_code} has non-repository-relative owned path {path!r}.")
 
+        if pr_number in REFERENCE_OWNER_PRS and "reports/references.bib" not in files:
+            _fail(f"PR-{pr_code} must own reports/references.bib for serialized citation updates.")
+        if pr_number in CITATION_REQUIRED_PRS:
+            lowered_section = section.lower()
+            if "reports/references.bib" not in section:
+                _fail(f"PR-{pr_code} must reference the canonical scientific citation registry.")
+            if (
+                "citation" not in lowered_section
+                and "citing" not in lowered_section
+                and "works cited" not in lowered_section
+            ):
+                _fail(f"PR-{pr_code} must explicitly specify citation or Works Cited work.")
+
         tasks = TASK_RE.findall(section)
         acceptances = AC_RE.findall(section)
         if not tasks or not acceptances:
@@ -189,7 +244,7 @@ def main() -> None:
         f"BACKLOG contract valid: {len(numbers)} PRs, {len(all_task_ids)} tasks, "
         "one-to-one acceptance coverage, explicit backward-only dependencies, "
         "deterministic Git branch/status/commit metadata, bounded atomicity, explicit file "
-        "ownership, and no forbidden ambiguous phrases."
+        "ownership, scientific citation contracts, and no forbidden ambiguous phrases."
     )
 
 

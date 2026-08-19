@@ -13,7 +13,7 @@ Single canonical implementation backlog for MScFE 622 Stochastic Modeling GWP2. 
 7. Source PRs have deterministic offline tests. Unit tests never require Yahoo/network access. Numerical outputs are never fabricated.
 8. Notebook technical prose explains finance/statistics, not Python library names. Standalone PDF prose is non-technical and avoids model/algorithm/library names.
 9. Sidecars read canonical artifacts only; they do not refit, redecode, or recompute a second analysis.
-10. Before equations containing Greek symbols, list each Greek letter and pronunciation. External factual claims use consulted authoritative sources with MLA in-text citations/bibliography.
+10. Before equations containing Greek symbols, list each Greek letter and pronunciation. The technical notebook and standalone PDF must support external theoretical, methodological, and empirical claims with verifiable scholarly sources using MLA 9 in-text citations and a Works Cited section. Official primary sources may supplement scholarly literature for data/index definitions but do not replace academic support. Every citation must resolve to the canonical `reports/references.bib`; bare URLs are not citations and fabricated bibliographic metadata is forbidden.
 11. Every PR passes the full current quality suite; combined source coverage remains `>=90%`.
 12. `python scripts/check_backlog_contract.py` must pass before merge.
 
@@ -134,13 +134,25 @@ Sensitivity: K=2 vs3 **within preferred family**, load canonical candidate state
 
 Canonical Step5 files: `reports/tables/step5_daily_returns.csv`, `step5_performance_summary.csv`, `step5_state_count_sensitivity.csv`, `reports/figures/step5_cumulative_performance.png`, `reports/generated/step5_manifest.json`. Step5 manifest keys: `schema_version,input_data_path,input_data_sha256,selected_model_path,selected_states_path,allocation_path,notebook_path,tables,figures`; version1; no timestamp.
 
+## Scientific citation contract
+
+`reports/references.bib` is the single canonical source registry. PR-05 creates it; serialized notebook PRs may extend it only when a new cited source is required. Entries use stable citation keys and complete verifiable metadata: author(s), title, venue or publisher, year, and DOI when one exists; otherwise ISBN for scholarly books or a stable official URL for primary data/index documentation. No citation metadata may be invented.
+
+Scientific support is mandatory, not optional. Peer-reviewed journal/conference papers and scholarly books/textbooks support Markov-chain theory, HMM/EM/Viterbi/posterior inference, information criteria, performance metrics, backtesting limitations, and other methodological claims. Official primary sources such as index methodology or data-provider documentation may support definitions and provenance only. If a claim cannot be supported, omit it or label it explicitly as a project assumption/decision rule.
+
+The notebook uses MLA 9 parenthetical citations adjacent to externally sourced definitions, equations, methodological claims, and interpretations, plus a final **Works Cited** section rendered from the canonical registry. Each major method section has at least one relevant scholarly citation. Tables and figures include concise source notes distinguishing project calculations from external data/method sources.
+
+The standalone PDF remains non-technical in its narrative, but it also uses MLA 9 in-text citations for externally sourced factual or methodological claims, source notes for externally derived data/figures, and a final **Works Cited** section. Bibliographic titles may contain technical terminology; the no-model/no-algorithm wording rule applies to report narrative, not to bibliographic metadata.
+
+Citation integrity is deterministic: every in-text citation in notebook/PDF must resolve to `reports/references.bib`; every entry printed in an artifact's Works Cited must be cited in that artifact; duplicate keys, unresolved cites, bibliography-only orphan entries in rendered Works Cited, and URL-only pseudo-citations fail validation. PR-31 establishes Step1–4 citation parity checks and PR-47 extends them through Step5.
+
 ## Reports/submission
 
-Canonical technical notebook: `notebooks/gwp2_vix_regime_allocation.ipynb`. Each step visibly has question/step number, project-function calls, stored code output, equations/definitions, tables/plots, interpretation/recommendation, limitations, citations where applicable; execute top-to-bottom before commit.
+Canonical technical notebook: `notebooks/gwp2_vix_regime_allocation.ipynb`. Each step visibly has question/step number, project-function calls, stored code output, equations/definitions, tables/plots, interpretation/recommendation, limitations, mandatory MLA 9 scholarly citations/source notes, and a final Works Cited rendered from `reports/references.bib`; execute top-to-bottom before commit.
 
-README has exact technical parity from canonical artifacts. HTML `reports/gwp2_vix_regime_allocation.html` is exported from stored notebook outputs without execution/refitting. Separate PDF `reports/Stochastic_Modeling_GWP2_Report.pdf` is non-technical/no-code, uses provided template **page1 only**, excludes instruction page2, preserves known team names/blank unknown fields, and has decision parity; render every final page for visual QA.
+README has exact technical parity from canonical artifacts. HTML `reports/gwp2_vix_regime_allocation.html` is exported from stored notebook outputs without execution/refitting and preserves the notebook citations/Works Cited. Separate PDF `reports/Stochastic_Modeling_GWP2_Report.pdf` is non-technical/no-code, uses provided template **page1 only**, excludes instruction page2, preserves known team names/blank unknown fields, has decision parity, and contains MLA 9 in-text citations/source notes plus a Works Cited derived from the same canonical registry; render every final page for visual QA.
 
-Final ZIP `dist/MScFE_622_GWP2_submission.zip` contains exactly notebook, HTML, README, `pyproject.toml`, `data/processed/step1_data.csv`, and `src/vix_regime_allocation/**/*.py`. It excludes standalone PDF, `.git`, `.github`, tests, rendered QA, caches, coverage, `.env*`, keys. Sorted POSIX members, no symlinks/traversal, timestamp `1980-01-01`. Submission manifest keys: `schema_version,zip_path,zip_sha256,standalone_pdf_path,standalone_pdf_sha256,included_files,member_sha256`; no timestamp. Standalone PDF is uploaded separately.
+Final ZIP `dist/MScFE_622_GWP2_submission.zip` contains exactly notebook, HTML, README, `pyproject.toml`, `reports/references.bib`, `data/processed/step1_data.csv`, and `src/vix_regime_allocation/**/*.py`. It excludes standalone PDF, `.git`, `.github`, tests, rendered QA, caches, coverage, `.env*`, keys. Sorted POSIX members, no symlinks/traversal, timestamp `1980-01-01`. Submission manifest keys: `schema_version,zip_path,zip_sha256,standalone_pdf_path,standalone_pdf_sha256,included_files,member_sha256`; no timestamp. Standalone PDF is uploaded separately.
 
 ---
 ## PR-01 — Yahoo adjusted-close loader
@@ -302,18 +314,21 @@ tests/test_run_step1.py
 
 ```text
 notebooks/gwp2_vix_regime_allocation.ipynb
+reports/references.bib
 README.md
 ```
 
 ### Tasks
 
-- [ ] T05.1 Add complete Step1 technical section using project functions: data checks, equations/notation, both plots, assumptions/limitations, interpretation, MLA citations when used.
-- [ ] T05.2 Execute notebook with stored outputs and synchronize README Step1 status/paths without recomputation.
+- [ ] T05.1 Add complete Step1 technical section using project functions: data checks, equations/notation, both plots, assumptions/limitations, interpretation, MLA 9 in-text citations for external claims, and source notes for external data/figures.
+- [ ] T05.2 Create `reports/references.bib` as the canonical verified source registry with unique keys, complete scholarly metadata, and official primary data/index sources kept distinct from scholarly support; render the notebook Works Cited from cited entries only.
+- [ ] T05.3 Execute notebook with stored outputs and synchronize README Step1 status/paths/scientific-citation policy without recomputation.
 
 ### Acceptance criteria
 
-- [ ] AC05.1 (`T05.1`) Notebook covers all Step1 deliverables, uses shared functions, correct notation, evidence-bounded interpretation, and no failed/unexecuted cells.
-- [ ] AC05.2 (`T05.2`) README accurately references canonical Step1 artifacts and claims no later-step result.
+- [ ] AC05.1 (`T05.1`) Notebook covers all Step1 deliverables, uses shared functions/correct notation, has evidence-bounded interpretation, source notes, and resolved MLA 9 citations adjacent to external claims.
+- [ ] AC05.2 (`T05.2`) Canonical registry contains no duplicate keys or fabricated metadata; every rendered Works Cited entry is cited and every notebook citation resolves to the registry.
+- [ ] AC05.3 (`T05.3`) Notebook has no failed/unexecuted cells; README accurately references canonical Step1 artifacts/source policy and claims no later-step result.
 
 ---
 
@@ -876,6 +891,7 @@ def build_state_allocation(statistics: pandas.DataFrame) -> pandas.DataFrame: ..
 
 ```text
 notebooks/gwp2_vix_regime_allocation.ipynb
+reports/references.bib
 reports/tables/step2_markov_2_thresholds.csv
 reports/tables/step2_markov_3_thresholds.csv
 reports/tables/step2_markov_2_transition.csv
@@ -889,12 +905,12 @@ reports/figures/step2_markov_vix_states.png
 
 ### Tasks
 
-- [ ] T21.1 Add complete K=2/K=3 Markov technical analysis with equations/assumptions/limitations and canonical state figure using shared functions.
+- [ ] T21.1 Add complete K=2/K=3 Markov technical analysis with equations/assumptions/limitations, canonical state figure using shared functions, scholarly Markov-chain citations from `reports/references.bib`, and figure/data source notes.
 - [ ] T21.2 Serialize six model tables plus both exact candidate Date,state sequences; execute entire notebook and store outputs.
 
 ### Acceptance criteria
 
-- [ ] AC21.1 (`T21.1`) Notebook outputs/equations/figure are complete, correct, and evidence-bounded.
+- [ ] AC21.1 (`T21.1`) Notebook outputs/equations/figure are complete, correct, evidence-bounded, and all external Markov claims/caption source notes have resolved scholarly/primary citations.
 - [ ] AC21.2 (`T21.2`) All eight CSVs match displayed/shared outputs and exact Step1 dates; notebook has no failed/unexecuted cell.
 
 ---
@@ -915,6 +931,7 @@ reports/figures/step2_markov_vix_states.png
 
 ```text
 notebooks/gwp2_vix_regime_allocation.ipynb
+reports/references.bib
 reports/tables/step2_hmm_2_parameters.csv
 reports/tables/step2_hmm_3_parameters.csv
 reports/tables/step2_hmm_2_transition.csv
@@ -927,12 +944,12 @@ reports/figures/step2_hmm_smoothed_probabilities.png
 
 ### Tasks
 
-- [ ] T22.1 Add complete K=2/K=3 HMM parameters/diagnostics/EM-Viterbi-posterior explanation and both canonical figures.
+- [ ] T22.1 Add complete K=2/K=3 HMM parameters/diagnostics/EM-Viterbi-posterior explanation and both canonical figures, citing scholarly HMM/EM/decoding/posterior sources from `reports/references.bib` with figure/data source notes.
 - [ ] T22.2 Serialize four model tables plus both exact Viterbi Date,state files without second fit/decode; execute full notebook.
 
 ### Acceptance criteria
 
-- [ ] AC22.1 (`T22.1`) Notebook technical outputs/explanation/figures satisfy fixed contracts.
+- [ ] AC22.1 (`T22.1`) Notebook technical outputs/explanation/figures satisfy fixed contracts and every externally sourced HMM/EM/decoding/posterior claim resolves to scholarly bibliography metadata.
 - [ ] AC22.2 (`T22.2`) All six CSVs equal fitted outputs/Step1 dates and notebook has no failed/unexecuted cell.
 
 ---
@@ -953,6 +970,7 @@ reports/figures/step2_hmm_smoothed_probabilities.png
 
 ```text
 notebooks/gwp2_vix_regime_allocation.ipynb
+reports/references.bib
 reports/tables/step3_model_comparison.csv
 reports/tables/step3_selected_states.csv
 reports/generated/step3_selected_model.json
@@ -960,12 +978,12 @@ reports/generated/step3_selected_model.json
 
 ### Tasks
 
-- [ ] T23.1 Add IC equations/four-row table, within-family comparison caveat/winners, preferred-method result/reason.
+- [ ] T23.1 Add IC equations/four-row table, within-family comparison caveat/winners, preferred-method result/reason, and MLA 9 citations to scholarly information-criterion sources from `reports/references.bib`.
 - [ ] T23.2 Copy selected candidate state Series to canonical Date,state CSV; write exact selected-model JSON with Step1 SHA/path; execute full notebook.
 
 ### Acceptance criteria
 
-- [ ] AC23.1 (`T23.1`) Displayed/CSV comparison and selected decision match shared functions with no cross-family IC claim.
+- [ ] AC23.1 (`T23.1`) Displayed/CSV comparison and selected decision match shared functions with no cross-family IC claim; AIC/BIC definitions and external selection claims have resolved scholarly citations.
 - [ ] AC23.2 (`T23.2`) Selected states/JSON/hash/path match candidate and Step1 exactly; no refit/decode; notebook fully executed.
 
 ---
@@ -986,6 +1004,7 @@ reports/generated/step3_selected_model.json
 
 ```text
 notebooks/gwp2_vix_regime_allocation.ipynb
+reports/references.bib
 reports/tables/step3_state_asset_statistics.csv
 reports/figures/step3_state_asset_statistics.png
 ```
@@ -993,12 +1012,12 @@ reports/figures/step3_state_asset_statistics.png
 ### Tasks
 
 - [ ] T24.1 Load/validate canonical selected states (no fit/decode); compute/display/save shared mean/std/count table and grouped bar chart.
-- [ ] T24.2 Interpret states from displayed evidence; state units, ddof=1, non-annualization/sample-size limitations; execute full notebook.
+- [ ] T24.2 Interpret states from displayed evidence; state units, ddof=1, non-annualization/sample-size limitations; cite every external statistical/financial interpretation from `reports/references.bib`; execute full notebook.
 
 ### Acceptance criteria
 
 - [ ] AC24.1 (`T24.1`) Selected-state provenance/dates are exact; table/chart match shared outputs.
-- [ ] AC24.2 (`T24.2`) Interpretation is evidence-based with all fixed statistical caveats; notebook fully executed.
+- [ ] AC24.2 (`T24.2`) Interpretation is evidence-based with all fixed statistical caveats; external interpretation claims have resolved scholarly citations and notebook is fully executed.
 
 ---
 
@@ -1018,6 +1037,7 @@ reports/figures/step3_state_asset_statistics.png
 
 ```text
 notebooks/gwp2_vix_regime_allocation.ipynb
+reports/references.bib
 reports/tables/step4_allocation_mapping.csv
 reports/generated/steps_2_4_manifest.json
 ```
@@ -1025,12 +1045,12 @@ reports/generated/steps_2_4_manifest.json
 ### Tasks
 
 - [ ] T25.1 Add/display/save shared Step4 decision mapping/equation/justification/100%+tie rule; state no 60/40 and all fixed lookahead limitations.
-- [ ] T25.2 Add evidence-supported practical takeaways/citations; write exact deterministic Steps2–4 manifest; execute/verify full Step1–4 notebook/artifacts.
+- [ ] T25.2 Add evidence-supported practical takeaways with MLA 9 citations, refresh `reports/references.bib`, render a complete Step1–4 Works Cited from cited entries only, verify citation/source-note integrity, write the exact deterministic Steps2–4 manifest, and execute/verify full Step1–4 notebook/artifacts.
 
 ### Acceptance criteria
 
 - [ ] AC25.1 (`T25.1`) Mapping/justifications/rules and non-OOS caveats match canonical evidence.
-- [ ] AC25.2 (`T25.2`) Citations are non-fabricated; manifest/hash/path coverage is exact; notebook/artifacts are fully consistent.
+- [ ] AC25.2 (`T25.2`) All notebook citations resolve to verified bibliography entries, every rendered Works Cited entry is cited, source notes are present, manifest/hash/path coverage is exact, and notebook/artifacts are fully consistent.
 
 ---
 
@@ -1117,13 +1137,13 @@ tests/test_build_pdf_report.py
 
 ### Tasks
 
-- [ ] T28.1 Build from template page1 + validated no-code non-technical body/canonical artifacts; exclude template page2; verify known names and render pages.
-- [ ] T28.2 Add offline tests for cover/page2/code prohibition/required sections/artifact parity/names/non-empty renderability.
+- [ ] T28.1 Build from template page1 + validated no-code non-technical body/canonical artifacts and `reports/references.bib`; render MLA 9 in-text citations, source notes, and Works Cited; exclude template page2; verify known names and render pages.
+- [ ] T28.2 Add offline tests for cover/page2/code prohibition/required sections/artifact parity/names/non-empty renderability plus duplicate/unresolved/orphan citation failures and the bibliography-title exception to narrative technical-term checks.
 
 ### Acceptance criteria
 
-- [ ] AC28.1 (`T28.1`) Generated fixture PDF obeys cover/nontechnical/canonical-artifact rules with no estimation path.
-- [ ] AC28.2 (`T28.2`) All PDF builder tests pass offline.
+- [ ] AC28.1 (`T28.1`) Generated fixture PDF obeys cover/nontechnical/canonical-artifact rules with no estimation path and contains resolved scholarly citations/source notes/Works Cited from the canonical registry.
+- [ ] AC28.2 (`T28.2`) All PDF builder and citation-integrity tests pass offline.
 
 ---
 
@@ -1149,12 +1169,12 @@ reports/rendered/Stochastic_Modeling_GWP2_Report/*.png
 
 ### Tasks
 
-- [ ] T29.1 Write original non-technical Step1–4 results/recommendation/factors/limitations with canonical values/figures and consulted MLA sources; generate correct cover/no page2.
+- [ ] T29.1 Write original non-technical Step1–4 results/recommendation/factors/limitations with canonical values/figures, MLA 9 in-text citations to scholarly sources, official-primary data source notes, and a Works Cited derived from `reports/references.bib`; generate correct cover/no page2.
 - [ ] T29.2 Render/inspect every page for clipping/overlap/glyph/blank/split defects and mark report interim until Step5.
 
 ### Acceptance criteria
 
-- [ ] AC29.1 (`T29.1`) Prose has decision parity, no code/model-algorithm-library wording, correct citations/cover.
+- [ ] AC29.1 (`T29.1`) Prose has decision parity, no code/model-algorithm-library wording outside bibliographic metadata, correct cover, resolved citations/source notes, and no uncited rendered Works Cited entry.
 - [ ] AC29.2 (`T29.2`) Every page passes visual QA and Step5 regeneration requirement is explicit.
 
 ---
@@ -1181,12 +1201,12 @@ reports/gwp2_vix_regime_allocation.html
 
 ### Tasks
 
-- [ ] T30.1 Export stored-output notebook to canonical HTML without execution/refit; reject failed/unexecuted/missing expected output; embed notebook SHA marker.
+- [ ] T30.1 Export stored-output notebook to canonical HTML without execution/refit; reject failed/unexecuted/missing expected output or missing final Works Cited; preserve MLA citations/source notes rendered from `reports/references.bib`; embed notebook SHA marker.
 - [ ] T30.2 Add offline fixture tests and generate actual Step1–4 HTML.
 
 ### Acceptance criteria
 
-- [ ] AC30.1 (`T30.1`) HTML contains Step1–4 stored outputs/current hash and exporter has no execution path.
+- [ ] AC30.1 (`T30.1`) HTML contains Step1–4 stored outputs/current hash plus notebook citations/source notes/Works Cited and exporter has no execution path.
 - [ ] AC30.2 (`T30.2`) All exporter tests pass offline and canonical HTML is non-empty.
 
 ---
@@ -1212,12 +1232,12 @@ tests/test_analysis_sidecars.py
 
 ### Tasks
 
-- [ ] T31.1 Validate manifest/input hash/artifacts plus notebook/README exact technical parity, HTML notebook hash, and PDF decision parity including state provenance.
-- [ ] T31.2 Add deterministic stale/missing/hash/value failure tests for every sidecar/artifact class.
+- [ ] T31.1 Validate manifest/input hash/artifacts plus notebook/README exact technical parity, HTML notebook hash, PDF decision parity/state provenance, and citation integrity against `reports/references.bib`: resolved in-text cites, cited-only Works Cited entries, required scholarly support, and source notes.
+- [ ] T31.2 Add deterministic stale/missing/hash/value failure tests for every sidecar/artifact class plus duplicate bibliography keys, unresolved citations, orphan Works Cited entries, missing scholarly support, and URL-only pseudo-citations.
 
 ### Acceptance criteria
 
-- [ ] AC31.1 (`T31.1`) Any missing/stale/mismatched canonical technical/decision artifact fails at correct parity level.
+- [ ] AC31.1 (`T31.1`) Any missing/stale/mismatched canonical technical/decision artifact or citation/source-note/Works-Cited defect fails at the correct parity level.
 - [ ] AC31.2 (`T31.2`) All parity tests pass offline.
 
 ---
@@ -1245,12 +1265,12 @@ scripts/check_readme_sidecar.py
 ### Tasks
 
 - [ ] T32.1 Add independent `analysis-sidecars` and `backlog-contract` jobs; aggregate quality-gate requires them plus existing jobs while core lint/type/unit/integration remain parallel and coverage>=90%.
-- [ ] T32.2 Update README/checker to document/require new jobs and Step1–4 parity policy.
+- [ ] T32.2 Update README/checker to document/require new jobs, Step1–4 parity policy, canonical `reports/references.bib`, MLA 9 scholarly-citation requirements, and citation-integrity enforcement.
 
 ### Acceptance criteria
 
 - [ ] AC32.1 (`T32.1`) Workflow dependencies/jobs/coverage/parallelism exactly match contract.
-- [ ] AC32.2 (`T32.2`) README/checker accurately enforce current parity/CI paths.
+- [ ] AC32.2 (`T32.2`) README/checker accurately enforce current parity/CI paths and scientific-citation policy.
 
 ---
 
@@ -1500,18 +1520,19 @@ tests/integration/test_step5_pipeline.py
 
 ```text
 notebooks/gwp2_vix_regime_allocation.ipynb
+reports/references.bib
 reports/tables/step5_daily_returns.csv
 ```
 
 ### Tasks
 
 - [ ] T40.1 Load/verify Step1 hash, selected-model+selected-state CSV, Step4 mapping without fit/decode; show simple-return/one-row-lag equations and decision examples; call shared rotation/benchmarks; save daily comparison.
-- [ ] T40.2 Explain monthly benchmark convention, gross costs, and all full-sample/Viterbi/allocation lookahead caveats; execute full notebook.
+- [ ] T40.2 Explain monthly benchmark convention, gross costs, and all full-sample/Viterbi/allocation lookahead caveats with scholarly backtesting/portfolio-method citations from `reports/references.bib`; maintain source notes and execute full notebook.
 
 ### Acceptance criteria
 
 - [ ] AC40.1 (`T40.1`) Daily CSV/displayed decisions prove exact lag/benchmarks/state provenance and shared-function use.
-- [ ] AC40.2 (`T40.2`) All assumptions/non-OOS caveats are explicit and full notebook has no failed/unexecuted cell.
+- [ ] AC40.2 (`T40.2`) All assumptions/non-OOS caveats are explicit, externally sourced methodological claims have resolved scholarly citations/source notes, and the full notebook has no failed/unexecuted cell.
 
 ---
 
@@ -1531,18 +1552,19 @@ reports/tables/step5_daily_returns.csv
 
 ```text
 notebooks/gwp2_vix_regime_allocation.ipynb
+reports/references.bib
 reports/tables/step5_performance_summary.csv
 reports/figures/step5_cumulative_performance.png
 ```
 
 ### Tasks
 
-- [ ] T41.1 Show five formulas/assumptions (including W0=1), build/display/save exact shared summary and three-curve figure.
+- [ ] T41.1 Show five formulas/assumptions (including W0=1) with scholarly citations for externally sourced performance-metric definitions, build/display/save exact shared summary and three-curve figure, and maintain source notes from `reports/references.bib`.
 - [ ] T41.2 Interpret all five metrics versus both benchmarks and state risk-adjusted conclusion as full-sample descriptive/in-sample; execute full notebook.
 
 ### Acceptance criteria
 
-- [ ] AC41.1 (`T41.1`) Summary/figure/equations exactly match canonical shared calculations/presentation.
+- [ ] AC41.1 (`T41.1`) Summary/figure/equations exactly match canonical shared calculations/presentation and every external metric definition has a resolved scholarly citation.
 - [ ] AC41.2 (`T41.2`) Interpretation covers both benchmarks/all metrics, makes no causal/OOS claim, notebook fully executed.
 
 ---
@@ -1563,6 +1585,7 @@ reports/figures/step5_cumulative_performance.png
 
 ```text
 notebooks/gwp2_vix_regime_allocation.ipynb
+reports/references.bib
 reports/tables/step5_state_count_sensitivity.csv
 reports/generated/step5_manifest.json
 ```
@@ -1570,12 +1593,12 @@ reports/generated/step5_manifest.json
 ### Tasks
 
 - [ ] T42.1 Load preferred-family canonical K=2/3 state files (no fit/decode), run/display/save shared sensitivity, discuss all five metrics and in-sample scope.
-- [ ] T42.2 Add final practical takeaway/limitations/future causal validation, refresh consulted MLA citations, write exact Step5 manifest, execute/verify full Step1–5 notebook.
+- [ ] T42.2 Add final practical takeaway/limitations/future causal validation with scholarly support, refresh `reports/references.bib`, verify all MLA 9 citations/source notes, render the final cited-only Works Cited, write exact Step5 manifest, and execute/verify full Step1–5 notebook.
 
 ### Acceptance criteria
 
 - [ ] AC42.1 (`T42.1`) Sensitivity table/provenance/common dates and discussion match fixed contract without OOS claim.
-- [ ] AC42.2 (`T42.2`) Takeaway/citations/manifest/hash/path coverage are exact and final notebook/artifacts fully consistent.
+- [ ] AC42.2 (`T42.2`) Takeaway/citations/source notes/Works Cited have complete verified scholarly provenance with no unresolved/orphan entries; manifest/hash/path coverage is exact and final notebook/artifacts are fully consistent.
 
 ---
 
@@ -1603,7 +1626,7 @@ scripts/check_readme_sidecar.py
 ### Tasks
 
 - [ ] T43.1 Extend artifact-only synchronizer/generated block/status to Step5 equations/assumptions/summary/sensitivity/figure and no-OOS caveat; no recomputation.
-- [ ] T43.2 Extend tests/checker for exact Step5 parity, required paths/assumptions, missing/stale failures, idempotence; regenerate README.
+- [ ] T43.2 Extend tests/checker for exact Step5 parity, required paths/assumptions, `reports/references.bib`/MLA 9 citation policy, missing/stale failures, and idempotence; regenerate README.
 
 ### Acceptance criteria
 
@@ -1633,12 +1656,12 @@ tests/test_build_pdf_report.py
 
 ### Tasks
 
-- [ ] T44.1 Extend canonical readers/validation for Step5 benchmark comparison, summary, sensitivity, recommendation, limitations; no recomputation.
-- [ ] T44.2 Add tests for Step5 stale/missing parity while preserving nontechnical/code/model-name/template/name rules.
+- [ ] T44.1 Extend canonical readers/validation for Step5 benchmark comparison, summary, sensitivity, recommendation, limitations, and `reports/references.bib`; preserve resolved MLA 9 in-text citations/source notes/Works Cited with no recomputation.
+- [ ] T44.2 Add tests for Step5 stale/missing parity and final citation integrity while preserving nontechnical/code/model-name/template/name rules outside bibliographic metadata.
 
 ### Acceptance criteria
 
-- [ ] AC44.1 (`T44.1`) Builder requires exact Step5 decision content from canonical artifacts only.
+- [ ] AC44.1 (`T44.1`) Builder requires exact Step5 decision content from canonical artifacts only and a valid canonical scientific-source registry with resolved rendered citations.
 - [ ] AC44.2 (`T44.2`) All extended PDF-builder tests pass offline.
 
 ---
@@ -1665,12 +1688,12 @@ reports/rendered/Stochastic_Modeling_GWP2_Report/*.png
 
 ### Tasks
 
-- [ ] T45.1 Extend nontechnical report through Step5 with canonical metrics/figure/sensitivity, both-benchmark conclusion, recommendation, factors, costs, full-sample/non-OOS limitations, consulted MLA citations; correct cover/no page2.
+- [ ] T45.1 Extend nontechnical report through Step5 with canonical metrics/figure/sensitivity, both-benchmark conclusion, recommendation, factors, costs, full-sample/non-OOS limitations, MLA 9 in-text scholarly citations, official-primary source notes, and final Works Cited from `reports/references.bib`; correct cover/no page2.
 - [ ] T45.2 Render and inspect every final page for all fixed visual defects.
 
 ### Acceptance criteria
 
-- [ ] AC45.1 (`T45.1`) Final PDF has decision parity, nontechnical wording, correct citations/cover/limitations.
+- [ ] AC45.1 (`T45.1`) Final PDF has decision parity, nontechnical narrative wording, correct cover/limitations, resolved scholarly citations/source notes, and cited-only Works Cited entries; bibliographic titles are exempt from narrative technical-term checks.
 - [ ] AC45.2 (`T45.2`) Every rendered page passes visual QA and final PDF is non-empty.
 
 ---
@@ -1695,11 +1718,11 @@ reports/gwp2_vix_regime_allocation.html
 
 ### Tasks
 
-- [ ] T46.1 Run existing exporter on final executed notebook; verify Step5 daily returns/summary/figure/sensitivity/interpretation and exact notebook hash.
+- [ ] T46.1 Run existing exporter on final executed notebook; verify Step5 daily returns/summary/figure/sensitivity/interpretation, MLA 9 citations/source notes/final Works Cited from `reports/references.bib`, and exact notebook hash.
 
 ### Acceptance criteria
 
-- [ ] AC46.1 (`T46.1`) Final HTML is non-empty, contains all Step1–5 stored outputs, and hash equals canonical notebook without re-execution.
+- [ ] AC46.1 (`T46.1`) Final HTML is non-empty, contains all Step1–5 stored outputs plus citations/source notes/Works Cited, and hash equals canonical notebook without re-execution.
 
 ---
 
@@ -1727,12 +1750,12 @@ scripts/check_readme_sidecar.py
 
 ### Tasks
 
-- [ ] T47.1 Extend checker/tests to Step5 manifest/artifacts, notebook/README technical parity, current HTML, and PDF decision parity; include state provenance.
+- [ ] T47.1 Extend checker/tests to Step5 manifest/artifacts, notebook/README technical parity, current HTML, PDF decision parity/state provenance, and final citation integrity against `reports/references.bib` for both notebook and PDF.
 - [ ] T47.2 Keep `analysis-sidecars`/`backlog-contract`/aggregate wiring, parallel core jobs, coverage>=90%; finalize README/checker Step1–5 status.
 
 ### Acceptance criteria
 
-- [ ] AC47.1 (`T47.1`) Every Step5 stale/missing/hash/value sidecar defect fails at correct parity level.
+- [ ] AC47.1 (`T47.1`) Every Step5 stale/missing/hash/value sidecar defect and every unresolved/duplicate/orphan/URL-only citation or missing Works Cited/source-note defect fails at the correct parity level.
 - [ ] AC47.2 (`T47.2`) CI/coverage/parallelism and final README/checker contracts remain exact.
 
 ---
@@ -1764,12 +1787,12 @@ def build_submission_bundle(repository_root: pathlib.Path, output_zip: pathlib.P
 
 ### Tasks
 
-- [ ] T48.1 Implement exact allowlist/exclusions, non-symlink/path safety, deterministic sorted normalized ZIP, separate-PDF requirement, exact member/ZIP/PDF hashes and no-timestamp manifest, post-build reinspection.
+- [ ] T48.1 Implement exact allowlist including `reports/references.bib`, exclusions, non-symlink/path safety, deterministic sorted normalized ZIP, separate-PDF requirement, exact member/ZIP/PDF hashes and no-timestamp manifest, post-build reinspection; reject a missing/empty scientific citation registry.
 - [ ] T48.2 Test byte-identical rebuild, exact members/hashes, missing/empty/traversal/symlink/forbidden failures, and PDF exclusion.
 
 ### Acceptance criteria
 
-- [ ] AC48.1 (`T48.1`) Builder output/manifest exactly satisfy fixed submission contract.
+- [ ] AC48.1 (`T48.1`) Builder output/manifest exactly satisfy fixed submission contract and include the canonical non-empty scientific citation registry.
 - [ ] AC48.2 (`T48.2`) All bundle tests pass offline.
 
 ---
@@ -1797,12 +1820,12 @@ scripts/check_readme_sidecar.py
 
 ### Tasks
 
-- [ ] T49.1 Generate final ZIP/manifest from post-PR47 canonical files; inspect exact members/byte parity/forbidden exclusions and separately hashed PDF.
-- [ ] T49.2 Update README/checker with exact ZIP path, separate PDF path, contents/rebuild/upload instructions; run backlog/README/sidecar/full quality suite.
+- [ ] T49.1 Generate final ZIP/manifest from post-PR47 canonical files; inspect exact members including `reports/references.bib`, citation-registry byte parity, forbidden exclusions, and separately hashed PDF.
+- [ ] T49.2 Update README/checker with exact ZIP path, separate PDF path, citation-registry contents/rebuild/upload instructions, and notebook/PDF scholarly-source requirements; run backlog/README/sidecar/full quality suite.
 
 ### Acceptance criteria
 
-- [ ] AC49.1 (`T49.1`) ZIP/manifest/member hashes and separate-PDF exclusion exactly match fixed contract.
+- [ ] AC49.1 (`T49.1`) ZIP/manifest/member hashes, included canonical citation registry, and separate-PDF exclusion exactly match fixed contract.
 - [ ] AC49.2 (`T49.2`) README/checker are actionable/exact and all final quality checks pass.
 
 ---
@@ -1853,7 +1876,7 @@ For every PR: branch from current main after dependencies; modify only owned fil
 - [ ] All candidate/preferred state sequences are canonical artifacts; no later refit/redecode is used merely to recover them.
 - [ ] One-row execution lag, W0=1 drawdown, zero-RF Sharpe, monthly benchmark, and identical comparison dates are verified.
 - [ ] Full-sample regime/Viterbi/allocation lookahead limitations, gross-cost assumption, and non-OOS status are explicit.
-- [ ] Final notebook fully executed; README exact technical parity; HTML exact duplicate; separate PDF nontechnical decision parity with template page1 only and visual QA.
+- [ ] Final notebook fully executed with resolved MLA 9 scholarly citations/source notes/final Works Cited; README exact technical parity; HTML exact duplicate; separate PDF nontechnical decision parity with resolved scholarly citations/source notes/Works Cited, template page1 only, and visual QA.
 - [ ] `analysis-sidecars`, `backlog-contract`, lint/type/unit/integration, combined coverage>=90%, and aggregate quality-gate pass.
-- [ ] Deterministic final ZIP contains exact executable allowlist and excludes standalone PDF/forbidden files; submission manifest hashes exact final bytes.
+- [ ] Deterministic final ZIP contains exact executable allowlist including `reports/references.bib` and excludes standalone PDF/forbidden files; submission manifest hashes exact final bytes.
 - [ ] README gives exact rebuild and upload instructions, including separate PDF upload.
