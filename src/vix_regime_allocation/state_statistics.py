@@ -39,7 +39,7 @@ def _validate_data(data: pd.DataFrame) -> None:
         raise ValueError("data must contain only finite values.")
 
 
-def _validate_states(states: pd.Series, index: pd.DatetimeIndex) -> int:
+def _validate_states(states: pd.Series, index: pd.Index) -> int:
     if not isinstance(states, pd.Series):
         raise TypeError("states must be a pandas Series.")
     if states.name != "state":
@@ -59,7 +59,9 @@ def _validate_states(states: pd.Series, index: pd.DatetimeIndex) -> int:
         raise ValueError("states must be contiguous integer labels starting at zero.")
     counts = np.bincount(values, minlength=n_states)
     if np.any(counts < 2):
-        raise ValueError("Each state requires at least two observations for sample standard deviation.")
+        raise ValueError(
+            "Each state requires at least two observations for sample standard deviation."
+        )
     return n_states
 
 
