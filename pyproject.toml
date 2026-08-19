@@ -20,6 +20,8 @@ dependencies = [
 [project.optional-dependencies]
 dev = [
     "coverage[toml]>=7.6",
+    "ipykernel>=6.29",
+    "ipython>=8.20",
     "mypy>=1.11",
     "nbclient>=0.10",
     "nbconvert>=7.16",
@@ -48,6 +50,7 @@ select = ["E", "F", "I", "B", "UP"]
 
 [tool.ruff.lint.per-file-ignores]
 "scripts/rebuild_analysis_review.py" = ["E501"]
+"scripts/rebuild_thin_notebook.py" = ["E501"]
 
 [tool.mypy]
 python_version = "3.11"
