@@ -101,11 +101,12 @@ def build_rotation_returns(
     first data row is excluded because it has no previous observed trading-row state.
     """
     _validate_data(data)
-    n_states = _validate_states(states, data.index)
+    date_index = pd.DatetimeIndex(data.index, name="Date")
+    n_states = _validate_states(states, date_index)
     ordered_allocation = _validate_allocation(allocation, n_states)
 
-    return_index = data.index[1:]
-    decision_dates = data.index[:-1]
+    return_index = date_index[1:]
+    decision_dates = date_index[:-1]
     decision_states = states.iloc[:-1].to_numpy(dtype=int)
 
     simple_returns = np.expm1(
