@@ -54,7 +54,6 @@ def performance_metrics(returns: pd.Series) -> dict[str, float | int]:
     """Compute the assignment's five fixed performance metrics with risk-free rate zero."""
     validated = _validated_returns(returns, minimum_observations=2)
     wealth = cumulative_wealth(validated)
-    values = validated.to_numpy(dtype=float)
     n = int(len(validated))
     terminal_wealth = float(wealth.iloc[-1])
 
