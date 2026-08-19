@@ -83,7 +83,8 @@ def test_step5_source_pipeline_end_to_end_offline(tmp_path: Path) -> None:
     assert tuple(comparison.columns) == COMPARISON_COLUMNS
     assert comparison.index.equals(comparison_index)
     assert len(comparison) == len(data) - 1
-    np.testing.assert_allclose(comparison["spy_buy_hold"], np.expm1(data.loc[comparison_index, "SPY_log_return"]))
+    expected_spy = np.expm1(data.loc[comparison_index, "SPY_log_return"])
+    np.testing.assert_allclose(comparison["spy_buy_hold"], expected_spy)
 
     summary = build_performance_summary(comparison)
     assert tuple(summary.columns) == SUMMARY_COLUMNS
