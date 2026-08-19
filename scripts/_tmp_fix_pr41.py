@@ -21,7 +21,6 @@ existing_heading = next(
     None,
 )
 if existing_heading is not None:
-    # Remove any partial/broken prior PR-41 block up to the next Works Cited section.
     nb.cells = nb.cells[:existing_heading] + nb.cells[works_index:]
     works_index = existing_heading
 
@@ -77,7 +76,10 @@ metrics_code = nbformat.v4.new_code_cell(
     r'''from vix_regime_allocation.backtest_plot import plot_cumulative_performance
 from vix_regime_allocation.backtest_summary import build_performance_summary
 
-repo_root_step5 = Path.cwd().resolve().parent if Path.cwd().name == "notebooks" else Path.cwd().resolve()
+if Path.cwd().name == "notebooks":
+    repo_root_step5 = Path.cwd().resolve().parent
+else:
+    repo_root_step5 = Path.cwd().resolve()
 daily_path = repo_root_step5 / "reports/tables/step5_daily_returns.csv"
 summary_path = repo_root_step5 / "reports/tables/step5_performance_summary.csv"
 figure_path = repo_root_step5 / "reports/figures/step5_cumulative_performance.png"
