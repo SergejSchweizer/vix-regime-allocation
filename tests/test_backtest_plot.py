@@ -160,9 +160,7 @@ def test_plot_rejects_invalid_comparison(case: str, tmp_path: Path) -> None:
         comparison = _comparison().iloc[0:0]
     elif case == "duplicate":
         frame = _comparison().copy()
-        frame.index = pd.DatetimeIndex(
-            ["2026-01-02", "2026-01-02", "2026-01-06"], name="Date"
-        )
+        frame.index = pd.DatetimeIndex(["2026-01-02", "2026-01-02", "2026-01-06"], name="Date")
         comparison = frame
     elif case == "nonnumeric":
         frame = _comparison().copy()
@@ -180,7 +178,8 @@ def test_plot_rejects_invalid_comparison(case: str, tmp_path: Path) -> None:
     error = TypeError if case == "not_dataframe" else ValueError
     with pytest.raises(error):
         plot_cumulative_performance(
-            comparison, tmp_path / "figure.png"  # type: ignore[arg-type]
+            comparison,
+            tmp_path / "figure.png",  # type: ignore[arg-type]
         )
 
 
