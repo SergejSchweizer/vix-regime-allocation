@@ -1,9 +1,13 @@
 name: Temporary Thin Notebook Rebuild
 
 on:
-  push:
+  pull_request:
     branches:
-      - notebook-thin-helper-calls
+      - main
+    types:
+      - opened
+      - reopened
+      - synchronize
 
 permissions:
   contents: write
@@ -12,7 +16,7 @@ jobs:
   rebuild:
     if: >-
       github.actor != 'github-actions[bot]' &&
-      github.event.head_commit.message == 'NOTEBOOK — Trigger thin notebook rebuild'
+      github.head_ref == 'notebook-thin-helper-calls'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout feature branch
@@ -59,5 +63,3 @@ jobs:
           git add notebooks/gwp2_vix_regime_allocation.ipynb
           git commit -m 'NOTEBOOK — Rebuild as helper-call-only technical report'
           git push origin HEAD:notebook-thin-helper-calls
-
-# trigger revision 2
