@@ -22,14 +22,15 @@ jobs:
           ref: pr-docs-scientific-citation-contract
           fetch-depth: 0
 
-      - name: Repair one-shot updater validation
+      - name: Apply deterministic citation-contract update
         shell: bash
         run: |
           set -euo pipefail
+          python scripts/apply_scientific_citation_contract.py
           python - <<'PY'
           from pathlib import Path
 
-          path = Path("scripts/apply_scientific_citation_contract.py")
+          path = Path("scripts/check_backlog_contract.py")
           text = path.read_text(encoding="utf-8")
           old = '            if "citation" not in lowered_section and "works cited" not in lowered_section:\n'
           new = (
@@ -40,15 +41,9 @@ jobs:
               '            ):\n'
           )
           if text.count(old) != 1:
-              raise SystemExit("Expected exactly one updater citation-validation condition.")
+              raise SystemExit("Expected exactly one generated citation-validation condition.")
           path.write_text(text.replace(old, new, 1), encoding="utf-8")
           PY
-
-      - name: Apply deterministic citation-contract update
-        shell: bash
-        run: |
-          set -euo pipefail
-          python scripts/apply_scientific_citation_contract.py
           python scripts/check_backlog_contract.py
           python scripts/check_readme_sidecar.py
 
