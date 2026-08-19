@@ -37,7 +37,9 @@ def _validate_data(data: pd.DataFrame) -> None:
     if data.index.has_duplicates or not data.index.is_monotonic_increasing:
         raise ValueError("data dates must be unique and sorted ascending.")
     if len(data) < 4:
-        raise ValueError("data must contain enough observations for two- and three-state sensitivity.")
+        raise ValueError(
+            "data must contain enough observations for two- and three-state sensitivity."
+        )
     for column in OUTPUT_COLUMNS:
         if not is_numeric_dtype(data[column].dtype):
             raise ValueError(f"data column {column!r} must be numeric.")
@@ -45,7 +47,9 @@ def _validate_data(data: pd.DataFrame) -> None:
         raise ValueError("data must contain only finite values.")
 
 
-def _validate_states(states: pd.Series, data_index: pd.DatetimeIndex, n_states: int) -> pd.Series:
+def _validate_states(
+    states: pd.Series, data_index: pd.DatetimeIndex, n_states: int
+) -> pd.Series:
     if not isinstance(states, pd.Series):
         raise TypeError(f"states_by_k[{n_states}] must be a pandas Series.")
     if states.name != "state":
@@ -57,7 +61,9 @@ def _validate_states(states: pd.Series, data_index: pd.DatetimeIndex, n_states: 
     values = states.to_numpy(dtype=int)
     unique = np.unique(values)
     if not np.array_equal(unique, np.arange(n_states, dtype=int)):
-        raise ValueError(f"states_by_k[{n_states}] must contain contiguous labels 0..{n_states - 1}.")
+        raise ValueError(
+            f"states_by_k[{n_states}] must contain contiguous labels 0..{n_states - 1}."
+        )
     counts = np.bincount(values, minlength=n_states)
     if np.any(counts < 2):
         raise ValueError(f"states_by_k[{n_states}] requires at least two observations per state.")
@@ -103,7 +109,9 @@ def build_state_count_sensitivity(
     for n_states in (2, 3):
         common_returns = rotations[n_states].reindex(common_index)
         if common_returns.isna().any():
-            raise ValueError("common sensitivity return dates must be complete for both state counts.")
+            raise ValueError(
+                "common sensitivity return dates must be complete for both state counts."
+            )
         metrics = performance_metrics(common_returns)
         if tuple(metrics.keys()) != PERFORMANCE_KEYS:
             raise ValueError("performance_metrics returned an unexpected metric schema.")
