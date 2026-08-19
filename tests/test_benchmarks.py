@@ -14,7 +14,9 @@ from vix_regime_allocation.transform import OUTPUT_COLUMNS
 
 
 def _data() -> pd.DataFrame:
-    index = pd.DatetimeIndex(["2026-01-29", "2026-01-30", "2026-02-02", "2026-02-03"], name="Date")
+    index = pd.DatetimeIndex(
+        ["2026-01-29", "2026-01-30", "2026-02-02", "2026-02-03"], name="Date"
+    )
     frame = pd.DataFrame(index=index)
     frame["TLT"] = [100.0, 101.0, 102.0, 103.0]
     frame["GLD"] = [200.0, 201.0, 202.0, 203.0]
@@ -104,7 +106,17 @@ def test_benchmarks_reject_non_datetime_comparison_index() -> None:
 
 
 @pytest.mark.parametrize(
-    "case", ["not_dataframe", "schema", "index_type", "index_name", "duplicate", "empty", "nonnumeric", "nonfinite"]
+    "case",
+    [
+        "not_dataframe",
+        "schema",
+        "index_type",
+        "index_name",
+        "duplicate",
+        "empty",
+        "nonnumeric",
+        "nonfinite",
+    ],
 )
 def test_benchmarks_reject_noncanonical_data(case: str) -> None:
     data: object = _data().copy()
