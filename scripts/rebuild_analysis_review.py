@@ -132,7 +132,7 @@ A key interpretation distinction is now explicit. Step 3 estimates a **contempor
 The two sensitivity rows use the common lagged return-date intersection, so cumulative return, annualized return, annualized volatility, Sharpe ratio, maximum drawdown, and observation count are compared on identical dates."""
     )
     sensitivity_code = nbformat.v4.new_code_cell(
-        r'''from vix_regime_allocation.sensitivity import build_state_count_sensitivity
+        r"""from vix_regime_allocation.sensitivity import build_state_count_sensitivity
 
 preferred_family = selected_model["family"]
 states_by_k = {}
@@ -152,7 +152,7 @@ state_count_sensitivity = build_state_count_sensitivity(
 sensitivity_path = repo_root / "reports/tables/step5_state_count_sensitivity.csv"
 state_count_sensitivity.to_csv(sensitivity_path, index=False)
 display(Markdown("### K=2 versus K=3 sensitivity within the preferred family"))
-display(state_count_sensitivity)'''
+display(state_count_sensitivity)"""
     )
     final_md = nbformat.v4.new_markdown_cell(
         """### Final Step 5 interpretation
@@ -217,12 +217,16 @@ def _regenerate_figures() -> None:
     plot_vix_change(step1, ROOT / "reports/figures/step1_vix_change.png")
 
     vix = step1["VIX"].rename("VIX")
-    markov_2 = _load_indexed_csv(ROOT / "reports/tables/step2_markov_2_states.csv")[
-        "state"
-    ].astype(int).rename("state")
-    markov_3 = _load_indexed_csv(ROOT / "reports/tables/step2_markov_3_states.csv")[
-        "state"
-    ].astype(int).rename("state")
+    markov_2 = (
+        _load_indexed_csv(ROOT / "reports/tables/step2_markov_2_states.csv")["state"]
+        .astype(int)
+        .rename("state")
+    )
+    markov_3 = (
+        _load_indexed_csv(ROOT / "reports/tables/step2_markov_3_states.csv")["state"]
+        .astype(int)
+        .rename("state")
+    )
     plot_markov_vix_states(
         vix,
         markov_2,
