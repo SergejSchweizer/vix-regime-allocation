@@ -105,7 +105,18 @@ def test_summary_rejects_unexpected_metric_schema(monkeypatch: pytest.MonkeyPatc
 
 @pytest.mark.parametrize(
     "case",
-    ["type", "columns", "index_type", "index_name", "timezone", "duplicate", "unsorted", "nonnumeric", "nonfinite", "invalid_return"],
+    [
+        "type",
+        "columns",
+        "index_type",
+        "index_name",
+        "timezone",
+        "duplicate",
+        "unsorted",
+        "nonnumeric",
+        "nonfinite",
+        "invalid_return",
+    ],
 )
 def test_build_comparison_rejects_invalid_rotation(case: str) -> None:
     rotation: object = _rotation().copy()
@@ -127,7 +138,9 @@ def test_build_comparison_rejects_invalid_rotation(case: str) -> None:
         rotation = frame
     elif case == "duplicate":
         frame = _rotation().copy()
-        frame.index = pd.DatetimeIndex(["2026-01-02", "2026-01-02", "2026-01-06"], name="Date")
+        frame.index = pd.DatetimeIndex(
+            ["2026-01-02", "2026-01-02", "2026-01-06"], name="Date"
+        )
         rotation = frame
     elif case == "unsorted":
         rotation = _rotation().iloc[::-1]
@@ -151,7 +164,18 @@ def test_build_comparison_rejects_invalid_rotation(case: str) -> None:
 
 
 @pytest.mark.parametrize(
-    "case", ["type", "name", "index_type", "index_name", "duplicate", "unsorted", "nonnumeric", "nonfinite", "invalid_return"]
+    "case",
+    [
+        "type",
+        "name",
+        "index_type",
+        "index_name",
+        "duplicate",
+        "unsorted",
+        "nonnumeric",
+        "nonfinite",
+        "invalid_return",
+    ],
 )
 def test_build_comparison_rejects_invalid_benchmark(case: str) -> None:
     equal_weight, spy = _benchmarks()
@@ -170,7 +194,9 @@ def test_build_comparison_rejects_invalid_benchmark(case: str) -> None:
         benchmark = series
     elif case == "duplicate":
         series = equal_weight.copy()
-        series.index = pd.DatetimeIndex(["2026-01-02", "2026-01-02", "2026-01-06"], name="Date")
+        series.index = pd.DatetimeIndex(
+            ["2026-01-02", "2026-01-02", "2026-01-06"], name="Date"
+        )
         benchmark = series
     elif case == "unsorted":
         benchmark = equal_weight.iloc[::-1]
@@ -190,7 +216,9 @@ def test_build_comparison_rejects_invalid_benchmark(case: str) -> None:
         build_comparison(_rotation(), benchmark, spy)  # type: ignore[arg-type]
 
 
-@pytest.mark.parametrize("case", ["type", "columns", "index_type", "index_name", "duplicate", "unsorted"])
+@pytest.mark.parametrize(
+    "case", ["type", "columns", "index_type", "index_name", "duplicate", "unsorted"]
+)
 def test_summary_rejects_invalid_comparison(case: str) -> None:
     equal_weight, spy = _benchmarks()
     comparison: object = build_comparison(_rotation(), equal_weight, spy)
@@ -208,7 +236,9 @@ def test_summary_rejects_invalid_comparison(case: str) -> None:
         comparison = frame
     elif case == "duplicate":
         frame = comparison.copy()  # type: ignore[union-attr]
-        frame.index = pd.DatetimeIndex(["2026-01-02", "2026-01-02", "2026-01-06"], name="Date")
+        frame.index = pd.DatetimeIndex(
+            ["2026-01-02", "2026-01-02", "2026-01-06"], name="Date"
+        )
         comparison = frame
     else:
         comparison = comparison.iloc[::-1]  # type: ignore[union-attr]
