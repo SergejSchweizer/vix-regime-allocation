@@ -26,7 +26,8 @@ def test_plot_writes_nonempty_file_and_closes_figure(tmp_path: Path) -> None:
 
 
 def test_plot_contains_each_delta_vix_state_once(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
 ) -> None:
     vix, states_2, states_3 = _inputs()
     labels: list[str] = []
@@ -38,7 +39,13 @@ def test_plot_contains_each_delta_vix_state_once(
 
     monkeypatch.setattr(plt.Axes, "scatter", recording_scatter)
     plot_hmm_vix_states(vix, states_2, states_3, tmp_path / "plot.png")
-    assert labels == ["ΔVIX state 0", "ΔVIX state 1", "ΔVIX state 0", "ΔVIX state 1", "ΔVIX state 2"]
+    assert labels == [
+        "ΔVIX state 0",
+        "ΔVIX state 1",
+        "ΔVIX state 0",
+        "ΔVIX state 1",
+        "ΔVIX state 2",
+    ]
 
 
 def test_index_and_data_validation_failures(tmp_path: Path) -> None:
