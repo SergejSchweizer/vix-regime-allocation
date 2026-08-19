@@ -13,7 +13,7 @@ EQUAL_WEIGHT_NAME = "equal_weight_monthly"
 SPY_NAME = "spy_buy_hold"
 
 
-def _validate_data(data: pd.DataFrame) -> None:
+def _validate_data(data: pd.DataFrame) -> pd.DatetimeIndex:
     if not isinstance(data, pd.DataFrame):
         raise TypeError("data must be a pandas DataFrame.")
     if tuple(data.columns) != OUTPUT_COLUMNS:
@@ -31,6 +31,7 @@ def _validate_data(data: pd.DataFrame) -> None:
             raise ValueError(f"data column {column!r} must be numeric.")
     if np.any(~np.isfinite(data.to_numpy(dtype=float))):
         raise ValueError("data must contain only finite values.")
+    return pd.DatetimeIndex(data.index, name="Date")
 
 
 def _validate_comparison_index(
@@ -66,15 +67,17 @@ def build_equal_weight_monthly_returns(
     first observed comparison return in each new calendar month. Between resets they
     drift according to realized simple returns.
     """
-    _validate_data(data)
-    index = _validate_comparison_index(comparison_index, data.index)
+    data_index = _validate_data(data)
+    index = _validate_comparison_index(comparison_index, data_index)
     returns = _simple_returns(data, index)
 
     weights = np.full(3, 1.0 / 3.0, dtype=float)
     portfolio_returns: list[float] = []
     previous_period: pd.Period | None = None
 
-    for date, row in returns.iterrows():
+    for position in range(len(returns)):
+        date = index[position]
+        row = returns.iloc[position]
         period = date.to_period("M")
         if previous_period is None or period != previous_period:
             weights = np.full(3, 1.0 / 3.0, dtype=float)
@@ -85,7 +88,9 @@ def build_equal_weight_monthly_returns(
         portfolio_returns.append(portfolio_return)
         weights = weights * (1.0 + asset_returns) / (1.0 + portfolio_return)
         if np.any(~np.isfinite(weights)) or not np.isclose(weights.sum(), 1.0):
-            raise ValueError("drifted equal-weight benchmark weights must remain finite and sum to 1.")
+            raise ValueError(
+                "drifted equal-weight benchmark weights must remain finite and sum to 1."
+            )
         previous_period = period
 
     return pd.Series(portfolio_returns, index=index, name=EQUAL_WEIGHT_NAME, dtype=float)
@@ -93,8 +98,8 @@ def build_equal_weight_monthly_returns(
 
 def build_spy_buy_hold_returns(data: pd.DataFrame, comparison_index: pd.DatetimeIndex) -> pd.Series:
     """Return SPY simple returns on the exact comparison index."""
-    _validate_data(data)
-    index = _validate_comparison_index(comparison_index, data.index)
+    data_index = _validate_data(data)
+    index = _validate_comparison_index(comparison_index, data_index)
     spy = _simple_returns(data, index)["SPY"].copy()
     spy.name = SPY_NAME
     return spy
