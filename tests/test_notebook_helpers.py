@@ -46,7 +46,13 @@ def _repo(tmp_path: Path) -> Path:
         _write_csv(
             tmp_path,
             f"reports/tables/step2_markov_{n_states}_thresholds.csv",
-            pd.DataFrame({"state": range(n_states), "lower_bound": range(n_states), "upper_bound": range(1, n_states + 1)}),
+            pd.DataFrame(
+                {
+                    "state": range(n_states),
+                    "lower_bound": range(n_states),
+                    "upper_bound": range(1, n_states + 1),
+                }
+            ),
         )
         _write_csv(
             tmp_path,
@@ -56,7 +62,12 @@ def _repo(tmp_path: Path) -> Path:
         _write_csv(
             tmp_path,
             f"reports/tables/step2_markov_{n_states}_stationary.csv",
-            pd.DataFrame({"state": range(n_states), "stationary_probability": [1.0 / n_states] * n_states}),
+            pd.DataFrame(
+                {
+                    "state": range(n_states),
+                    "stationary_probability": [1.0 / n_states] * n_states,
+                }
+            ),
         )
         _write_csv(
             tmp_path,
@@ -80,12 +91,29 @@ def _repo(tmp_path: Path) -> Path:
     _write_csv(
         tmp_path,
         "reports/tables/step3_state_asset_statistics.csv",
-        pd.DataFrame({"state": [0], "asset": ["SPY"], "mean_log_return": [0.01], "std_log_return": [0.02], "observations": [2]}),
+        pd.DataFrame(
+            {
+                "state": [0],
+                "asset": ["SPY"],
+                "mean_log_return": [0.01],
+                "std_log_return": [0.02],
+                "observations": [2],
+            }
+        ),
     )
     _write_csv(
         tmp_path,
         "reports/tables/step4_allocation_mapping.csv",
-        pd.DataFrame({"state": [0], "selected_asset": ["SPY"], "selection_mean_log_return": [0.01], "TLT_weight": [0.0], "GLD_weight": [0.0], "SPY_weight": [1.0]}),
+        pd.DataFrame(
+            {
+                "state": [0],
+                "selected_asset": ["SPY"],
+                "selection_mean_log_return": [0.01],
+                "TLT_weight": [0.0],
+                "GLD_weight": [0.0],
+                "SPY_weight": [1.0],
+            }
+        ),
     )
     _write_csv(
         tmp_path,
@@ -152,7 +180,9 @@ def test_all_presentation_functions_display_canonical_artifacts(
     assert any(isinstance(value, pd.DataFrame) for value in seen)
 
 
-def test_sensitivity_displays_existing_table(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_sensitivity_displays_existing_table(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     root = _repo(tmp_path)
     _write_csv(
         root,
@@ -162,9 +192,12 @@ def test_sensitivity_displays_existing_table(tmp_path: Path, monkeypatch: pytest
     monkeypatch.chdir(root)
     seen: list[object] = []
     monkeypatch.setattr(module, "display", lambda value: seen.append(value))
+
     module.show_step5_sensitivity()
-    assert isinstance(seen[-1], pd.DataFrame)
-    assert list(seen[-1]["n_states"]) == [2, 3]
+
+    frames = [value for value in seen if isinstance(value, pd.DataFrame)]
+    assert frames
+    assert list(frames[-1]["n_states"]) == [2, 3]
 
 
 def test_step5_schema_mismatch_fails(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
