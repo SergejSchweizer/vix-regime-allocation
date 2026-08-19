@@ -34,9 +34,7 @@ def _fit(n_states: int = 2, periods: int = 20) -> HMMFitResult:
         means=pd.Series(
             np.arange(n_states, dtype=float), index=pd.Index(range(n_states), name="state")
         ),
-        variances=pd.Series(
-            np.ones(n_states), index=pd.Index(range(n_states), name="state")
-        ),
+        variances=pd.Series(np.ones(n_states), index=pd.Index(range(n_states), name="state")),
         states=pd.Series(states, index=index, name="state", dtype="int64"),
         probabilities=pd.DataFrame(
             [[1.0 / n_states] * n_states for _ in range(periods)],
@@ -188,9 +186,7 @@ def _with_low_occupancy(fit: HMMFitResult) -> HMMFitResult:
         (lambda candidate: {**candidate, "fit": "not-a-fit"}, "fit result is missing"),
     ],
 )
-def test_each_hmm_invalidity_falls_back_to_markov(
-    candidate_transform: object, reason: str
-) -> None:
+def test_each_hmm_invalidity_falls_back_to_markov(candidate_transform: object, reason: str) -> None:
     markov = [_markov_candidate(2, 10.0), _markov_candidate(3, 11.0)]
     hmm = [_hmm_candidate(2, 5.0), _hmm_candidate(3, 7.0)]
     transform = candidate_transform
