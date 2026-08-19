@@ -54,9 +54,7 @@ def test_transition_validation_failures_are_explicit() -> None:
     with pytest.raises(TypeError, match="DataFrame"):
         stationary_distribution(np.eye(2))  # type: ignore[arg-type]
 
-    one_state = pd.DataFrame(
-        [[1.0]], index=pd.Index([0], name="from_state"), columns=["state_0"]
-    )
+    one_state = pd.DataFrame([[1.0]], index=pd.Index([0], name="from_state"), columns=["state_0"])
     with pytest.raises(ValueError, match="two or three"):
         stationary_distribution(one_state)
 
