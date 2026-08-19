@@ -1,0 +1,73 @@
+name: Temporary PR-40 Diagnostic Controller
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    if: github.event.head_commit.message == 'OPS — Rebuild PR-40 Step5 notebook backtest'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: pr-40-notebook-step5-backtest-benchmarks
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+      - name: Build execute and persist diagnostics
+        shell: bash
+        run: |
+          set +e
+          LOG=.github/_tmp_pr40_build.log
+          : > "$LOG"
+          python -m pip install --upgrade pip >> "$LOG" 2>&1
+          status=$?
+          if [ "$status" -eq 0 ]; then pip install -e '.[dev]' ipykernel >> "$LOG" 2>&1; status=$?; fi
+          if [ "$status" -eq 0 ]; then python scripts/_tmp_build_pr40.py >> "$LOG" 2>&1; status=$?; fi
+          if [ "$status" -eq 0 ]; then
+            python -m jupyter nbconvert --to notebook --execute --inplace --ExecutePreprocessor.timeout=900 notebooks/gwp2_vix_regime_allocation.ipynb >> "$LOG" 2>&1
+            status=$?
+          fi
+          if [ "$status" -eq 0 ] && [ ! -s reports/tables/step5_daily_returns.csv ]; then status=91; fi
+          if [ "$status" -eq 0 ] && ! grep -q '## Step 5' notebooks/gwp2_vix_regime_allocation.ipynb; then status=92; fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          if [ "$status" -eq 0 ]; then
+            rm -f "$LOG" scripts/_tmp_build_pr40.py
+            git add notebooks/gwp2_vix_regime_allocation.ipynb reports/references.bib reports/tables/step5_daily_returns.csv scripts/_tmp_build_pr40.py "$LOG"
+            git commit -m 'PR-40 — Notebook Step5 backtest + benchmarks [generated]'
+            git push origin HEAD:pr-40-notebook-step5-backtest-benchmarks
+          else
+            git add "$LOG"
+            git commit -m 'OPS — PR-40 build diagnostic'
+            git push origin HEAD:pr-40-notebook-step5-backtest-benchmarks
+            exit "$status"
+          fi
+
+  cleanup:
+    if: always() && github.event.head_commit.message == 'OPS — Rebuild PR-40 Step5 notebook backtest'
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Remove temporary controller and trigger
+        run: |
+          rm -f .github/workflows/_tmp_pr40_controller.yml .github/_tmp_pr40_trigger
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A .github/workflows/_tmp_pr40_controller.yml .github/_tmp_pr40_trigger
+          if ! git diff --cached --quiet; then
+            git commit -m 'OPS — Remove PR-40 diagnostic controller'
+            git push origin HEAD:main
+          fi
