@@ -12,6 +12,9 @@ def _fit(index: pd.DatetimeIndex, n_states: int, log_likelihood: float) -> HMMFi
         index=pd.Index(range(n_states), name="from_state"),
         columns=labels,
     )
+    states = pd.Series(
+        [state % n_states for state in range(len(index))], index=index, name="state"
+    )
     return HMMFitResult(
         n_states=n_states,
         seed=42,
@@ -21,7 +24,7 @@ def _fit(index: pd.DatetimeIndex, n_states: int, log_likelihood: float) -> HMMFi
         transition_matrix=transition,
         means=pd.Series(range(n_states), index=pd.Index(range(n_states), name="state")),
         variances=pd.Series([1.0] * n_states, index=pd.Index(range(n_states), name="state")),
-        states=pd.Series([state % n_states for state in range(len(index))], index=index, name="state"),
+        states=states,
         probabilities=pd.DataFrame(
             [[1.0 / n_states] * n_states for _ in index], index=index, columns=labels
         ),
