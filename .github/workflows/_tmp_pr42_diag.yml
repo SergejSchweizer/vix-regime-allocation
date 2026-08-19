@@ -1,0 +1,36 @@
+name: Temporary PR-42 Diagnostic
+on:
+  push:
+    branches: [main]
+permissions:
+  contents: write
+jobs:
+  diag:
+    if: github.event.head_commit.message == 'OPS — Trigger PR-42 diagnostic'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: {ref: pr-42-notebook-step5-sensitivity-manifest, token: ${{ secrets.GITHUB_TOKEN }}}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - shell: bash
+        run: |
+          set +e
+          pip install -e '.[dev]' ipykernel >/dev/null 2>&1
+          python scripts/_tmp_build_pr42.py > /tmp/log 2>&1; s=$?
+          if [ $s -eq 0 ]; then python -m jupyter nbconvert --to notebook --execute --inplace --ExecutePreprocessor.timeout=900 notebooks/gwp2_vix_regime_allocation.ipynb >> /tmp/log 2>&1; s=$?; fi
+          tail -120 /tmp/log > .github/_tmp_pr42_diag.log
+          echo STATUS=$s >> .github/_tmp_pr42_diag.log
+          git config user.name 'github-actions[bot]'; git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add .github/_tmp_pr42_diag.log; git commit -m "OPS — PR-42 diagnostic $s"; git push origin HEAD:pr-42-notebook-step5-sensitivity-manifest
+  cleanup:
+    if: always() && github.event.head_commit.message == 'OPS — Trigger PR-42 diagnostic'
+    needs: diag
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: {ref: main, token: ${{ secrets.GITHUB_TOKEN }}}
+      - run: |
+          rm -f .github/workflows/_tmp_pr42_diag.yml .github/_tmp_pr42_diag_trigger
+          git config user.name 'github-actions[bot]'; git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A .github/workflows/_tmp_pr42_diag.yml .github/_tmp_pr42_diag_trigger; git commit -m 'OPS — Remove PR-42 diagnostic'; git push origin HEAD:main
