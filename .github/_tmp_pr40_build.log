@@ -1,0 +1,484 @@
+Requirement already satisfied: pip in /opt/hostedtoolcache/Python/3.11.15/x64/lib/python3.11/site-packages (26.2.1)
+Obtaining file:///home/runner/work/vix-regime-allocation/vix-regime-allocation
+  Installing build dependencies: started
+  Installing build dependencies: finished with status 'done'
+  Checking if build backend supports build_editable: started
+  Checking if build backend supports build_editable: finished with status 'done'
+  Getting requirements to build editable: started
+  Getting requirements to build editable: finished with status 'done'
+  Preparing editable metadata (pyproject.toml): started
+  Preparing editable metadata (pyproject.toml): finished with status 'done'
+Collecting ipykernel
+  Downloading ipykernel-7.3.0-py3-none-any.whl.metadata (4.5 kB)
+Collecting hmmlearn>=0.3.3 (from vix-regime-allocation==0.1.0)
+  Using cached hmmlearn-0.3.3-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl.metadata (3.0 kB)
+Collecting matplotlib>=3.8 (from vix-regime-allocation==0.1.0)
+  Using cached matplotlib-3.11.1-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.whl.metadata (80 kB)
+Collecting numpy>=1.26 (from vix-regime-allocation==0.1.0)
+  Using cached numpy-2.4.6-cp311-cp311-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl.metadata (6.6 kB)
+Collecting pandas>=2.2 (from vix-regime-allocation==0.1.0)
+  Using cached pandas-3.0.5-cp311-cp311-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl.metadata (79 kB)
+Collecting scipy>=1.13 (from vix-regime-allocation==0.1.0)
+  Using cached scipy-1.17.1-cp311-cp311-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl.metadata (62 kB)
+Collecting yfinance>=0.2.40 (from vix-regime-allocation==0.1.0)
+  Using cached yfinance-1.6.0-py3-none-any.whl.metadata (6.7 kB)
+Collecting coverage>=7.6 (from coverage[toml]>=7.6; extra == "dev"->vix-regime-allocation==0.1.0)
+  Using cached coverage-7.15.4-cp311-cp311-manylinux1_x86_64.manylinux_2_28_x86_64.manylinux_2_5_x86_64.whl.metadata (8.6 kB)
+Collecting mypy>=1.11 (from vix-regime-allocation==0.1.0)
+  Using cached mypy-2.3.1-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl.metadata (2.4 kB)
+Collecting nbclient>=0.10 (from vix-regime-allocation==0.1.0)
+  Using cached nbclient-0.11.0-py3-none-any.whl.metadata (7.3 kB)
+Collecting nbconvert>=7.16 (from vix-regime-allocation==0.1.0)
+  Using cached nbconvert-7.17.1-py3-none-any.whl.metadata (8.4 kB)
+Collecting nbformat>=5.10 (from vix-regime-allocation==0.1.0)
+  Using cached nbformat-5.11.1-py3-none-any.whl.metadata (3.7 kB)
+Collecting pandas-stubs>=2.2 (from vix-regime-allocation==0.1.0)
+  Using cached pandas_stubs-3.0.5.260730-py3-none-any.whl.metadata (11 kB)
+Collecting pymupdf>=1.24 (from vix-regime-allocation==0.1.0)
+  Using cached pymupdf-1.28.2-cp310-abi3-manylinux_2_28_x86_64.whl.metadata (26 kB)
+Collecting pypdf>=5.0 (from vix-regime-allocation==0.1.0)
+  Using cached pypdf-6.16.1-py3-none-any.whl.metadata (7.5 kB)
+Collecting pytest>=8.3 (from vix-regime-allocation==0.1.0)
+  Using cached pytest-9.1.1-py3-none-any.whl.metadata (7.6 kB)
+Collecting reportlab>=4.2 (from vix-regime-allocation==0.1.0)
+  Using cached reportlab-5.0.0-py3-none-any.whl.metadata (1.6 kB)
+Collecting ruff>=0.6 (from vix-regime-allocation==0.1.0)
+  Using cached ruff-0.16.3-py3-none-manylinux_2_17_x86_64.manylinux2014_x86_64.whl.metadata (26 kB)
+Collecting comm>=0.1.1 (from ipykernel)
+  Downloading comm-0.2.3-py3-none-any.whl.metadata (3.7 kB)
+Collecting debugpy>=1.6.5 (from ipykernel)
+  Downloading debugpy-1.8.21-cp311-cp311-manylinux_2_34_x86_64.whl.metadata (1.4 kB)
+Collecting ipython>=7.23.1 (from ipykernel)
+  Downloading ipython-9.16.1-py3-none-any.whl.metadata (4.6 kB)
+Collecting jupyter-client>=8.9.0 (from ipykernel)
+  Using cached jupyter_client-8.9.1-py3-none-any.whl.metadata (8.5 kB)
+Collecting jupyter-core!=6.0.*,>=5.1 (from ipykernel)
+  Using cached jupyter_core-5.9.1-py3-none-any.whl.metadata (1.5 kB)
+Collecting matplotlib-inline>=0.1 (from ipykernel)
+  Downloading matplotlib_inline-0.2.2-py3-none-any.whl.metadata (2.4 kB)
+Collecting nest-asyncio2>=1.7.0 (from ipykernel)
+  Downloading nest_asyncio2-1.7.2-py3-none-any.whl.metadata (6.3 kB)
+Collecting packaging>=22 (from ipykernel)
+  Using cached packaging-26.3-py3-none-any.whl.metadata (3.5 kB)
+Collecting psutil>=5.7 (from ipykernel)
+  Downloading psutil-7.2.2-cp36-abi3-manylinux2010_x86_64.manylinux_2_12_x86_64.manylinux_2_28_x86_64.whl.metadata (22 kB)
+Collecting pyzmq>=25 (from ipykernel)
+  Using cached pyzmq-27.1.0-cp311-cp311-manylinux_2_26_x86_64.manylinux_2_28_x86_64.whl.metadata (6.0 kB)
+Collecting tornado>=6.4.1 (from ipykernel)
+  Using cached tornado-6.5.8-cp39-abi3-manylinux1_x86_64.manylinux_2_28_x86_64.manylinux_2_5_x86_64.whl.metadata (2.8 kB)
+Collecting traitlets>=5.4.0 (from ipykernel)
+  Using cached traitlets-5.16.1-py3-none-any.whl.metadata (10 kB)
+Collecting scikit-learn!=0.22.0,>=0.16 (from hmmlearn>=0.3.3->vix-regime-allocation==0.1.0)
+  Using cached scikit_learn-1.9.0-cp311-cp311-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl.metadata (11 kB)
+Collecting ipython-pygments-lexers>=1.0.0 (from ipython>=7.23.1->ipykernel)
+  Downloading ipython_pygments_lexers-1.1.1-py3-none-any.whl.metadata (1.1 kB)
+Collecting jedi>=0.18.2 (from ipython>=7.23.1->ipykernel)
+  Downloading jedi-0.20.0-py2.py3-none-any.whl.metadata (23 kB)
+Collecting pexpect>4.6 (from ipython>=7.23.1->ipykernel)
+  Downloading pexpect-4.9.0-py2.py3-none-any.whl.metadata (2.5 kB)
+Collecting prompt_toolkit<3.1.0,>=3.0.41 (from ipython>=7.23.1->ipykernel)
+  Downloading prompt_toolkit-3.0.53-py3-none-any.whl.metadata (6.4 kB)
+Collecting pygments>=2.14.0 (from ipython>=7.23.1->ipykernel)
+  Using cached pygments-2.21.0-py3-none-any.whl.metadata (2.5 kB)
+Collecting stack_data>=0.6.0 (from ipython>=7.23.1->ipykernel)
+  Downloading stack_data-0.6.3-py3-none-any.whl.metadata (18 kB)
+Collecting typing_extensions>=4.6 (from ipython>=7.23.1->ipykernel)
+  Using cached typing_extensions-4.16.0-py3-none-any.whl.metadata (3.3 kB)
+Collecting wcwidth>=0.1.4 (from prompt_toolkit<3.1.0,>=3.0.41->ipython>=7.23.1->ipykernel)
+  Downloading wcwidth-0.8.2-py3-none-any.whl.metadata (43 kB)
+Collecting parso<0.9.0,>=0.8.6 (from jedi>=0.18.2->ipython>=7.23.1->ipykernel)
+  Downloading parso-0.8.7-py2.py3-none-any.whl.metadata (8.2 kB)
+Collecting python-dateutil>=2.8.2 (from jupyter-client>=8.9.0->ipykernel)
+  Using cached python_dateutil-2.9.0.post0-py2.py3-none-any.whl.metadata (8.4 kB)
+Collecting platformdirs>=2.5 (from jupyter-core!=6.0.*,>=5.1->ipykernel)
+  Using cached platformdirs-4.11.3-py3-none-any.whl.metadata (5.5 kB)
+Collecting contourpy>=1.0.1 (from matplotlib>=3.8->vix-regime-allocation==0.1.0)
+  Using cached contourpy-1.3.3-cp311-cp311-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl.metadata (5.5 kB)
+Collecting cycler>=0.10 (from matplotlib>=3.8->vix-regime-allocation==0.1.0)
+  Using cached cycler-0.12.1-py3-none-any.whl.metadata (3.8 kB)
+Collecting fonttools>=4.28.2 (from matplotlib>=3.8->vix-regime-allocation==0.1.0)
+  Using cached fonttools-4.63.0-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.whl.metadata (118 kB)
+Collecting kiwisolver>=1.3.1 (from matplotlib>=3.8->vix-regime-allocation==0.1.0)
+  Using cached kiwisolver-1.5.0-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.whl.metadata (5.1 kB)
+Collecting pillow>=9 (from matplotlib>=3.8->vix-regime-allocation==0.1.0)
+  Using cached pillow-12.3.0-cp311-cp311-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl.metadata (9.1 kB)
+Collecting pyparsing>=3 (from matplotlib>=3.8->vix-regime-allocation==0.1.0)
+  Using cached pyparsing-3.3.2-py3-none-any.whl.metadata (5.8 kB)
+Collecting mypy_extensions>=1.0.0 (from mypy>=1.11->vix-regime-allocation==0.1.0)
+  Using cached mypy_extensions-1.1.0-py3-none-any.whl.metadata (1.1 kB)
+Collecting pathspec>=1.0.0 (from mypy>=1.11->vix-regime-allocation==0.1.0)
+  Using cached pathspec-1.1.1-py3-none-any.whl.metadata (14 kB)
+Collecting librt>=0.13.0 (from mypy>=1.11->vix-regime-allocation==0.1.0)
+  Using cached librt-0.15.0-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl.metadata (1.3 kB)
+Collecting ast-serialize<1.0.0,>=0.6.0 (from mypy>=1.11->vix-regime-allocation==0.1.0)
+  Using cached ast_serialize-0.8.0-cp39-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl.metadata (1.4 kB)
+Collecting beautifulsoup4 (from nbconvert>=7.16->vix-regime-allocation==0.1.0)
+  Using cached beautifulsoup4-4.15.0-py3-none-any.whl.metadata (3.8 kB)
+Collecting bleach!=5.0.0 (from bleach[css]!=5.0.0->nbconvert>=7.16->vix-regime-allocation==0.1.0)
+  Using cached bleach-6.4.0-py3-none-any.whl.metadata (32 kB)
+Collecting defusedxml (from nbconvert>=7.16->vix-regime-allocation==0.1.0)
+  Using cached defusedxml-0.7.1-py2.py3-none-any.whl.metadata (32 kB)
+Collecting jinja2>=3.0 (from nbconvert>=7.16->vix-regime-allocation==0.1.0)
+  Using cached jinja2-3.1.6-py3-none-any.whl.metadata (2.9 kB)
+Collecting jupyterlab-pygments (from nbconvert>=7.16->vix-regime-allocation==0.1.0)
+  Using cached jupyterlab_pygments-0.3.0-py3-none-any.whl.metadata (4.4 kB)
+Collecting markupsafe>=2.0 (from nbconvert>=7.16->vix-regime-allocation==0.1.0)
+  Using cached markupsafe-3.0.3-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl.metadata (2.7 kB)
+Collecting mistune<4,>=2.0.3 (from nbconvert>=7.16->vix-regime-allocation==0.1.0)
+  Using cached mistune-3.3.4-py3-none-any.whl.metadata (1.9 kB)
+Collecting pandocfilters>=1.4.1 (from nbconvert>=7.16->vix-regime-allocation==0.1.0)
+  Using cached pandocfilters-1.5.1-py2.py3-none-any.whl.metadata (9.0 kB)
+Collecting webencodings (from bleach!=5.0.0->bleach[css]!=5.0.0->nbconvert>=7.16->vix-regime-allocation==0.1.0)
+  Using cached webencodings-0.6.1-py3-none-any.whl.metadata (3.4 kB)
+Collecting tinycss2>=1.1.0 (from bleach[css]!=5.0.0->nbconvert>=7.16->vix-regime-allocation==0.1.0)
+  Using cached tinycss2-1.5.1-py3-none-any.whl.metadata (3.0 kB)
+Collecting fastjsonschema>=2.15 (from nbformat>=5.10->vix-regime-allocation==0.1.0)
+  Using cached fastjsonschema-2.22.2-py3-none-any.whl.metadata (2.1 kB)
+Collecting jsonschema>=2.6 (from nbformat>=5.10->vix-regime-allocation==0.1.0)
+  Using cached jsonschema-4.26.0-py3-none-any.whl.metadata (7.6 kB)
+Collecting attrs>=22.2.0 (from jsonschema>=2.6->nbformat>=5.10->vix-regime-allocation==0.1.0)
+  Using cached attrs-26.1.0-py3-none-any.whl.metadata (8.8 kB)
+Collecting jsonschema-specifications>=2023.03.6 (from jsonschema>=2.6->nbformat>=5.10->vix-regime-allocation==0.1.0)
+  Using cached jsonschema_specifications-2025.9.1-py3-none-any.whl.metadata (2.9 kB)
+Collecting referencing>=0.28.4 (from jsonschema>=2.6->nbformat>=5.10->vix-regime-allocation==0.1.0)
+  Using cached referencing-0.37.0-py3-none-any.whl.metadata (2.8 kB)
+Collecting rpds-py>=0.25.0 (from jsonschema>=2.6->nbformat>=5.10->vix-regime-allocation==0.1.0)
+  Using cached rpds_py-2026.6.3-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl.metadata (4.1 kB)
+Collecting ptyprocess>=0.5 (from pexpect>4.6->ipython>=7.23.1->ipykernel)
+  Downloading ptyprocess-0.7.0-py2.py3-none-any.whl.metadata (1.3 kB)
+Collecting iniconfig>=1.0.1 (from pytest>=8.3->vix-regime-allocation==0.1.0)
+  Using cached iniconfig-2.3.0-py3-none-any.whl.metadata (2.5 kB)
+Collecting pluggy<2,>=1.5 (from pytest>=8.3->vix-regime-allocation==0.1.0)
+  Using cached pluggy-1.6.0-py3-none-any.whl.metadata (4.8 kB)
+Collecting six>=1.5 (from python-dateutil>=2.8.2->jupyter-client>=8.9.0->ipykernel)
+  Using cached six-1.17.0-py2.py3-none-any.whl.metadata (1.7 kB)
+Collecting charset-normalizer (from reportlab>=4.2->vix-regime-allocation==0.1.0)
+  Using cached charset_normalizer-3.5.1-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl.metadata (45 kB)
+Collecting joblib>=1.4.0 (from scikit-learn!=0.22.0,>=0.16->hmmlearn>=0.3.3->vix-regime-allocation==0.1.0)
+  Using cached joblib-1.5.3-py3-none-any.whl.metadata (5.5 kB)
+Collecting narwhals>=2.0.1 (from scikit-learn!=0.22.0,>=0.16->hmmlearn>=0.3.3->vix-regime-allocation==0.1.0)
+  Using cached narwhals-2.24.0-py3-none-any.whl.metadata (15 kB)
+Collecting threadpoolctl>=3.5.0 (from scikit-learn!=0.22.0,>=0.16->hmmlearn>=0.3.3->vix-regime-allocation==0.1.0)
+  Using cached threadpoolctl-3.6.0-py3-none-any.whl.metadata (13 kB)
+Collecting executing>=1.2.0 (from stack_data>=0.6.0->ipython>=7.23.1->ipykernel)
+  Downloading executing-2.2.1-py2.py3-none-any.whl.metadata (8.9 kB)
+Collecting asttokens>=2.1.0 (from stack_data>=0.6.0->ipython>=7.23.1->ipykernel)
+  Downloading asttokens-3.0.2-py3-none-any.whl.metadata (5.7 kB)
+Collecting pure-eval (from stack_data>=0.6.0->ipython>=7.23.1->ipykernel)
+  Downloading pure_eval-0.2.3-py3-none-any.whl.metadata (6.3 kB)
+Collecting curl_cffi>=0.15 (from yfinance>=0.2.40->vix-regime-allocation==0.1.0)
+  Using cached curl_cffi-0.16.0-cp310-abi3-manylinux2014_x86_64.manylinux_2_17_x86_64.whl.metadata (17 kB)
+Collecting lxml>=4.9.0 (from yfinance>=0.2.40->vix-regime-allocation==0.1.0)
+  Using cached lxml-6.1.2-cp311-cp311-manylinux_2_26_x86_64.manylinux_2_28_x86_64.whl.metadata (3.3 kB)
+Collecting multitasking>=0.0.7 (from yfinance>=0.2.40->vix-regime-allocation==0.1.0)
+  Using cached multitasking-0.0.13-py3-none-any.whl.metadata (16 kB)
+Collecting peewee>=3.16.2 (from yfinance>=0.2.40->vix-regime-allocation==0.1.0)
+  Using cached peewee-4.3.0-py3-none-any.whl.metadata (10 kB)
+Collecting protobuf>=3.19.0 (from yfinance>=0.2.40->vix-regime-allocation==0.1.0)
+  Using cached protobuf-7.35.1-cp310-abi3-manylinux2014_x86_64.whl.metadata (595 bytes)
+Collecting pytz>=2022.5 (from yfinance>=0.2.40->vix-regime-allocation==0.1.0)
+  Using cached pytz-2026.3.post1-py2.py3-none-any.whl.metadata (22 kB)
+Collecting requests>=2.31 (from yfinance>=0.2.40->vix-regime-allocation==0.1.0)
+  Using cached requests-2.34.2-py3-none-any.whl.metadata (4.8 kB)
+Collecting websockets>=13.0 (from yfinance>=0.2.40->vix-regime-allocation==0.1.0)
+  Using cached websockets-17.0.1-cp311-cp311-manylinux1_x86_64.manylinux_2_28_x86_64.manylinux_2_5_x86_64.whl.metadata (6.3 kB)
+Collecting soupsieve>=1.6.1 (from beautifulsoup4->nbconvert>=7.16->vix-regime-allocation==0.1.0)
+  Using cached soupsieve-2.9.2-py3-none-any.whl.metadata (4.6 kB)
+Collecting cffi>=2.0.0 (from curl_cffi>=0.15->yfinance>=0.2.40->vix-regime-allocation==0.1.0)
+  Using cached cffi-2.1.1-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.whl.metadata (2.5 kB)
+Collecting certifi>=2024.2.2 (from curl_cffi>=0.15->yfinance>=0.2.40->vix-regime-allocation==0.1.0)
+  Using cached certifi-2026.7.22-py3-none-any.whl.metadata (2.5 kB)
+Collecting pycparser (from cffi>=2.0.0->curl_cffi>=0.15->yfinance>=0.2.40->vix-regime-allocation==0.1.0)
+  Using cached pycparser-3.0-py3-none-any.whl.metadata (8.2 kB)
+Collecting idna<4,>=2.5 (from requests>=2.31->yfinance>=0.2.40->vix-regime-allocation==0.1.0)
+  Using cached idna-3.19-py3-none-any.whl.metadata (9.2 kB)
+Collecting urllib3<3,>=1.26 (from requests>=2.31->yfinance>=0.2.40->vix-regime-allocation==0.1.0)
+  Using cached urllib3-2.7.0-py3-none-any.whl.metadata (6.9 kB)
+Downloading ipykernel-7.3.0-py3-none-any.whl (120 kB)
+Downloading comm-0.2.3-py3-none-any.whl (7.3 kB)
+Using cached coverage-7.15.4-cp311-cp311-manylinux1_x86_64.manylinux_2_28_x86_64.manylinux_2_5_x86_64.whl (255 kB)
+Downloading debugpy-1.8.21-cp311-cp311-manylinux_2_34_x86_64.whl (3.1 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 3.1/3.1 MB 85.6 MB/s  0:00:00
+Using cached hmmlearn-0.3.3-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (165 kB)
+Downloading ipython-9.16.1-py3-none-any.whl (625 kB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 626.0/626.0 kB 123.2 MB/s  0:00:00
+Downloading prompt_toolkit-3.0.53-py3-none-any.whl (392 kB)
+Downloading ipython_pygments_lexers-1.1.1-py3-none-any.whl (8.1 kB)
+Downloading jedi-0.20.0-py2.py3-none-any.whl (4.9 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 4.9/4.9 MB 240.0 MB/s  0:00:00
+Downloading parso-0.8.7-py2.py3-none-any.whl (107 kB)
+Using cached jupyter_client-8.9.1-py3-none-any.whl (109 kB)
+Using cached jupyter_core-5.9.1-py3-none-any.whl (29 kB)
+Using cached matplotlib-3.11.1-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.whl (10.0 MB)
+Using cached contourpy-1.3.3-cp311-cp311-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl (355 kB)
+Using cached cycler-0.12.1-py3-none-any.whl (8.3 kB)
+Using cached fonttools-4.63.0-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.whl (5.1 MB)
+Using cached kiwisolver-1.5.0-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.whl (1.4 MB)
+Downloading matplotlib_inline-0.2.2-py3-none-any.whl (9.5 kB)
+Using cached mypy-2.3.1-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (15.1 MB)
+Using cached ast_serialize-0.8.0-cp39-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (1.3 MB)
+Using cached librt-0.15.0-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (516 kB)
+Using cached mypy_extensions-1.1.0-py3-none-any.whl (5.0 kB)
+Using cached nbclient-0.11.0-py3-none-any.whl (25 kB)
+Using cached nbconvert-7.17.1-py3-none-any.whl (261 kB)
+Using cached mistune-3.3.4-py3-none-any.whl (66 kB)
+Using cached bleach-6.4.0-py3-none-any.whl (165 kB)
+Using cached jinja2-3.1.6-py3-none-any.whl (134 kB)
+Using cached markupsafe-3.0.3-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (22 kB)
+Using cached nbformat-5.11.1-py3-none-any.whl (79 kB)
+Using cached fastjsonschema-2.22.2-py3-none-any.whl (27 kB)
+Using cached jsonschema-4.26.0-py3-none-any.whl (90 kB)
+Using cached attrs-26.1.0-py3-none-any.whl (67 kB)
+Using cached jsonschema_specifications-2025.9.1-py3-none-any.whl (18 kB)
+Downloading nest_asyncio2-1.7.2-py3-none-any.whl (7.8 kB)
+Using cached numpy-2.4.6-cp311-cp311-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl (16.9 MB)
+Using cached packaging-26.3-py3-none-any.whl (129 kB)
+Using cached pandas-3.0.5-cp311-cp311-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl (11.3 MB)
+Using cached pandas_stubs-3.0.5.260730-py3-none-any.whl (174 kB)
+Using cached pandocfilters-1.5.1-py2.py3-none-any.whl (8.7 kB)
+Using cached pathspec-1.1.1-py3-none-any.whl (57 kB)
+Downloading pexpect-4.9.0-py2.py3-none-any.whl (63 kB)
+Using cached pillow-12.3.0-cp311-cp311-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl (6.9 MB)
+Using cached platformdirs-4.11.3-py3-none-any.whl (23 kB)
+Downloading psutil-7.2.2-cp36-abi3-manylinux2010_x86_64.manylinux_2_12_x86_64.manylinux_2_28_x86_64.whl (155 kB)
+Downloading ptyprocess-0.7.0-py2.py3-none-any.whl (13 kB)
+Using cached pygments-2.21.0-py3-none-any.whl (1.3 MB)
+Using cached pymupdf-1.28.2-cp310-abi3-manylinux_2_28_x86_64.whl (25.8 MB)
+Using cached pyparsing-3.3.2-py3-none-any.whl (122 kB)
+Using cached pypdf-6.16.1-py3-none-any.whl (382 kB)
+Using cached pytest-9.1.1-py3-none-any.whl (386 kB)
+Using cached pluggy-1.6.0-py3-none-any.whl (20 kB)
+Using cached iniconfig-2.3.0-py3-none-any.whl (7.5 kB)
+Using cached python_dateutil-2.9.0.post0-py2.py3-none-any.whl (229 kB)
+Using cached pyzmq-27.1.0-cp311-cp311-manylinux_2_26_x86_64.manylinux_2_28_x86_64.whl (857 kB)
+Using cached referencing-0.37.0-py3-none-any.whl (26 kB)
+Using cached reportlab-5.0.0-py3-none-any.whl (2.0 MB)
+Using cached rpds_py-2026.6.3-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (371 kB)
+Using cached ruff-0.16.3-py3-none-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (11.1 MB)
+Using cached scikit_learn-1.9.0-cp311-cp311-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl (9.3 MB)
+Using cached joblib-1.5.3-py3-none-any.whl (309 kB)
+Using cached narwhals-2.24.0-py3-none-any.whl (461 kB)
+Using cached scipy-1.17.1-cp311-cp311-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl (35.3 MB)
+Using cached six-1.17.0-py2.py3-none-any.whl (11 kB)
+Downloading stack_data-0.6.3-py3-none-any.whl (24 kB)
+Downloading asttokens-3.0.2-py3-none-any.whl (28 kB)
+Downloading executing-2.2.1-py2.py3-none-any.whl (28 kB)
+Using cached threadpoolctl-3.6.0-py3-none-any.whl (18 kB)
+Using cached tinycss2-1.5.1-py3-none-any.whl (28 kB)
+Using cached tornado-6.5.8-cp39-abi3-manylinux1_x86_64.manylinux_2_28_x86_64.manylinux_2_5_x86_64.whl (450 kB)
+Using cached traitlets-5.16.1-py3-none-any.whl (86 kB)
+Using cached typing_extensions-4.16.0-py3-none-any.whl (45 kB)
+Downloading wcwidth-0.8.2-py3-none-any.whl (323 kB)
+Using cached webencodings-0.6.1-py3-none-any.whl (8.7 kB)
+Using cached yfinance-1.6.0-py3-none-any.whl (148 kB)
+Using cached beautifulsoup4-4.15.0-py3-none-any.whl (109 kB)
+Using cached curl_cffi-0.16.0-cp310-abi3-manylinux2014_x86_64.manylinux_2_17_x86_64.whl (13.5 MB)
+Using cached certifi-2026.7.22-py3-none-any.whl (136 kB)
+Using cached cffi-2.1.1-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.whl (217 kB)
+Using cached lxml-6.1.2-cp311-cp311-manylinux_2_26_x86_64.manylinux_2_28_x86_64.whl (5.2 MB)
+Using cached multitasking-0.0.13-py3-none-any.whl (16 kB)
+Using cached peewee-4.3.0-py3-none-any.whl (179 kB)
+Using cached protobuf-7.35.1-cp310-abi3-manylinux2014_x86_64.whl (327 kB)
+Using cached pytz-2026.3.post1-py2.py3-none-any.whl (508 kB)
+Using cached requests-2.34.2-py3-none-any.whl (73 kB)
+Using cached charset_normalizer-3.5.1-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (262 kB)
+Using cached idna-3.19-py3-none-any.whl (68 kB)
+Using cached urllib3-2.7.0-py3-none-any.whl (131 kB)
+Using cached soupsieve-2.9.2-py3-none-any.whl (37 kB)
+Using cached websockets-17.0.1-cp311-cp311-manylinux1_x86_64.manylinux_2_28_x86_64.manylinux_2_5_x86_64.whl (219 kB)
+Using cached defusedxml-0.7.1-py2.py3-none-any.whl (25 kB)
+Using cached jupyterlab_pygments-0.3.0-py3-none-any.whl (15 kB)
+Downloading pure_eval-0.2.3-py3-none-any.whl (11 kB)
+Using cached pycparser-3.0-py3-none-any.whl (48 kB)
+Building wheels for collected packages: vix-regime-allocation
+  Building editable for vix-regime-allocation (pyproject.toml): started
+  Building editable for vix-regime-allocation (pyproject.toml): finished with status 'done'
+  Created wheel for vix-regime-allocation: filename=vix_regime_allocation-0.1.0-0.editable-py3-none-any.whl size=7571 sha256=bb18709d69f3326c34157edc301567f1f850c3a68b5d0fd360acf9ac8518d15e
+  Stored in directory: /tmp/pip-ephem-wheel-cache-4ph87yhe/wheels/fb/58/80/f6d8e4b3dd94fe495fbf2c7eecd57115a433761a14c3310924
+Successfully built vix-regime-allocation
+Installing collected packages: pytz, pure-eval, ptyprocess, multitasking, websockets, webencodings, wcwidth, urllib3, typing_extensions, traitlets, tornado, threadpoolctl, soupsieve, six, ruff, rpds-py, pyzmq, pypdf, pyparsing, pymupdf, pygments, pycparser, psutil, protobuf, pluggy, platformdirs, pillow, pexpect, peewee, pathspec, parso, pandocfilters, packaging, numpy, nest-asyncio2, narwhals, mypy_extensions, mistune, markupsafe, lxml, librt, kiwisolver, jupyterlab-pygments, joblib, iniconfig, idna, fonttools, fastjsonschema, executing, defusedxml, debugpy, cycler, coverage, comm, charset-normalizer, certifi, attrs, asttokens, ast-serialize, tinycss2, stack_data, scipy, requests, reportlab, referencing, python-dateutil, pytest, prompt_toolkit, pandas-stubs, mypy, matplotlib-inline, jupyter-core, jinja2, jedi, ipython-pygments-lexers, contourpy, cffi, bleach, beautifulsoup4, scikit-learn, pandas, matplotlib, jupyter-client, jsonschema-specifications, ipython, curl_cffi, yfinance, jsonschema, ipykernel, hmmlearn, vix-regime-allocation, nbformat, nbclient, nbconvert
+
+Successfully installed ast-serialize-0.8.0 asttokens-3.0.2 attrs-26.1.0 beautifulsoup4-4.15.0 bleach-6.4.0 certifi-2026.7.22 cffi-2.1.1 charset-normalizer-3.5.1 comm-0.2.3 contourpy-1.3.3 coverage-7.15.4 curl_cffi-0.16.0 cycler-0.12.1 debugpy-1.8.21 defusedxml-0.7.1 executing-2.2.1 fastjsonschema-2.22.2 fonttools-4.63.0 hmmlearn-0.3.3 idna-3.19 iniconfig-2.3.0 ipykernel-7.3.0 ipython-9.16.1 ipython-pygments-lexers-1.1.1 jedi-0.20.0 jinja2-3.1.6 joblib-1.5.3 jsonschema-4.26.0 jsonschema-specifications-2025.9.1 jupyter-client-8.9.1 jupyter-core-5.9.1 jupyterlab-pygments-0.3.0 kiwisolver-1.5.0 librt-0.15.0 lxml-6.1.2 markupsafe-3.0.3 matplotlib-3.11.1 matplotlib-inline-0.2.2 mistune-3.3.4 multitasking-0.0.13 mypy-2.3.1 mypy_extensions-1.1.0 narwhals-2.24.0 nbclient-0.11.0 nbconvert-7.17.1 nbformat-5.11.1 nest-asyncio2-1.7.2 numpy-2.4.6 packaging-26.3 pandas-3.0.5 pandas-stubs-3.0.5.260730 pandocfilters-1.5.1 parso-0.8.7 pathspec-1.1.1 peewee-4.3.0 pexpect-4.9.0 pillow-12.3.0 platformdirs-4.11.3 pluggy-1.6.0 prompt_toolkit-3.0.53 protobuf-7.35.1 psutil-7.2.2 ptyprocess-0.7.0 pure-eval-0.2.3 pycparser-3.0 pygments-2.21.0 pymupdf-1.28.2 pyparsing-3.3.2 pypdf-6.16.1 pytest-9.1.1 python-dateutil-2.9.0.post0 pytz-2026.3.post1 pyzmq-27.1.0 referencing-0.37.0 reportlab-5.0.0 requests-2.34.2 rpds-py-2026.6.3 ruff-0.16.3 scikit-learn-1.9.0 scipy-1.17.1 six-1.17.0 soupsieve-2.9.2 stack_data-0.6.3 threadpoolctl-3.6.0 tinycss2-1.5.1 tornado-6.5.8 traitlets-5.16.1 typing_extensions-4.16.0 urllib3-2.7.0 vix-regime-allocation-0.1.0 wcwidth-0.8.2 webencodings-0.6.1 websockets-17.0.1 yfinance-1.6.0
+[NbConvertApp] Converting notebook notebooks/gwp2_vix_regime_allocation.ipynb to notebook
+[IPKernelApp] WARNING | Kernel is running over TCP without encryption. All communication (including code and outputs) is sent in plain text and is susceptible to eavesdropping. Use IPC transport or launch with kernel manager-provisioned CurveZMQ keys to enable transport encryption.
+Traceback (most recent call last):
+  File "/opt/hostedtoolcache/Python/3.11.15/x64/bin/jupyter-nbconvert", line 6, in <module>
+    sys.exit(main())
+             ^^^^^^
+  File "/opt/hostedtoolcache/Python/3.11.15/x64/lib/python3.11/site-packages/jupyter_core/application.py", line 284, in launch_instance
+    super().launch_instance(argv=argv, **kwargs)
+  File "/opt/hostedtoolcache/Python/3.11.15/x64/lib/python3.11/site-packages/traitlets/config/application.py", line 1080, in launch_instance
+    app.start()
+  File "/opt/hostedtoolcache/Python/3.11.15/x64/lib/python3.11/site-packages/nbconvert/nbconvertapp.py", line 420, in start
+    self.convert_notebooks()
+  File "/opt/hostedtoolcache/Python/3.11.15/x64/lib/python3.11/site-packages/nbconvert/nbconvertapp.py", line 597, in convert_notebooks
+    self.convert_single_notebook(notebook_filename)
+  File "/opt/hostedtoolcache/Python/3.11.15/x64/lib/python3.11/site-packages/nbconvert/nbconvertapp.py", line 563, in convert_single_notebook
+    output, resources = self.export_single_notebook(
+                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/hostedtoolcache/Python/3.11.15/x64/lib/python3.11/site-packages/nbconvert/nbconvertapp.py", line 487, in export_single_notebook
+    output, resources = self.exporter.from_filename(
+                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/hostedtoolcache/Python/3.11.15/x64/lib/python3.11/site-packages/nbconvert/exporters/exporter.py", line 201, in from_filename
+    return self.from_file(f, resources=resources, **kw)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/hostedtoolcache/Python/3.11.15/x64/lib/python3.11/site-packages/nbconvert/exporters/exporter.py", line 220, in from_file
+    return self.from_notebook_node(
+           ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/hostedtoolcache/Python/3.11.15/x64/lib/python3.11/site-packages/nbconvert/exporters/notebook.py", line 36, in from_notebook_node
+    nb_copy, resources = super().from_notebook_node(nb, resources, **kw)
+                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/hostedtoolcache/Python/3.11.15/x64/lib/python3.11/site-packages/nbconvert/exporters/exporter.py", line 154, in from_notebook_node
+    nb_copy, resources = self._preprocess(nb_copy, resources)
+                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/hostedtoolcache/Python/3.11.15/x64/lib/python3.11/site-packages/nbconvert/exporters/exporter.py", line 353, in _preprocess
+    nbc, resc = preprocessor(nbc, resc)
+                ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/hostedtoolcache/Python/3.11.15/x64/lib/python3.11/site-packages/nbconvert/preprocessors/base.py", line 48, in __call__
+    return self.preprocess(nb, resources)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/hostedtoolcache/Python/3.11.15/x64/lib/python3.11/site-packages/nbconvert/preprocessors/execute.py", line 103, in preprocess
+    self.preprocess_cell(cell, resources, index)
+  File "/opt/hostedtoolcache/Python/3.11.15/x64/lib/python3.11/site-packages/nbconvert/preprocessors/execute.py", line 124, in preprocess_cell
+    cell = self.execute_cell(cell, index, store_history=True)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/hostedtoolcache/Python/3.11.15/x64/lib/python3.11/site-packages/jupyter_core/utils/__init__.py", line 165, in wrapped
+    return loop.run_until_complete(inner)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/hostedtoolcache/Python/3.11.15/x64/lib/python3.11/asyncio/base_events.py", line 654, in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+  File "/opt/hostedtoolcache/Python/3.11.15/x64/lib/python3.11/site-packages/nbclient/client.py", line 1062, in async_execute_cell
+    await self._check_raise_for_error(cell, cell_index, exec_reply)
+  File "/opt/hostedtoolcache/Python/3.11.15/x64/lib/python3.11/site-packages/nbclient/client.py", line 918, in _check_raise_for_error
+    raise CellExecutionError.from_cell_and_msg(cell, exec_reply_content)
+nbclient.exceptions.CellExecutionError: An error occurred while executing the following cell:
+------------------
+import hashlib
+import json
+from pathlib import Path
+
+from vix_regime_allocation.backtest import ROTATION_DETAIL_COLUMNS, build_rotation_returns
+from vix_regime_allocation.backtest_summary import COMPARISON_COLUMNS, build_comparison
+from vix_regime_allocation.benchmarks import (
+    build_equal_weight_monthly_returns,
+    build_spy_buy_hold_returns,
+)
+
+repo_root = Path.cwd()
+step1_path = repo_root / "data/processed/step1_data.csv"
+selected_model_path = repo_root / "reports/generated/step3_selected_model.json"
+allocation_path = repo_root / "reports/tables/step4_allocation_mapping.csv"
+daily_returns_path = repo_root / "reports/tables/step5_daily_returns.csv"
+
+step1 = pd.read_csv(step1_path, parse_dates=["Date"]).set_index("Date")
+step1.index = pd.DatetimeIndex(step1.index, name="Date")
+selected_model = json.loads(selected_model_path.read_text(encoding="utf-8"))
+input_sha256 = hashlib.sha256(step1_path.read_bytes()).hexdigest()
+assert selected_model["input_data_sha256"] == input_sha256
+
+selected_states_path = repo_root / selected_model["selected_states_path"]
+selected_states_frame = pd.read_csv(selected_states_path, parse_dates=["Date"])
+assert selected_states_frame["Date"].tolist() == step1.index.tolist()
+selected_states = pd.Series(
+    selected_states_frame["state"].to_numpy(dtype=int),
+    index=step1.index,
+    name="state",
+    dtype=int,
+)
+allocation = pd.read_csv(allocation_path)
+
+rotation_detail = build_rotation_returns(step1, selected_states, allocation)
+assert tuple(rotation_detail.columns) == ROTATION_DETAIL_COLUMNS
+comparison_index = pd.DatetimeIndex(rotation_detail.index, name="Date")
+equal_weight = build_equal_weight_monthly_returns(step1, comparison_index)
+spy_buy_hold = build_spy_buy_hold_returns(step1, comparison_index)
+step5_daily_returns = build_comparison(rotation_detail, equal_weight, spy_buy_hold)
+assert tuple(step5_daily_returns.columns) == COMPARISON_COLUMNS
+assert step5_daily_returns.index.equals(comparison_index)
+assert len(step5_daily_returns) == len(step1) - 1
+
+daily_returns_path.parent.mkdir(parents=True, exist_ok=True)
+step5_daily_returns.to_csv(daily_returns_path, index_label="Date")
+
+display(Markdown("### Lagged rotation decision examples"))
+display(rotation_detail.head(8))
+display(Markdown("### Canonical Step 5 daily comparison returns"))
+display(step5_daily_returns.head(8))
+display(
+    Markdown(
+        f"Comparison period: **{comparison_index[0].date()}** to "
+        f"**{comparison_index[-1].date()}**, observations: **{len(comparison_index)}**."
+    )
+)
+------------------
+
+
+[31m---------------------------------------------------------------------------[39m
+[31mFileNotFoundError[39m                         Traceback (most recent call last)
+[36mCell[39m[36m [39m[32mIn[13][39m[32m, line 18[39m
+[32m     14[39m selected_model_path = repo_root / [33m"reports/generated/step3_selected_model.json"[39m
+[32m     15[39m allocation_path = repo_root / [33m"reports/tables/step4_allocation_mapping.csv"[39m
+[32m     16[39m daily_returns_path = repo_root / [33m"reports/tables/step5_daily_returns.csv"[39m
+[32m     17[39m 
+[32m---> [39m[32m18[39m step1 = pd.read_csv(step1_path, parse_dates=[[33m"Date"[39m]).set_index([33m"Date"[39m)
+[32m     19[39m step1.index = pd.DatetimeIndex(step1.index, name=[33m"Date"[39m)
+[32m     20[39m selected_model = json.loads(selected_model_path.read_text(encoding=[33m"utf-8"[39m))
+[32m     21[39m input_sha256 = hashlib.sha256(step1_path.read_bytes()).hexdigest()
+
+[36mFile [39m[32m/opt/hostedtoolcache/Python/3.11.15/x64/lib/python3.11/site-packages/pandas/io/parsers/readers.py:873[39m, in [36mread_csv[39m[34m(filepath_or_buffer, sep, delimiter, header, names, index_col, usecols, dtype, engine, converters, true_values, false_values, skipinitialspace, skiprows, skipfooter, nrows, na_values, keep_default_na, na_filter, skip_blank_lines, parse_dates, date_format, dayfirst, cache_dates, iterator, chunksize, compression, thousands, decimal, lineterminator, quotechar, quoting, doublequote, escapechar, comment, encoding, encoding_errors, dialect, on_bad_lines, low_memory, memory_map, float_precision, storage_options, dtype_backend)[39m
+[32m    861[39m kwds_defaults = _refine_defaults_read(
+[32m    862[39m     dialect,
+[32m    863[39m     delimiter,
+[32m   (...)[39m[32m    869[39m     dtype_backend=dtype_backend,
+[32m    870[39m )
+[32m    871[39m kwds.update(kwds_defaults)
+[32m--> [39m[32m873[39m [38;5;28;01mreturn[39;00m [30;43m_read[39;49m[30;43m([39;49m[30;43mfilepath_or_buffer[39;49m[30;43m,[39;49m[30;43m [39;49m[30;43mkwds[39;49m[30;43m)[39;49m
+
+[36mFile [39m[32m/opt/hostedtoolcache/Python/3.11.15/x64/lib/python3.11/site-packages/pandas/io/parsers/readers.py:300[39m, in [36m_read[39m[34m(filepath_or_buffer, kwds)[39m
+[32m    297[39m _validate_names(kwds.get([33m"[39m[33mnames[39m[33m"[39m, [38;5;28;01mNone[39;00m))
+[32m    299[39m [38;5;66;03m# Create the parser.[39;00m
+[32m--> [39m[32m300[39m parser = [30;43mTextFileReader[39;49m[30;43m([39;49m[30;43mfilepath_or_buffer[39;49m[30;43m,[39;49m[30;43m [39;49m[30;43m*[39;49m[30;43m*[39;49m[30;43mkwds[39;49m[30;43m)[39;49m
+[32m    302[39m [38;5;28;01mif[39;00m chunksize [38;5;129;01mor[39;00m iterator:
+[32m    303[39m     [38;5;28;01mreturn[39;00m parser
+
+[36mFile [39m[32m/opt/hostedtoolcache/Python/3.11.15/x64/lib/python3.11/site-packages/pandas/io/parsers/readers.py:1645[39m, in [36mTextFileReader.__init__[39m[34m(self, f, engine, **kwds)[39m
+[32m   1642[39m     [38;5;28mself[39m.options[[33m"[39m[33mhas_index_names[39m[33m"[39m] = kwds[[33m"[39m[33mhas_index_names[39m[33m"[39m]
+[32m   1644[39m [38;5;28mself[39m.handles: IOHandles | [38;5;28;01mNone[39;00m = [38;5;28;01mNone[39;00m
+[32m-> [39m[32m1645[39m [38;5;28mself[39m._engine = [30;43mself[39;49m[30;43m.[39;49m[30;43m_make_engine[39;49m[30;43m([39;49m[30;43mf[39;49m[30;43m,[39;49m[30;43m [39;49m[30;43mself[39;49m[30;43m.[39;49m[30;43mengine[39;49m[30;43m)[39;49m
+
+[36mFile [39m[32m/opt/hostedtoolcache/Python/3.11.15/x64/lib/python3.11/site-packages/pandas/io/parsers/readers.py:1904[39m, in [36mTextFileReader._make_engine[39m[34m(self, f, engine)[39m
+[32m   1902[39m     [38;5;28;01mif[39;00m [33m"[39m[33mb[39m[33m"[39m [38;5;129;01mnot[39;00m [38;5;129;01min[39;00m mode:
+[32m   1903[39m         mode += [33m"[39m[33mb[39m[33m"[39m
+[32m-> [39m[32m1904[39m [38;5;28mself[39m.handles = [30;43mget_handle[39;49m[30;43m([39;49m
+[32m   1905[39m [30;43m    [39;49m[30;43mf[39;49m[30;43m,[39;49m
+[32m   1906[39m [30;43m    [39;49m[30;43mmode[39;49m[30;43m,[39;49m
+[32m   1907[39m [30;43m    [39;49m[30;43mencoding[39;49m[30;43m=[39;49m[30;43mself[39;49m[30;43m.[39;49m[30;43moptions[39;49m[30;43m.[39;49m[30;43mget[39;49m[30;43m([39;49m[30;43m"[39;49m[30;43mencoding[39;49m[30;43m"[39;49m[30;43m,[39;49m[30;43m [39;49m[30;43;01mNone[39;49;00m[30;43m)[39;49m[30;43m,[39;49m
+[32m   1908[39m [30;43m    [39;49m[30;43mcompression[39;49m[30;43m=[39;49m[30;43mself[39;49m[30;43m.[39;49m[30;43moptions[39;49m[30;43m.[39;49m[30;43mget[39;49m[30;43m([39;49m[30;43m"[39;49m[30;43mcompression[39;49m[30;43m"[39;49m[30;43m,[39;49m[30;43m [39;49m[30;43;01mNone[39;49;00m[30;43m)[39;49m[30;43m,[39;49m
+[32m   1909[39m [30;43m    [39;49m[30;43mmemory_map[39;49m[30;43m=[39;49m[30;43mself[39;49m[30;43m.[39;49m[30;43moptions[39;49m[30;43m.[39;49m[30;43mget[39;49m[30;43m([39;49m[30;43m"[39;49m[30;43mmemory_map[39;49m[30;43m"[39;49m[30;43m,[39;49m[30;43m [39;49m[30;43;01mFalse[39;49;00m[30;43m)[39;49m[30;43m,[39;49m
+[32m   1910[39m [30;43m    [39;49m[30;43mis_text[39;49m[30;43m=[39;49m[30;43mis_text[39;49m[30;43m,[39;49m
+[32m   1911[39m [30;43m    [39;49m[30;43merrors[39;49m[30;43m=[39;49m[30;43mself[39;49m[30;43m.[39;49m[30;43moptions[39;49m[30;43m.[39;49m[30;43mget[39;49m[30;43m([39;49m[30;43m"[39;49m[30;43mencoding_errors[39;49m[30;43m"[39;49m[30;43m,[39;49m[30;43m [39;49m[30;43m"[39;49m[30;43mstrict[39;49m[30;43m"[39;49m[30;43m)[39;49m[30;43m,[39;49m
+[32m   1912[39m [30;43m    [39;49m[30;43mstorage_options[39;49m[30;43m=[39;49m[30;43mself[39;49m[30;43m.[39;49m[30;43moptions[39;49m[30;43m.[39;49m[30;43mget[39;49m[30;43m([39;49m[30;43m"[39;49m[30;43mstorage_options[39;49m[30;43m"[39;49m[30;43m,[39;49m[30;43m [39;49m[30;43;01mNone[39;49;00m[30;43m)[39;49m[30;43m,[39;49m
+[32m   1913[39m [30;43m[39;49m[30;43m)[39;49m
+[32m   1914[39m [38;5;28;01massert[39;00m [38;5;28mself[39m.handles [38;5;129;01mis[39;00m [38;5;129;01mnot[39;00m [38;5;28;01mNone[39;00m
+[32m   1915[39m f = [38;5;28mself[39m.handles.handle
+
+[36mFile [39m[32m/opt/hostedtoolcache/Python/3.11.15/x64/lib/python3.11/site-packages/pandas/io/common.py:930[39m, in [36mget_handle[39m[34m(path_or_buf, mode, encoding, compression, memory_map, is_text, errors, storage_options)[39m
+[32m    925[39m [38;5;28;01melif[39;00m [38;5;28misinstance[39m(handle, [38;5;28mstr[39m):
+[32m    926[39m     [38;5;66;03m# Check whether the filename is to be opened in binary mode.[39;00m
+[32m    927[39m     [38;5;66;03m# Binary mode does not support 'encoding' and 'newline'.[39;00m
+[32m    928[39m     [38;5;28;01mif[39;00m ioargs.encoding [38;5;129;01mand[39;00m [33m"[39m[33mb[39m[33m"[39m [38;5;129;01mnot[39;00m [38;5;129;01min[39;00m ioargs.mode:
+[32m    929[39m         [38;5;66;03m# Encoding[39;00m
+[32m--> [39m[32m930[39m         handle = [38;5;28mopen[39m(
+[32m    931[39m             handle,
+[32m    932[39m             ioargs.mode,
+[32m    933[39m             encoding=ioargs.encoding,
+[32m    934[39m             errors=errors,
+[32m    935[39m             newline=[33m"[39m[33m"[39m,
+[32m    936[39m         )
+[32m    937[39m     [38;5;28;01melse[39;00m:
+[32m    938[39m         [38;5;66;03m# Binary mode[39;00m
+[32m    939[39m         handle = [38;5;28mopen[39m(handle, ioargs.mode)
+
+[31mFileNotFoundError[39m: [Errno 2] No such file or directory: '/home/runner/work/vix-regime-allocation/vix-regime-allocation/notebooks/data/processed/step1_data.csv'
+
