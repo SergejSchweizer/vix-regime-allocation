@@ -132,24 +132,42 @@ A key interpretation distinction is now explicit. Step 3 estimates a **contempor
 The two sensitivity rows use the common lagged return-date intersection, so cumulative return, annualized return, annualized volatility, Sharpe ratio, maximum drawdown, and observation count are compared on identical dates."""
     )
     sensitivity_code = nbformat.v4.new_code_cell(
-        r"""from vix_regime_allocation.sensitivity import build_state_count_sensitivity
+        r"""import json
 
-preferred_family = selected_model["family"]
+import pandas as pd
+from IPython.display import Markdown, display
+
+from vix_regime_allocation.sensitivity import build_state_count_sensitivity
+
+repo_root_sensitivity = Path.cwd().resolve().parent if Path.cwd().name == "notebooks" else Path.cwd().resolve()
+selected_model_sensitivity = json.loads(
+    (repo_root_sensitivity / "reports/generated/step3_selected_model.json").read_text(
+        encoding="utf-8"
+    )
+)
+preferred_family = selected_model_sensitivity["family"]
+step5_sensitivity_data = pd.read_csv(
+    repo_root_sensitivity / "data/processed/step1_data.csv",
+    parse_dates=["Date"],
+).set_index("Date")
+step5_sensitivity_data.index = pd.DatetimeIndex(step5_sensitivity_data.index, name="Date")
+
 states_by_k = {}
 for n_states in (2, 3):
     states_path = (
-        repo_root / f"reports/tables/step2_{preferred_family}_{n_states}_states.csv"
+        repo_root_sensitivity
+        / f"reports/tables/step2_{preferred_family}_{n_states}_states.csv"
     )
     state_frame = pd.read_csv(states_path, parse_dates=["Date"]).set_index("Date")
     state_frame.index = pd.DatetimeIndex(state_frame.index, name="Date")
     states_by_k[n_states] = state_frame["state"].astype(int).rename("state")
 
 state_count_sensitivity = build_state_count_sensitivity(
-    step1_data,
+    step5_sensitivity_data,
     preferred_family,
     states_by_k,
 )
-sensitivity_path = repo_root / "reports/tables/step5_state_count_sensitivity.csv"
+sensitivity_path = repo_root_sensitivity / "reports/tables/step5_state_count_sensitivity.csv"
 state_count_sensitivity.to_csv(sensitivity_path, index=False)
 display(Markdown("### K=2 versus K=3 sensitivity within the preferred family"))
 display(state_count_sensitivity)"""
