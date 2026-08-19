@@ -16,9 +16,7 @@ def test_transition_matrix_and_stationary_distribution_manual() -> None:
     np.testing.assert_allclose(transition.to_numpy(), expected)
     stationary = stationary_distribution(transition)
     np.testing.assert_allclose(stationary.to_numpy(), [0.5, 0.5], atol=1e-10)
-    np.testing.assert_allclose(
-        stationary.to_numpy() @ transition.to_numpy(), stationary.to_numpy()
-    )
+    np.testing.assert_allclose(stationary.to_numpy() @ transition.to_numpy(), stationary.to_numpy())
 
 
 def test_zero_outgoing_and_invalid_states_fail() -> None:
