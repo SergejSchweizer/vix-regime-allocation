@@ -13,12 +13,13 @@ The assignment studies a VIX-driven allocation rule across `TLT`, `GLD`, and `SP
 | Backlog structural validator | `scripts/check_backlog_contract.py` |
 | Python package scaffold | Bootstrapped |
 | Push / pull-request quality gates | Configured |
+| Auto-complete after successful Quality Gates | Configured in `.github/workflows/auto-complete.yml` |
 | Combined source coverage threshold | 90% |
 | Step 1 implementation | Complete: PR-01 through PR-05 merged; canonical dataset, figures, notebook, and scientific references available |
 | Steps 2–4 implementation | Not started |
 | Step 5 implementation | Not started |
 | Final submission bundle | Planned in PR-48/PR-49 |
-| `main` branch protection | GitHub ruleset still required |
+| `main` branch protection | Repository ruleset still must be enabled in GitHub settings |
 
 No uncomputed assignment result is claimed in this README.
 
@@ -197,6 +198,8 @@ Windows PowerShell:
 
 The aggregate `quality-gate` requires all current jobs. PR-32 later adds the first `analysis-sidecars` parity job after the corresponding notebook/README/HTML/PDF artifacts exist; PR-47 extends that checker through Step 5.
 
+`.github/workflows/auto-complete.yml` listens only to completed **Quality Gates** runs originating from pull requests. After successful Quality Gates, **Auto Complete** merges only an open, non-draft PR targeting `main` whose current head SHA is exactly the SHA that passed validation. If `main` advanced after that validation, the workflow updates the PR branch and waits for a fresh Quality Gates run instead of merging stale validation. A successful auto-complete uses a merge commit and requests deletion of the feature branch. The workflow does not check out or execute PR code and therefore keeps its write-scoped token isolated from untrusted test execution.
+
 Local planning-stage checks:
 
 ```bash
@@ -214,7 +217,16 @@ python scripts/check_backlog_contract.py
 
 ## Main-branch rule
 
-The workflow can evaluate commits, but GitHub must still be configured with a branch/ruleset for `main` to technically require pull requests/status checks and block force pushes/deletion. Until that repository setting is enabled, the backlog merge rules must be applied administratively.
+The intended `main` ruleset is:
+
+- require changes through a pull request;
+- require the `quality-gate` status check before merge;
+- require the PR branch to be up to date with `main` before merge;
+- require zero approving reviews so fully automated backlog PRs can complete without a human approval bottleneck;
+- block force pushes;
+- block branch deletion.
+
+The Auto Complete workflow is already configured to merge only after successful Quality Gates and to refresh a stale PR before a new validation run. GitHub repository settings must still enable the `main` branch/ruleset above for server-side enforcement; until that setting is enabled, the workflow discipline is implemented but direct privileged pushes remain technically possible.
 
 ## Team
 
