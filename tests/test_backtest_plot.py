@@ -108,7 +108,9 @@ def test_plot_delegates_to_shared_wealth_and_renders_exact_three_curves(
     assert closed == [figure]
 
 
-def test_plot_closes_figure_when_save_fails(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+def test_plot_closes_figure_when_save_fails(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
     comparison = _comparison()
     axis = _FakeAxis()
     figure = _FakeFigure()
@@ -127,7 +129,18 @@ def test_plot_closes_figure_when_save_fails(monkeypatch: pytest.MonkeyPatch, tmp
 
 
 @pytest.mark.parametrize(
-    "case", ["not_dataframe", "columns", "index_type", "index_name", "empty", "duplicate", "nonnumeric", "nonfinite", "invalid_return"]
+    "case",
+    [
+        "not_dataframe",
+        "columns",
+        "index_type",
+        "index_name",
+        "empty",
+        "duplicate",
+        "nonnumeric",
+        "nonfinite",
+        "invalid_return",
+    ],
 )
 def test_plot_rejects_invalid_comparison(case: str, tmp_path: Path) -> None:
     comparison: object = _comparison().copy()
@@ -147,7 +160,9 @@ def test_plot_rejects_invalid_comparison(case: str, tmp_path: Path) -> None:
         comparison = _comparison().iloc[0:0]
     elif case == "duplicate":
         frame = _comparison().copy()
-        frame.index = pd.DatetimeIndex(["2026-01-02", "2026-01-02", "2026-01-06"], name="Date")
+        frame.index = pd.DatetimeIndex(
+            ["2026-01-02", "2026-01-02", "2026-01-06"], name="Date"
+        )
         comparison = frame
     elif case == "nonnumeric":
         frame = _comparison().copy()
@@ -164,7 +179,9 @@ def test_plot_rejects_invalid_comparison(case: str, tmp_path: Path) -> None:
 
     error = TypeError if case == "not_dataframe" else ValueError
     with pytest.raises(error):
-        plot_cumulative_performance(comparison, tmp_path / "figure.png")  # type: ignore[arg-type]
+        plot_cumulative_performance(
+            comparison, tmp_path / "figure.png"  # type: ignore[arg-type]
+        )
 
 
 def test_plot_requires_path_object() -> None:
