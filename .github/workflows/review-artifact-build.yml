@@ -1,9 +1,6 @@
 name: Review Analysis Artifact Build
 
 on:
-  push:
-    branches:
-      - project-review-quality-improvements
   pull_request:
     branches:
       - main
@@ -13,9 +10,6 @@ permissions:
 
 jobs:
   rebuild:
-    if: >-
-      github.event_name == 'pull_request' ||
-      github.event.head_commit.message == 'REVIEW — Trigger analysis rebuild'
     runs-on: ubuntu-latest
     env:
       MPLBACKEND: Agg
@@ -30,14 +24,16 @@ jobs:
       - name: Install project
         run: |
           python -m pip install --upgrade pip
-          pip install -e '.[dev]' ipykernel
-      - name: Rebuild analysis artifacts and notebook sources
+          pip install -e '.[dev]'
+      - name: Rebuild canonical analysis artifacts
         run: python scripts/rebuild_analysis_review.py
+      - name: Rebuild thin notebook source
+        run: python scripts/rebuild_thin_notebook.py
       - name: Execute full notebook
         run: >-
           python -m jupyter nbconvert --to notebook --execute --inplace
           --ExecutePreprocessor.timeout=1200 notebooks/gwp2_vix_regime_allocation.ipynb
-      - name: Validate generated artifacts
+      - name: Validate generated artifacts and notebook contract
         run: |
           test -s reports/tables/step5_state_count_sensitivity.csv
           test -s reports/generated/step5_manifest.json
@@ -47,7 +43,8 @@ jobs:
           test -s reports/figures/step2_hmm_smoothed_probabilities.png
           test -s reports/figures/step3_state_asset_statistics.png
           test -s reports/figures/step5_cumulative_performance.png
-          ruff check src tests scripts notebooks/gwp2_vix_regime_allocation.ipynb
+          python scripts/check_notebook_thin.py
+          ruff check src tests scripts
       - name: Stage generated files
         run: |
           mkdir -p /tmp/review-artifacts
