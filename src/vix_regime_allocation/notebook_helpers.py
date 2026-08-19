@@ -227,6 +227,7 @@ def show_step5_backtest() -> None:
         rotation = indexed.loc["regime_rotation"]
         equal_weight = indexed.loc["equal_weight_monthly"]
         spy = indexed.loc["spy_buy_hold"]
+        equal_weight_max_drawdown = _percent(float(equal_weight["max_drawdown"]))
         display(
             Markdown(
                 "**Economic interpretation.** The lagged regime rotation is not competitive "
@@ -237,7 +238,7 @@ def show_step5_backtest() -> None:
                 f"{float(equal_weight['sharpe_ratio']):.3f}** for monthly equal weight and "
                 f"**{_percent(float(spy['annualized_return']))} / "
                 f"{float(spy['sharpe_ratio']):.3f}** for SPY. The equal-weight benchmark also "
-                f"has the smallest maximum drawdown at **{_percent(float(equal_weight['max_drawdown']))}**. "
+                f"has the smallest maximum drawdown at **{equal_weight_max_drawdown}**. "
                 "This is consistent with the distinction between a strong same-day state/return "
                 "association and genuinely useful next-observation predictive information."
             )
