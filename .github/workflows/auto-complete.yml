@@ -25,6 +25,7 @@ jobs:
           GH_REPO: ${{ github.repository }}
           PR_NUMBER: ${{ github.event.workflow_run.pull_requests[0].number }}
           VERIFIED_HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+          VERIFIED_BASE_SHA: ${{ github.event.workflow_run.pull_requests[0].base.sha }}
         run: |
           set -euo pipefail
 
@@ -37,6 +38,7 @@ jobs:
           draft="$(gh pr view "$PR_NUMBER" --repo "$GH_REPO" --json isDraft --jq '.isDraft')"
           base="$(gh pr view "$PR_NUMBER" --repo "$GH_REPO" --json baseRefName --jq '.baseRefName')"
           head_sha="$(gh pr view "$PR_NUMBER" --repo "$GH_REPO" --json headRefOid --jq '.headRefOid')"
+          base_sha="$(gh pr view "$PR_NUMBER" --repo "$GH_REPO" --json baseRefOid --jq '.baseRefOid')"
 
           if [ "$state" != "OPEN" ]; then
             echo "PR #$PR_NUMBER is not open; nothing to merge."
@@ -55,6 +57,12 @@ jobs:
 
           if [ "$head_sha" != "$VERIFIED_HEAD_SHA" ]; then
             echo "PR #$PR_NUMBER changed after the successful Quality Gates run; skipping stale merge."
+            exit 0
+          fi
+
+          if [ -n "${VERIFIED_BASE_SHA:-}" ] && [ "$base_sha" != "$VERIFIED_BASE_SHA" ]; then
+            echo "main advanced after validation; updating PR #$PR_NUMBER and waiting for fresh gates."
+            gh pr update-branch "$PR_NUMBER" --repo "$GH_REPO"
             exit 0
           fi
 
