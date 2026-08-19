@@ -18,7 +18,7 @@ The assignment studies a VIX-driven allocation rule across `TLT`, `GLD`, and `SP
 | Step 1 implementation | Complete: PR-01 through PR-05 merged; canonical dataset, figures, notebook, and scientific references available |
 | Step 2 implementation | Complete: PR-06 through PR-16 and PR-21/PR-22 merged; Markov/HMM tables, figures, canonical state paths, executed notebook, and scientific references available |
 | Step 3 implementation | Complete: PR-17 through PR-19 and PR-23/PR-24 merged; model comparison, selected-state provenance, state-conditional ETF statistics, figure, executed notebook, and scientific references available |
-| Step 4 implementation | Not started |
+| Step 4 implementation | Complete: PR-20 and PR-25 merged; canonical state-to-allocation mapping, Steps 2–4 manifest, executed notebook, scientific references, and in-sample limitations available |
 | Step 5 implementation | Not started |
 | Final submission bundle | Planned in PR-48/PR-49 |
 | `main` branch protection | Repository ruleset still must be enabled in GitHub settings |
@@ -96,13 +96,13 @@ State-conditional TLT/GLD/SPY mean daily log return, sample standard deviation (
 
 ### Step 4 — Rotation Strategy
 
-For every preferred state, allocate 100% to the ETF with the largest historical mean daily log return in that state. Exact ties use:
+Implemented the deterministic 100% state-based rotation rule from the canonical Step 3 statistics. For the selected Markov K=2 specification, **State 0 maps to SPY** and **State 1 maps to TLT**; GLD is not selected by the maximum-conditional-mean rule in either state. Exact ties use:
 
 ```text
 TLT -> GLD -> SPY
 ```
 
-The optional 60/40 variant is not used.
+The optional 60/40 variant is not used. The mapping is persisted at `reports/tables/step4_allocation_mapping.csv`, and `reports/generated/steps_2_4_manifest.json` records the frozen Step 1 SHA plus every canonical Step 2–4 table and figure. The notebook explicitly states that the mapping is full-sample/in-sample and is not a causal out-of-sample trading rule.
 
 ### Step 5 — Backtesting and Evaluation
 
