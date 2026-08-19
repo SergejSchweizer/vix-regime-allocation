@@ -3,25 +3,24 @@ name: Review Analysis Artifact Build
 on:
   push:
     branches:
-      - project-review-quality-improvements
-  pull_request:
-    branches:
-      - main
+      - project-review-finalize-artifacts
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   rebuild:
-    if: >-
-      github.event_name == 'pull_request' ||
-      github.event.head_commit.message == 'REVIEW — Trigger analysis rebuild'
+    if: github.event.head_commit.message == 'REVIEW — Trigger canonical artifact commit'
     runs-on: ubuntu-latest
     env:
       MPLBACKEND: Agg
     steps:
       - name: Checkout review branch
         uses: actions/checkout@v4
+        with:
+          ref: project-review-finalize-artifacts
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -48,16 +47,18 @@ jobs:
           test -s reports/figures/step3_state_asset_statistics.png
           test -s reports/figures/step5_cumulative_performance.png
           ruff check src tests scripts notebooks/gwp2_vix_regime_allocation.ipynb
-      - name: Stage generated files
+      - name: Commit canonical generated artifacts
         run: |
-          mkdir -p /tmp/review-artifacts
-          cp notebooks/gwp2_vix_regime_allocation.ipynb /tmp/review-artifacts/
-          cp reports/tables/step5_state_count_sensitivity.csv /tmp/review-artifacts/
-          cp reports/generated/step5_manifest.json /tmp/review-artifacts/
-          cp reports/figures/*.png /tmp/review-artifacts/
-      - name: Upload generated artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: review-analysis-artifacts
-          path: /tmp/review-artifacts
-          if-no-files-found: error
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add notebooks/gwp2_vix_regime_allocation.ipynb
+          git add reports/tables/step5_state_count_sensitivity.csv
+          git add reports/generated/step5_manifest.json
+          git add reports/figures/step1_etf_log_returns.png
+          git add reports/figures/step1_vix_change.png
+          git add reports/figures/step2_markov_vix_states.png
+          git add reports/figures/step2_hmm_vix_states.png
+          git add reports/figures/step3_state_asset_statistics.png
+          git add reports/figures/step5_cumulative_performance.png
+          git commit -m 'REVIEW — Commit rebuilt analysis artifacts'
+          git push origin HEAD:project-review-finalize-artifacts
