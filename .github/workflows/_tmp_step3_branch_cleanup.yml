@@ -1,0 +1,39 @@
+name: Temp Step3 Branch Cleanup
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  cleanup:
+    if: ${{ github.event.head_commit.message == 'OPS — Run Step 3 branch cleanup' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - name: Delete merged/stale Step 3 branches and self-clean
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git fetch origin --prune
+          for branch in \
+            pr-17-model-comparison-and-preferred-selection \
+            pr-18-preferred-state-etf-statistics \
+            ops-step-3-readme-status; do
+            if git ls-remote --exit-code --heads origin "$branch" >/dev/null 2>&1; then
+              git fetch origin "$branch"
+              test "$(git rev-list --count origin/main..origin/$branch)" = "0"
+              git push origin --delete "$branch"
+            fi
+          done
+          git rm .github/workflows/_tmp_step3_branch_cleanup.yml
+          git commit -m "OPS — Complete Step 3 branch cleanup"
+          git push origin HEAD:main
