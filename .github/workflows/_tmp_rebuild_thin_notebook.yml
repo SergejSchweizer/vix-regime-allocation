@@ -59,3 +59,5 @@ jobs:
           git add notebooks/gwp2_vix_regime_allocation.ipynb
           git commit -m 'NOTEBOOK — Rebuild as helper-call-only technical report'
           git push origin HEAD:notebook-thin-helper-calls
+
+# trigger revision 2
