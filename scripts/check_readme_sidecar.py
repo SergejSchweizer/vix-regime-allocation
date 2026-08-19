@@ -28,7 +28,7 @@ def main() -> None:
         "Git workflow per backlog PR",
         "git status --short --branch",
         "PR-01 — Yahoo adjusted-close loader",
-        "PR-01 Yahoo adjusted-close loader implemented",
+        "Step 1 implementation | Complete",
         "90%",
         "ruff check .",
         "ruff format --check .",
