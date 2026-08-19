@@ -158,7 +158,7 @@ references = _parse_bibtex_registry(references_path.read_text(encoding="utf-8"))
 cited_keys = ["whaley2009vix", "cboe2019vixfaq", "baum1970maximization"]
 missing_keys = [key for key in cited_keys if key not in references]
 assert not missing_keys, f"Unresolved citation keys: {missing_keys}"
-display(Markdown("\n".join(f"- {_mla_entry(references[key])}" for key in cited_keys)))"""
+display(Markdown(chr(10).join(f"- {_mla_entry(references[key])}" for key in cited_keys)))"""
 )
 
 nb.cells = prefix + [step2_markdown, step2_code, step2_interpretation, works_heading, works_code]
