@@ -17,7 +17,8 @@ The assignment studies a VIX-driven allocation rule across `TLT`, `GLD`, and `SP
 | Combined source coverage threshold | 90% |
 | Step 1 implementation | Complete: PR-01 through PR-05 merged; canonical dataset, figures, notebook, and scientific references available |
 | Step 2 implementation | Complete: PR-06 through PR-16 and PR-21/PR-22 merged; Markov/HMM tables, figures, canonical state paths, executed notebook, and scientific references available |
-| Steps 3–4 implementation | Not started |
+| Step 3 implementation | Complete: PR-17 through PR-19 and PR-23/PR-24 merged; model comparison, selected-state provenance, state-conditional ETF statistics, figure, executed notebook, and scientific references available |
+| Step 4 implementation | Not started |
 | Step 5 implementation | Not started |
 | Final submission bundle | Planned in PR-48/PR-49 |
 | `main` branch protection | Repository ruleset still must be enabled in GitHub settings |
@@ -83,7 +84,7 @@ All four candidate state sequences are persisted as canonical `Date,state` CSVs 
 
 ### Step 3 — State Selection and Interpretation
 
-Report log-likelihood, AIC, and BIC. Because Markov and HMM likelihoods are defined on different observation spaces, state count is selected by BIC **within family**, not by raw cross-family AIC/BIC comparison. The preferred-method rule in `BACKLOG.md` then selects a valid HMM or Markov fallback transparently.
+Implemented log-likelihood, AIC, and BIC comparison. Because Markov and HMM likelihoods are defined on different observation spaces, state count is selected by BIC **within family**, not by raw cross-family AIC/BIC comparison. The preferred-method rule selected **Markov K=2**: HMM K=3 won within the HMM family by BIC but failed the fixed minimum 5% decoded-state-occupancy diagnostic, so the deterministic Markov fallback was used.
 
 The preferred state sequence is persisted at:
 
@@ -91,7 +92,7 @@ The preferred state sequence is persisted at:
 reports/tables/step3_selected_states.csv
 ```
 
-State-conditional TLT/GLD/SPY mean daily log return, sample standard deviation (`ddof=1`), and count are computed and visualized.
+State-conditional TLT/GLD/SPY mean daily log return, sample standard deviation (`ddof=1`), and count are computed and visualized in `reports/tables/step3_state_asset_statistics.csv` and `reports/figures/step3_state_asset_statistics.png`.
 
 ### Step 4 — Rotation Strategy
 
