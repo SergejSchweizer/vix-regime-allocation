@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from check_notebook_orchestration import validate_orchestration
+
 ROOT = Path(__file__).resolve().parents[1]
 FORBIDDEN_PREFIXES = (
     ".github/_tmp_",
@@ -27,6 +29,7 @@ def main() -> None:
     if forbidden:
         joined = "\n".join(f"- {path}" for path in forbidden)
         raise SystemExit(f"Forbidden temporary repository files detected:\n{joined}")
+    validate_orchestration()
     print("Repository hygiene check passed.")
 
 
