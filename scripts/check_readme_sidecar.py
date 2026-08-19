@@ -99,7 +99,9 @@ def main() -> None:
         "--delete-branch",
     )
     missing_auto_complete = [
-        fragment for fragment in required_auto_complete_fragments if fragment not in auto_complete_text
+        fragment
+        for fragment in required_auto_complete_fragments
+        if fragment not in auto_complete_text
     ]
     if missing_auto_complete:
         raise SystemExit(
