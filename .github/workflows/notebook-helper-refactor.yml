@@ -1,0 +1,46 @@
+name: Notebook Helper Refactor
+
+on:
+  push:
+    branches:
+      - refactor/notebook-orchestration-only
+    paths:
+      - scripts/refactor_notebook_to_helpers.py
+      - .github/workflows/notebook-helper-refactor.yml
+
+permissions:
+  contents: write
+
+concurrency:
+  group: notebook-helper-refactor-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  refactor:
+    name: refactor-notebook
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Extract notebook implementation into helpers
+        run: python scripts/refactor_notebook_to_helpers.py
+      - name: Validate orchestration-only notebook
+        run: python scripts/check_notebook_orchestration.py
+      - name: Commit generated notebook and helper module
+        shell: bash
+        run: |
+          if git diff --quiet -- notebooks/gwp2_vix_regime_allocation.ipynb src/vix_regime_allocation/notebook_helpers.py; then
+            echo "No generated changes to commit."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add notebooks/gwp2_vix_regime_allocation.ipynb src/vix_regime_allocation/notebook_helpers.py
+          git commit -m "REFACTOR — make GWP2 notebook orchestration-only"
+          git push
