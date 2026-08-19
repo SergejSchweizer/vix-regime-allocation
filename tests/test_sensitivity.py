@@ -45,16 +45,12 @@ def test_sensitivity_delegates_all_shared_steps_and_uses_common_dates(
         calls.append(("allocation", k))
         return pd.DataFrame({"k": [k]})
 
-    def fake_rotation(
-        _: pd.DataFrame, states: pd.Series, allocation: pd.DataFrame
-    ) -> pd.DataFrame:
+    def fake_rotation(_: pd.DataFrame, states: pd.Series, allocation: pd.DataFrame) -> pd.DataFrame:
         k = int(states.nunique())
         assert int(allocation.loc[0, "k"]) == k
         calls.append(("rotation", k))
         index = data.index[1:] if k == 2 else data.index[2:]
-        return pd.DataFrame(
-            {"regime_rotation_return": np.full(len(index), 0.001 * k)}, index=index
-        )
+        return pd.DataFrame({"regime_rotation_return": np.full(len(index), 0.001 * k)}, index=index)
 
     metric_calls: list[tuple[str, int]] = []
 
