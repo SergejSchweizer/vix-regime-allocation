@@ -1,0 +1,3 @@
+state,selected_asset,selection_mean_log_return,TLT_weight,GLD_weight,SPY_weight
+0,SPY,0.0067018399343474,0.0,0.0,1.0
+1,TLT,0.0014777461049552,1.0,0.0,0.0
