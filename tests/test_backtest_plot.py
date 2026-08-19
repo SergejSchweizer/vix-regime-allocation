@@ -60,10 +60,14 @@ def test_saved_figure_has_cumulative_and_drawdown_panels(
         observed["dd_ylabel"] = drawdown_axis.get_ylabel()
         observed["xlabel"] = drawdown_axis.get_xlabel()
         observed["cum_lines"] = [
-            line.get_label() for line in cumulative_axis.lines if not str(line.get_label()).startswith("_")
+            line.get_label()
+            for line in cumulative_axis.lines
+            if not str(line.get_label()).startswith("_")
         ]
         observed["dd_lines"] = [
-            line.get_label() for line in drawdown_axis.lines if not str(line.get_label()).startswith("_")
+            line.get_label()
+            for line in drawdown_axis.lines
+            if not str(line.get_label()).startswith("_")
         ]
         original_savefig(self, *args, **kwargs)
 
@@ -113,7 +117,10 @@ def test_plot_rejects_invalid_comparison(case: str, tmp_path: Path) -> None:
         comparison = _comparison().iloc[0:0]
     elif case == "duplicate":
         frame = _comparison().copy()
-        frame.index = pd.DatetimeIndex(["2026-01-02", "2026-01-02", "2026-01-06"], name="Date")
+        frame.index = pd.DatetimeIndex(
+            ["2026-01-02", "2026-01-02", "2026-01-06"],
+            name="Date",
+        )
         comparison = frame
     elif case == "nonnumeric":
         frame = _comparison().copy()
@@ -130,9 +137,15 @@ def test_plot_rejects_invalid_comparison(case: str, tmp_path: Path) -> None:
 
     error = TypeError if case == "not_dataframe" else ValueError
     with pytest.raises(error):
-        plot_cumulative_performance(comparison, tmp_path / "figure.png")  # type: ignore[arg-type]
+        plot_cumulative_performance(  # type: ignore[arg-type]
+            comparison,
+            tmp_path / "figure.png",
+        )
 
 
 def test_plot_requires_path_object() -> None:
     with pytest.raises(TypeError):
-        plot_cumulative_performance(_comparison(), "figure.png")  # type: ignore[arg-type]
+        plot_cumulative_performance(  # type: ignore[arg-type]
+            _comparison(),
+            "figure.png",
+        )
