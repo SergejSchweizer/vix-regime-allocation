@@ -53,9 +53,7 @@ def validate_predictive_causality(
             "Selected strategy validation_start is not the fixed pre-registered date."
         )
     if str(selected.get("validation_end")) != VALIDATION_END.date().isoformat():
-        raise RuntimeError(
-            "Selected strategy validation_end is not the fixed pre-registered date."
-        )
+        raise RuntimeError("Selected strategy validation_end is not the fixed pre-registered date.")
     if str(selected.get("test_start")) != TEST_START.date().isoformat():
         raise RuntimeError("Selected strategy test_start is not the fixed pre-registered date.")
 
