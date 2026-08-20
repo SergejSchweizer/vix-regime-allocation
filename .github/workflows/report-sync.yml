@@ -51,7 +51,7 @@ jobs:
       - name: Commit synchronized report to PR branch
         if: github.event_name == 'pull_request'
         run: |
-          if git diff --quiet -- reports/Stochastic_Modeling_GWP2_Report.pdf; then
+          if test -z "$(git status --porcelain -- reports/Stochastic_Modeling_GWP2_Report.pdf)"; then
             echo 'PDF report already matches the notebook.'
             exit 0
           fi
