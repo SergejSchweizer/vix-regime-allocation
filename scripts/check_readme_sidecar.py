@@ -29,6 +29,13 @@ def main() -> None:
         "git status --short --branch",
         "PR-01 — Yahoo adjusted-close loader",
         "Step 1 implementation | Complete",
+        "Step 5 implementation | Complete",
+        "reports/tables/step5_state_count_sensitivity.csv",
+        "reports/generated/step5_manifest.json",
+        "scripts/check_analysis_consistency.py",
+        "analysis-consistency",
+        "contemporaneous",
+        "next-observation predictive information",
         "90%",
         "ruff check .",
         "ruff format --check src tests scripts",
@@ -56,11 +63,19 @@ def main() -> None:
         "Notebook <-> README: exact technical-result parity",
         "Notebook <-> HTML: exact executed-notebook duplicate",
         "Notebook <-> standalone PDF: exact rendered-notebook content parity",
-        "does **not** make this implementation causal or out-of-sample",
+        "does not make this implementation causal or out-of-sample",
     )
     missing = [fragment for fragment in required_readme_fragments if fragment not in readme_text]
     if missing:
         raise SystemExit("README is missing required contract text: " + ", ".join(missing))
+
+    stale_readme_fragments = (
+        "Step 5 implementation | Not started",
+        "Step 5 remains unimplemented",
+    )
+    stale = [fragment for fragment in stale_readme_fragments if fragment in readme_text]
+    if stale:
+        raise SystemExit("README contains stale Step 5 status: " + ", ".join(stale))
 
     if "BACKLOG_STEPS_2_4.md" in readme_text:
         raise SystemExit("README must reference only the canonical BACKLOG.md backlog.")
@@ -72,6 +87,8 @@ def main() -> None:
         "integration-tests",
         "readme-sidecar",
         "backlog-contract",
+        "repository-hygiene",
+        "analysis-consistency",
         "coverage",
         "quality-gate",
     )
@@ -79,12 +96,24 @@ def main() -> None:
         if re.search(rf"^  {re.escape(job)}:\s*$", workflow_text, flags=re.MULTILINE) is None:
             raise SystemExit(f"Workflow is missing required job: {job}")
 
-    if "python scripts/check_backlog_contract.py" not in workflow_text:
-        raise SystemExit("Workflow must execute scripts/check_backlog_contract.py.")
-    if "coverage report --fail-under=90" not in workflow_text:
-        raise SystemExit("Workflow must enforce coverage with --fail-under=90.")
-    if "ruff format --check src tests scripts" not in workflow_text:
-        raise SystemExit("Workflow must format-check the Python source/test/script trees.")
+    required_workflow_commands = (
+        "python scripts/check_backlog_contract.py",
+        "python scripts/check_repository_hygiene.py",
+        "python scripts/check_analysis_consistency.py",
+        "coverage report --fail-under=90",
+        "ruff format --check src tests scripts",
+    )
+    for command in required_workflow_commands:
+        if command not in workflow_text:
+            raise SystemExit(f"Workflow must execute/enforce: {command}")
+
+    quality_gate_needs = (
+        "repository-hygiene",
+        "analysis-consistency",
+    )
+    for dependency in quality_gate_needs:
+        if f"- {dependency}" not in workflow_text:
+            raise SystemExit(f"Aggregate quality gate must depend on {dependency}.")
 
     required_auto_complete_fragments = (
         "name: Auto Complete",
@@ -112,8 +141,8 @@ def main() -> None:
         )
 
     print(
-        "README planning sidecar is consistent with the canonical backlog, quality gates, "
-        "and auto-complete workflow."
+        "README sidecar is consistent with verified Step 1-5 results, the canonical backlog, "
+        "quality gates, and auto-complete workflow."
     )
 
 
