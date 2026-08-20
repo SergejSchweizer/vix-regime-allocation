@@ -143,6 +143,26 @@ jobs:
       - name: Reject temporary build and diagnostic files
         run: python scripts/check_repository_hygiene.py
 
+  analysis-consistency:
+    name: analysis-consistency
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - name: Install project
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+      - name: Recompute and verify canonical numerical artifacts
+        env:
+          MPLBACKEND: Agg
+        run: python scripts/check_analysis_consistency.py
+
   coverage:
     name: coverage
     runs-on: ubuntu-latest
@@ -192,6 +212,7 @@ jobs:
       - readme-sidecar
       - backlog-contract
       - repository-hygiene
+      - analysis-consistency
       - coverage
     steps:
       - name: Require every quality gate
@@ -203,6 +224,7 @@ jobs:
           README_SIDECAR: ${{ needs['readme-sidecar'].result }}
           BACKLOG_CONTRACT: ${{ needs['backlog-contract'].result }}
           REPOSITORY_HYGIENE: ${{ needs['repository-hygiene'].result }}
+          ANALYSIS_CONSISTENCY: ${{ needs['analysis-consistency'].result }}
           COVERAGE: ${{ needs.coverage.result }}
         run: |
           test "$LINT" = "success"
@@ -212,4 +234,5 @@ jobs:
           test "$README_SIDECAR" = "success"
           test "$BACKLOG_CONTRACT" = "success"
           test "$REPOSITORY_HYGIENE" = "success"
+          test "$ANALYSIS_CONSISTENCY" = "success"
           test "$COVERAGE" = "success"
