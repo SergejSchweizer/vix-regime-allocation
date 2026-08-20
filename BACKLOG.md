@@ -11,9 +11,9 @@ Single canonical implementation backlog for MScFE 622 Stochastic Modeling GWP2. 
 5. Parallel PRs must have disjoint write sets. All notebook PRs are serialized.
 6. Fixed names, schemas, paths, tolerances, tie rules, and formulas are immutable unless this backlog is explicitly audited again.
 7. Source PRs have deterministic offline tests. Unit tests never require Yahoo/network access. Numerical outputs are never fabricated.
-8. Notebook technical prose explains finance/statistics, not Python library names. Standalone PDF prose is non-technical and avoids model/algorithm/library names.
+8. Notebook technical prose explains finance/statistics rather than narrating Python library calls. The PDF is a rendered sidecar of the canonical executed notebook and therefore preserves the same notebook explanations, equations, code cells, stored outputs, tables, figures, citations, and Works Cited; PDF-only analytical narrative is forbidden.
 9. Sidecars read canonical artifacts only; they do not refit, redecode, or recompute a second analysis.
-10. Before equations containing Greek symbols, list each Greek letter and pronunciation. The technical notebook and standalone PDF must support external theoretical, methodological, and empirical claims with verifiable scholarly sources using MLA 9 in-text citations and a Works Cited section. Official primary sources may supplement scholarly literature for data/index definitions but do not replace academic support. Every citation must resolve to the canonical `reports/references.bib`; bare URLs are not citations and fabricated bibliographic metadata is forbidden.
+10. Before equations containing Greek symbols, list each Greek letter and pronunciation. The technical notebook must support external theoretical, methodological, and empirical claims with verifiable scholarly sources using MLA 9 in-text citations and a Works Cited section; the PDF sidecar inherits that exact cited content from the notebook and may not diverge. Official primary sources may supplement scholarly literature for data/index definitions but do not replace academic support. Every citation must resolve to the canonical `reports/references.bib`; bare URLs are not citations and fabricated bibliographic metadata is forbidden.
 11. Every PR passes the full current quality suite; combined source coverage remains `>=90%`.
 12. `python scripts/check_backlog_contract.py` must pass before merge.
 
@@ -142,7 +142,7 @@ Scientific support is mandatory, not optional. Peer-reviewed journal/conference 
 
 The notebook uses MLA 9 parenthetical citations adjacent to externally sourced definitions, equations, methodological claims, and interpretations, plus a final **Works Cited** section rendered from the canonical registry. Each major method section has at least one relevant scholarly citation. Tables and figures include concise source notes distinguishing project calculations from external data/method sources.
 
-The standalone PDF remains non-technical in its narrative, but it also uses MLA 9 in-text citations for externally sourced factual or methodological claims, source notes for externally derived data/figures, and a final **Works Cited** section. Bibliographic titles may contain technical terminology; the no-model/no-algorithm wording rule applies to report narrative, not to bibliographic metadata.
+The PDF report is a rendered sidecar of the canonical executed notebook. It inherits the notebook's MLA 9 in-text citations, source notes, equations, code cells, stored outputs, tables, figures, interpretations, limitations, and final **Works Cited** in notebook order. The supplied template contributes page 1 as the cover; template instruction page 2 is excluded. No separately authored PDF narrative or independent analysis is permitted.
 
 Citation integrity is deterministic: every in-text citation in notebook/PDF must resolve to `reports/references.bib`; every entry printed in an artifact's Works Cited must be cited in that artifact; duplicate keys, unresolved cites, bibliography-only orphan entries in rendered Works Cited, and URL-only pseudo-citations fail validation. PR-31 establishes Step1–4 citation parity checks and PR-47 extends them through Step5.
 
@@ -150,9 +150,9 @@ Citation integrity is deterministic: every in-text citation in notebook/PDF must
 
 Canonical technical notebook: `notebooks/gwp2_vix_regime_allocation.ipynb`. Each step visibly has question/step number, project-function calls, stored code output, equations/definitions, tables/plots, interpretation/recommendation, limitations, mandatory MLA 9 scholarly citations/source notes, and a final Works Cited rendered from `reports/references.bib`; execute top-to-bottom before commit.
 
-README has exact technical parity from canonical artifacts. HTML `reports/gwp2_vix_regime_allocation.html` is exported from stored notebook outputs without execution/refitting and preserves the notebook citations/Works Cited. Separate PDF `reports/Stochastic_Modeling_GWP2_Report.pdf` is non-technical/no-code, uses provided template **page1 only**, excludes instruction page2, preserves known team names/blank unknown fields, has decision parity, and contains MLA 9 in-text citations/source notes plus a Works Cited derived from the same canonical registry; render every final page for visual QA.
+README has exact technical parity from canonical artifacts. HTML `reports/gwp2_vix_regime_allocation.html` is exported from stored notebook outputs without execution/refitting and preserves the notebook citations/Works Cited. Separate PDF sidecar `reports/Stochastic_Modeling_GWP2_Report.pdf` uses provided template **page1 only**, excludes instruction page2, preserves known team names/blank unknown fields, and then renders the canonical executed notebook in order. The PDF stores the source notebook path and exact notebook SHA-256 for stale-sidecar detection; render every final page for visual QA.
 
-Final ZIP `dist/MScFE_622_GWP2_submission.zip` contains exactly notebook, HTML, README, `pyproject.toml`, `reports/references.bib`, `data/processed/step1_data.csv`, and `src/vix_regime_allocation/**/*.py`. It excludes standalone PDF, `.git`, `.github`, tests, rendered QA, caches, coverage, `.env*`, keys. Sorted POSIX members, no symlinks/traversal, timestamp `1980-01-01`. Submission manifest keys: `schema_version,zip_path,zip_sha256,standalone_pdf_path,standalone_pdf_sha256,included_files,member_sha256`; no timestamp. Standalone PDF is uploaded separately.
+Final ZIP `dist/MScFE_622_GWP2_submission.zip` contains exactly notebook, HTML, README, `pyproject.toml`, `reports/references.bib`, `data/processed/step1_data.csv`, and `src/vix_regime_allocation/**/*.py`. It excludes the separately uploaded PDF sidecar, `.git`, `.github`, tests, rendered QA, caches, coverage, `.env*`, keys. Sorted POSIX members, no symlinks/traversal, timestamp `1980-01-01`. Submission manifest keys remain `schema_version,zip_path,zip_sha256,standalone_pdf_path,standalone_pdf_sha256,included_files,member_sha256`; no timestamp. The PDF sidecar is uploaded separately.
 
 ---
 ## PR-01 — Yahoo adjusted-close loader
@@ -1119,17 +1119,17 @@ scripts/check_readme_sidecar.py
 
 ---
 
-## PR-28 — Non-technical PDF builder
+## PR-28 — Notebook PDF sidecar builder
 
 **Agent lane:** B
 
 **Dependencies:** PR-25
 
-**Git branch:** `pr-28-non-technical-pdf-builder`
+**Git branch:** `pr-28-notebook-pdf-sidecar-builder`
 
-**Git status:** `git status --short --branch` must show `pr-28-non-technical-pdf-builder` and no staged, modified, or untracked files immediately before commit and merge.
+**Git status:** `git status --short --branch` must show `pr-28-notebook-pdf-sidecar-builder` and no staged, modified, or untracked files immediately before commit and merge.
 
-**Commit message:** `PR-28 — Non-technical PDF builder`
+**Commit message:** `PR-28 — Notebook PDF sidecar builder`
 
 **Files owned:**
 
@@ -1140,45 +1140,44 @@ tests/test_build_pdf_report.py
 
 ### Tasks
 
-- [ ] T28.1 Build from template page1 + validated no-code non-technical body/canonical artifacts and `reports/references.bib`; render MLA 9 in-text citations, source notes, and Works Cited; exclude template page2; verify known names and render pages.
-- [ ] T28.2 Add offline tests for cover/page2/code prohibition/required sections/artifact parity/names/non-empty renderability plus duplicate/unresolved/orphan citation failures and the bibliography-title exception to narrative technical-term checks.
+- [ ] T28.1 Build from template page1 plus the canonical executed notebook; reject notebook error outputs; render notebook cells/outputs in order; exclude template page2; preserve `reports/references.bib`-resolved citations/Works Cited; embed sidecar role, source notebook path, and exact notebook SHA-256; forbid PDF-only analysis.
+- [ ] T28.2 Add offline tests for cover/page2 exclusion, notebook error rejection, notebook-SHA/source-path metadata, non-empty renderability, known names, inherited `reports/references.bib` citation integrity, and rejection of any stale sidecar hash.
 
 ### Acceptance criteria
 
-- [ ] AC28.1 (`T28.1`) Generated fixture PDF obeys cover/nontechnical/canonical-artifact rules with no estimation path and contains resolved scholarly citations/source notes/Works Cited from the canonical registry.
-- [ ] AC28.2 (`T28.2`) All PDF builder and citation-integrity tests pass offline.
+- [ ] AC28.1 (`T28.1`) Generated fixture PDF is a notebook-derived sidecar with correct cover/no page2, exact notebook provenance metadata, no independent analysis path, and the notebook's resolved scholarly citations/source notes/Works Cited.
+- [ ] AC28.2 (`T28.2`) All PDF sidecar, provenance, stale-hash, renderability, and citation-integrity tests pass offline.
 
 ---
 
-## PR-29 — Generate/visually verify Step1–4 PDF
+## PR-29 — Generate/visually verify Step1–4 PDF sidecar
 
 **Agent lane:** B
 
 **Dependencies:** PR-28
 
-**Git branch:** `pr-29-generate-visually-verify-step1-4-pdf`
+**Git branch:** `pr-29-generate-visually-verify-step1-4-pdf-sidecar`
 
-**Git status:** `git status --short --branch` must show `pr-29-generate-visually-verify-step1-4-pdf` and no staged, modified, or untracked files immediately before commit and merge.
+**Git status:** `git status --short --branch` must show `pr-29-generate-visually-verify-step1-4-pdf-sidecar` and no staged, modified, or untracked files immediately before commit and merge.
 
-**Commit message:** `PR-29 — Generate/visually verify Step1–4 PDF`
+**Commit message:** `PR-29 — Generate/visually verify Step1–4 PDF sidecar`
 
 **Files owned:**
 
 ```text
-reports/Stochastic_Modeling_GWP2_Report.md
 reports/Stochastic_Modeling_GWP2_Report.pdf
 reports/rendered/Stochastic_Modeling_GWP2_Report/*.png
 ```
 
 ### Tasks
 
-- [ ] T29.1 Write original non-technical Step1–4 results/recommendation/factors/limitations with canonical values/figures, MLA 9 in-text citations to scholarly sources, official-primary data source notes, and a Works Cited derived from `reports/references.bib`; generate correct cover/no page2.
-- [ ] T29.2 Render/inspect every page for clipping/overlap/glyph/blank/split defects and mark report interim until Step5.
+- [ ] T29.1 Generate the Step1–4 PDF sidecar from the committed executed notebook and template page1 only; preserve notebook equations, project-function cells, stored outputs, figures, explanations, limitations, MLA 9 citations, source notes, and Works Cited resolved through `reports/references.bib`; add no PDF-only prose.
+- [ ] T29.2 Render/inspect every page for clipping/overlap/glyph/blank/split defects, verify the stored notebook SHA-256 metadata, and mark the sidecar interim until Step5.
 
 ### Acceptance criteria
 
-- [ ] AC29.1 (`T29.1`) Prose has decision parity, no code/model-algorithm-library wording outside bibliographic metadata, correct cover, resolved citations/source notes, and no uncited rendered Works Cited entry.
-- [ ] AC29.2 (`T29.2`) Every page passes visual QA and Step5 regeneration requirement is explicit.
+- [ ] AC29.1 (`T29.1`) PDF content is derived from the executed notebook in order, includes the notebook's technical content and resolved citations/source notes/Works Cited, has the correct cover/no page2, and contains no independently authored analytical section.
+- [ ] AC29.2 (`T29.2`) Every page passes visual QA, notebook provenance metadata matches exactly, and Step5 sidecar regeneration requirement is explicit.
 
 ---
 
@@ -1235,12 +1234,12 @@ tests/test_analysis_sidecars.py
 
 ### Tasks
 
-- [ ] T31.1 Validate manifest/input hash/artifacts plus notebook/README exact technical parity, HTML notebook hash, PDF decision parity/state provenance, and citation integrity against `reports/references.bib`: resolved in-text cites, cited-only Works Cited entries, required scholarly support, and source notes.
+- [ ] T31.1 Validate manifest/input hash/artifacts plus notebook/README exact technical parity, HTML notebook hash, PDF notebook-content parity and exact notebook-SHA/source-path provenance, and citation integrity against `reports/references.bib`: resolved in-text cites, cited-only Works Cited entries, required scholarly support, and source notes.
 - [ ] T31.2 Add deterministic stale/missing/hash/value failure tests for every sidecar/artifact class plus duplicate bibliography keys, unresolved citations, orphan Works Cited entries, missing scholarly support, and URL-only pseudo-citations.
 
 ### Acceptance criteria
 
-- [ ] AC31.1 (`T31.1`) Any missing/stale/mismatched canonical technical/decision artifact or citation/source-note/Works-Cited defect fails at the correct parity level.
+- [ ] AC31.1 (`T31.1`) Any missing/stale/mismatched canonical technical artifact, notebook/PDF provenance mismatch, or citation/source-note/Works-Cited defect fails at the correct parity level.
 - [ ] AC31.2 (`T31.2`) All parity tests pass offline.
 
 ---
@@ -1638,17 +1637,17 @@ scripts/check_readme_sidecar.py
 
 ---
 
-## PR-44 — Extend PDF builder through Step5
+## PR-44 — Extend PDF sidecar builder through Step5
 
 **Agent lane:** A
 
 **Dependencies:** PR-28, PR-42
 
-**Git branch:** `pr-44-extend-pdf-builder-through-step5`
+**Git branch:** `pr-44-extend-pdf-sidecar-builder-through-step5`
 
-**Git status:** `git status --short --branch` must show `pr-44-extend-pdf-builder-through-step5` and no staged, modified, or untracked files immediately before commit and merge.
+**Git status:** `git status --short --branch` must show `pr-44-extend-pdf-sidecar-builder-through-step5` and no staged, modified, or untracked files immediately before commit and merge.
 
-**Commit message:** `PR-44 — Extend PDF builder through Step5`
+**Commit message:** `PR-44 — Extend PDF sidecar builder through Step5`
 
 **Files owned:**
 
@@ -1659,44 +1658,43 @@ tests/test_build_pdf_report.py
 
 ### Tasks
 
-- [ ] T44.1 Extend canonical readers/validation for Step5 benchmark comparison, summary, sensitivity, recommendation, limitations, and `reports/references.bib`; preserve resolved MLA 9 in-text citations/source notes/Works Cited with no recomputation.
-- [ ] T44.2 Add tests for Step5 stale/missing parity and final citation integrity while preserving nontechnical/code/model-name/template/name rules outside bibliographic metadata.
+- [ ] T44.1 Extend PDF-sidecar validation through the final Step5 notebook sections and `reports/references.bib`; require the benchmark comparison, summary, sensitivity, recommendation, limitations, figures, equations, stored outputs, resolved MLA 9 citations/source notes/Works Cited to come from the executed notebook with no second analysis.
+- [ ] T44.2 Add tests for Step5 stale/missing notebook content, exact notebook-SHA/source-path metadata, final citation integrity, template cover/page2 exclusion, known names, and rejection of PDF-only analytical content.
 
 ### Acceptance criteria
 
-- [ ] AC44.1 (`T44.1`) Builder requires exact Step5 decision content from canonical artifacts only and a valid canonical scientific-source registry with resolved rendered citations.
+- [ ] AC44.1 (`T44.1`) Builder requires the exact final executed notebook as its Step5 analytical source and a valid canonical scientific-source registry with resolved rendered citations.
 - [ ] AC44.2 (`T44.2`) All extended PDF-builder tests pass offline.
 
 ---
 
-## PR-45 — Final Step1–5 nontechnical PDF + visual QA
+## PR-45 — Final Step1–5 PDF sidecar + visual QA
 
 **Agent lane:** A
 
 **Dependencies:** PR-29, PR-44
 
-**Git branch:** `pr-45-final-step1-5-nontechnical-pdf-visual-qa`
+**Git branch:** `pr-45-final-step1-5-pdf-sidecar-visual-qa`
 
-**Git status:** `git status --short --branch` must show `pr-45-final-step1-5-nontechnical-pdf-visual-qa` and no staged, modified, or untracked files immediately before commit and merge.
+**Git status:** `git status --short --branch` must show `pr-45-final-step1-5-pdf-sidecar-visual-qa` and no staged, modified, or untracked files immediately before commit and merge.
 
-**Commit message:** `PR-45 — Final Step1–5 nontechnical PDF + visual QA`
+**Commit message:** `PR-45 — Final Step1–5 PDF sidecar + visual QA`
 
 **Files owned:**
 
 ```text
-reports/Stochastic_Modeling_GWP2_Report.md
 reports/Stochastic_Modeling_GWP2_Report.pdf
 reports/rendered/Stochastic_Modeling_GWP2_Report/*.png
 ```
 
 ### Tasks
 
-- [ ] T45.1 Extend nontechnical report through Step5 with canonical metrics/figure/sensitivity, both-benchmark conclusion, recommendation, factors, costs, full-sample/non-OOS limitations, MLA 9 in-text scholarly citations, official-primary source notes, and final Works Cited from `reports/references.bib`; correct cover/no page2.
+- [ ] T45.1 Generate the final Step1–5 PDF sidecar from the fully executed notebook with canonical metrics, cumulative comparison figure, sensitivity, both-benchmark conclusion, recommendation, costs, full-sample/non-OOS limitations, equations, code/output cells, MLA 9 citations, official-primary source notes, and final Works Cited from `reports/references.bib`; use template page1 only and no PDF-only narrative.
 - [ ] T45.2 Render and inspect every final page for all fixed visual defects.
 
 ### Acceptance criteria
 
-- [ ] AC45.1 (`T45.1`) Final PDF has decision parity, nontechnical narrative wording, correct cover/limitations, resolved scholarly citations/source notes, and cited-only Works Cited entries; bibliographic titles are exempt from narrative technical-term checks.
+- [ ] AC45.1 (`T45.1`) Final PDF is an exact rendered-notebook sidecar after the template cover, has matching notebook SHA-256/source-path metadata, includes the notebook's technical content and limitations, and preserves resolved scholarly citations/source notes with cited-only Works Cited entries.
 - [ ] AC45.2 (`T45.2`) Every rendered page passes visual QA and final PDF is non-empty.
 
 ---
@@ -1753,12 +1751,12 @@ scripts/check_readme_sidecar.py
 
 ### Tasks
 
-- [ ] T47.1 Extend checker/tests to Step5 manifest/artifacts, notebook/README technical parity, current HTML, PDF decision parity/state provenance, and final citation integrity against `reports/references.bib` for both notebook and PDF.
+- [ ] T47.1 Extend checker/tests to Step5 manifest/artifacts, notebook/README technical parity, current HTML, PDF exact notebook-sidecar parity with notebook-SHA/source-path provenance, and final citation integrity against `reports/references.bib` for notebook-derived HTML/PDF artifacts.
 - [ ] T47.2 Keep `analysis-sidecars`/`backlog-contract`/aggregate wiring, parallel core jobs, coverage>=90%; finalize README/checker Step1–5 status.
 
 ### Acceptance criteria
 
-- [ ] AC47.1 (`T47.1`) Every Step5 stale/missing/hash/value sidecar defect and every unresolved/duplicate/orphan/URL-only citation or missing Works Cited/source-note defect fails at the correct parity level.
+- [ ] AC47.1 (`T47.1`) Every Step5 stale/missing/hash/value sidecar defect, notebook/PDF provenance mismatch, and every unresolved/duplicate/orphan/URL-only citation or missing Works Cited/source-note defect fails at the correct parity level.
 - [ ] AC47.2 (`T47.2`) CI/coverage/parallelism and final README/checker contracts remain exact.
 
 ---
@@ -1879,7 +1877,7 @@ For every PR: branch from current main after dependencies; modify only owned fil
 - [ ] All candidate/preferred state sequences are canonical artifacts; no later refit/redecode is used merely to recover them.
 - [ ] One-row execution lag, W0=1 drawdown, zero-RF Sharpe, monthly benchmark, and identical comparison dates are verified.
 - [ ] Full-sample regime/Viterbi/allocation lookahead limitations, gross-cost assumption, and non-OOS status are explicit.
-- [ ] Final notebook fully executed with resolved MLA 9 scholarly citations/source notes/final Works Cited; README exact technical parity; HTML exact duplicate; separate PDF nontechnical decision parity with resolved scholarly citations/source notes/Works Cited, template page1 only, and visual QA.
+- [ ] Final notebook fully executed with resolved MLA 9 scholarly citations/source notes/final Works Cited; README exact technical parity; HTML exact duplicate; separate PDF exact rendered-notebook sidecar with matching notebook SHA-256/source-path provenance, template page1 only, and visual QA.
 - [ ] `analysis-sidecars`, `backlog-contract`, lint/type/unit/integration, combined coverage>=90%, and aggregate quality-gate pass.
 - [ ] Deterministic final ZIP contains exact executable allowlist including `reports/references.bib` and excludes standalone PDF/forbidden files; submission manifest hashes exact final bytes.
 - [ ] README gives exact rebuild and upload instructions, including separate PDF upload.
