@@ -56,14 +56,18 @@ def comparison_return_frame(data: pd.DataFrame, daily: pd.DataFrame) -> pd.DataF
 
 def _wealth_frame(returns: pd.DataFrame) -> pd.DataFrame:
     return pd.DataFrame(
-        {column: cumulative_wealth(returns[column]).to_numpy(dtype=float) for column in returns},
+        {
+            str(column): cumulative_wealth(returns[column]).to_numpy(dtype=float)
+            for column in returns.columns
+        },
         index=returns.index,
     )
 
 
 def _drawdown_frame(wealth: pd.DataFrame) -> pd.DataFrame:
     result: dict[str, np.ndarray] = {}
-    for column in wealth:
+    for raw_column in wealth.columns:
+        column = str(raw_column)
         values = wealth[column].to_numpy(dtype=float)
         peaks = np.maximum.accumulate(np.concatenate(([1.0], values)))[1:]
         result[column] = values / peaks - 1.0
@@ -86,7 +90,8 @@ def plot_cumulative_performance(
     drawdown_axis = figure.add_subplot(grid[1, 0], sharex=cumulative_axis)
     terminal_axis = figure.add_subplot(grid[2, 0])
 
-    for column in wealth:
+    for raw_column in wealth.columns:
+        column = str(raw_column)
         cumulative_axis.plot(wealth.index, wealth[column], label=column, linewidth=1.5)
         drawdown_axis.plot(drawdown.index, drawdown[column] * 100.0, label=column, linewidth=1.0)
     cumulative_axis.set_title("Predictive Holdout — Cumulative Performance Comparison")
@@ -105,7 +110,13 @@ def plot_cumulative_performance(
     for position, value in zip(positions, terminal.to_numpy(dtype=float), strict=True):
         offset = 3.0 if value >= 0.0 else -3.0
         alignment = "left" if value >= 0.0 else "right"
-        terminal_axis.text(value + offset, position, f"{value:.1f}%", va="center", ha=alignment)
+        terminal_axis.text(
+            value + offset,
+            float(position),
+            f"{value:.1f}%",
+            va="center",
+            ha=alignment,
+        )
 
     output = Path(output_path)
     output.parent.mkdir(parents=True, exist_ok=True)
@@ -119,7 +130,7 @@ def plot_cumulative_performance(
 def probability_columns(daily: pd.DataFrame) -> list[str]:
     """Return the exact contiguous p_state_0..p_state_K columns."""
 
-    columns = [column for column in daily.columns if column.startswith("p_state_")]
+    columns = [str(column) for column in daily.columns if str(column).startswith("p_state_")]
     columns = sorted(columns, key=lambda value: int(value.rsplit("_", 1)[1]))
     expected = [f"p_state_{state}" for state in range(len(columns))]
     if columns != expected or len(columns) not in (2, 3):
