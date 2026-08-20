@@ -53,7 +53,7 @@ def _drawdown_from_wealth(wealth: pd.Series) -> pd.Series:
 
 
 def plot_cumulative_performance(comparison: pd.DataFrame, output_path: Path) -> None:
-    """Plot the required three cumulative-return curves plus their drawdown histories."""
+    """Plot cumulative returns with terminal labels plus matching drawdown histories."""
     _validate_comparison(comparison)
     if not isinstance(output_path, Path):
         raise TypeError("output_path must be a pathlib.Path.")
@@ -64,23 +64,43 @@ def plot_cumulative_performance(comparison: pd.DataFrame, output_path: Path) -> 
     try:
         for column in COMPARISON_COLUMNS:
             wealth = cumulative_wealth(comparison[column])
+            cumulative_return = wealth - 1.0
             label = DISPLAY_LABELS[column]
-            cumulative_axis.plot(comparison.index, wealth - 1.0, label=label, linewidth=1.35)
+            (line,) = cumulative_axis.plot(
+                comparison.index,
+                cumulative_return,
+                label=label,
+                linewidth=1.5,
+            )
+            cumulative_axis.annotate(
+                f"{float(cumulative_return.iloc[-1]):.1%}",
+                xy=(comparison.index[-1], float(cumulative_return.iloc[-1])),
+                xytext=(8, 0),
+                textcoords="offset points",
+                color=line.get_color(),
+                va="center",
+                fontsize=9,
+                fontweight="bold",
+                annotation_clip=False,
+            )
             drawdown_axis.plot(
                 comparison.index,
                 _drawdown_from_wealth(wealth),
                 label=label,
                 linewidth=1.0,
+                color=line.get_color(),
             )
 
         cumulative_axis.axhline(0.0, linewidth=0.8)
-        cumulative_axis.set_title("Step 5 Performance Comparison")
+        cumulative_axis.set_title("Cumulative Return: Regime Rotation vs Benchmarks")
         cumulative_axis.set_ylabel("Cumulative return")
         cumulative_axis.yaxis.set_major_formatter(PercentFormatter(xmax=1.0))
         cumulative_axis.legend(ncol=3)
         cumulative_axis.grid(True, alpha=0.22)
+        cumulative_axis.margins(x=0.06)
 
         drawdown_axis.axhline(0.0, linewidth=0.8)
+        drawdown_axis.set_title("Drawdown over the same comparison period", fontsize=10)
         drawdown_axis.set_xlabel("Date")
         drawdown_axis.set_ylabel("Drawdown")
         drawdown_axis.yaxis.set_major_formatter(PercentFormatter(xmax=1.0))
