@@ -8,9 +8,7 @@ import pandas as pd
 from .config import ASSET_ORDER, ONE_WAY_COST_BPS
 
 
-def choose_asset(
-    expected_returns: pd.Series, current_asset: str | None, hurdle_bps: float
-) -> str:
+def choose_asset(expected_returns: pd.Series, current_asset: str | None, hurdle_bps: float) -> str:
     """Choose the highest expected-return asset subject to the switching hurdle."""
 
     if not isinstance(expected_returns, pd.Series):
