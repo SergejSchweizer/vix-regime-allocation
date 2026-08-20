@@ -6,7 +6,10 @@ from pathlib import Path
 
 import pandas as pd
 
-from vix_regime_allocation.predictive.artifacts import PredictiveAnalysis, write_predictive_artifacts
+from vix_regime_allocation.predictive.artifacts import (
+    PredictiveAnalysis,
+    write_predictive_artifacts,
+)
 
 
 def _analysis() -> PredictiveAnalysis:
@@ -97,6 +100,7 @@ def test_artifact_writer_and_manifest_are_deterministic(tmp_path: Path) -> None:
     manifest = json.loads(outputs["manifest"].read_text(encoding="utf-8"))
     assert "timestamp" not in manifest
     assert manifest["figures"] == []
-    assert manifest["input_data_sha256"] == hashlib.sha256(data_path.read_bytes()).hexdigest()
+    expected_hash = hashlib.sha256(data_path.read_bytes()).hexdigest()
+    assert manifest["input_data_sha256"] == expected_hash
     for relative, digest in manifest["sha256"].items():
         assert hashlib.sha256((tmp_path / relative).read_bytes()).hexdigest() == digest
