@@ -143,6 +143,30 @@ jobs:
       - name: Reject temporary build and diagnostic files
         run: python scripts/check_repository_hygiene.py
 
+  latex-rendering:
+    name: latex-rendering
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - name: Install PDF validation tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y poppler-utils
+      - name: Install project
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+      - name: Validate notebook LaTeX formatting
+        run: python scripts/check_notebook_latex.py notebooks/gwp2_vix_regime_allocation.ipynb
+      - name: Validate committed PDF math rendering
+        run: python scripts/check_pdf_latex.py reports/Stochastic_Modeling_GWP2_Report.pdf
+
   analysis-consistency:
     name: analysis-consistency
     runs-on: ubuntu-latest
@@ -230,6 +254,7 @@ jobs:
       - readme-sidecar
       - backlog-contract
       - repository-hygiene
+      - latex-rendering
       - analysis-consistency
       - artifact-provenance
       - coverage
@@ -243,6 +268,7 @@ jobs:
           README_SIDECAR: ${{ needs['readme-sidecar'].result }}
           BACKLOG_CONTRACT: ${{ needs['backlog-contract'].result }}
           REPOSITORY_HYGIENE: ${{ needs['repository-hygiene'].result }}
+          LATEX_RENDERING: ${{ needs['latex-rendering'].result }}
           ANALYSIS_CONSISTENCY: ${{ needs['analysis-consistency'].result }}
           ARTIFACT_PROVENANCE: ${{ needs['artifact-provenance'].result }}
           COVERAGE: ${{ needs.coverage.result }}
@@ -254,6 +280,7 @@ jobs:
           test "$README_SIDECAR" = "success"
           test "$BACKLOG_CONTRACT" = "success"
           test "$REPOSITORY_HYGIENE" = "success"
+          test "$LATEX_RENDERING" = "success"
           test "$ANALYSIS_CONSISTENCY" = "success"
           test "$ARTIFACT_PROVENANCE" = "success"
           test "$COVERAGE" = "success"
