@@ -37,9 +37,7 @@ def _analysis() -> PredictiveAnalysis:
             }
         ]
     )
-    performance = pd.DataFrame(
-        [{"portfolio": "selected_predictive_net", "annualized_return": 0.1}]
-    )
+    performance = pd.DataFrame([{"portfolio": "selected_predictive_net", "annualized_return": 0.1}])
     dominance = pd.DataFrame(
         [
             {
