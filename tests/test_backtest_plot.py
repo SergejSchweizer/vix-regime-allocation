@@ -9,7 +9,6 @@ import pytest
 
 import vix_regime_allocation.backtest_plot as module
 from vix_regime_allocation.backtest_plot import (
-    COMPARISON_COLUMNS,
     PLOT_COLUMNS,
     plot_cumulative_performance,
 )
