@@ -9,7 +9,7 @@ import nbformat
 
 MATH_COMMAND = re.compile(
     r"\\(?:frac|dfrac|tfrac|sqrt|sum|prod|int|iint|iiint|lim|log|ln|exp|"
-    r"sin|cos|tan|operatorname|mathrm|mathbf|mathbb|mathcal|left|right|"
+    r"sin|cos|tan|operatorname|mathrm|mathbf|mathbb|mathcal|left|right|begin|end|"
     r"alpha|beta|gamma|delta|epsilon|varepsilon|zeta|eta|theta|vartheta|iota|"
     r"kappa|lambda|mu|nu|xi|pi|rho|varrho|sigma|varsigma|tau|upsilon|phi|"
     r"varphi|chi|psi|omega|Gamma|Delta|Theta|Lambda|Xi|Pi|Sigma|Upsilon|Phi|"
