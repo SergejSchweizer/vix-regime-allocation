@@ -47,7 +47,9 @@ def _validate_output_path(output_path: Path) -> None:
 
 
 def _format_dates(axis: Axes) -> None:
-    locator = mdates.AutoDateLocator(minticks=5, maxticks=9)  # type: ignore[no-untyped-call]
+    # Three requested ticks remain feasible for the small hand-checkable test fixtures,
+    # while maxticks keeps the multi-decade canonical figures readable.
+    locator = mdates.AutoDateLocator(minticks=3, maxticks=9)  # type: ignore[no-untyped-call]
     axis.xaxis.set_major_locator(locator)
     formatter = mdates.ConciseDateFormatter(locator)  # type: ignore[no-untyped-call]
     axis.xaxis.set_major_formatter(formatter)
