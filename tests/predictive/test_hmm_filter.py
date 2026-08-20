@@ -49,9 +49,8 @@ def test_filter_and_forecast_are_normalized_and_prefix_invariant() -> None:
 
     idx = pd.date_range("2020-01-01", periods=3, name="Date")
     short = pd.Series([-0.5, 0.2, 1.2], index=idx, name="VIX_change")
-    long = pd.concat(
-        [short, pd.Series([-2.0], index=pd.DatetimeIndex([pd.Timestamp("2020-01-04")], name="Date"))]
-    )
+    future_index = pd.DatetimeIndex([pd.Timestamp("2020-01-04")], name="Date")
+    long = pd.concat([short, pd.Series([-2.0], index=future_index)])
     short_filtered = filtered_probabilities(model, short)
     long_filtered = filtered_probabilities(model, long)
     pd.testing.assert_frame_equal(short_filtered, long_filtered.iloc[:3], check_freq=False)
