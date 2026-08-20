@@ -12,13 +12,15 @@ def test_refit_schedule_uses_previous_observed_row() -> None:
         name="Date",
     )
     result = build_refit_schedule(index, pd.Timestamp("2021-01-04"))
-    assert result["decision_date"].tolist() == pd.to_datetime(
-        ["2021-01-04", "2021-01-05", "2021-02-01"]
-    ).tolist()
+    assert (
+        result["decision_date"].tolist()
+        == pd.to_datetime(["2021-01-04", "2021-01-05", "2021-02-01"]).tolist()
+    )
     assert result["refit"].tolist() == [True, False, True]
-    assert result["training_end"].tolist() == pd.to_datetime(
-        ["2020-12-31", "2020-12-31", "2021-01-05"]
-    ).tolist()
+    assert (
+        result["training_end"].tolist()
+        == pd.to_datetime(["2020-12-31", "2020-12-31", "2021-01-05"]).tolist()
+    )
     assert (result["training_end"] < result["decision_date"]).all()
 
 
