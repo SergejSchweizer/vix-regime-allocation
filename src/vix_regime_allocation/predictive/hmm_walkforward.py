@@ -79,7 +79,7 @@ def build_hmm_signals(
         alpha = filter_observation(model, alpha, current_vix)
         next_probabilities = forecast_next_regime(model, alpha)
         expected = expected_asset_returns(next_probabilities, state_means)
-        position = int(index.get_indexer([decision])[0])
+        position = cast(int, index.get_loc(decision))
         return_date = index[position + 1]
         row: dict[str, object] = {
             "decision_date": decision,
