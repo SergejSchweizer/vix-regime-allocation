@@ -54,9 +54,7 @@ def test_render_predictive_extension_reads_only_canonical_artifacts(
         "switch_hurdle_bps": 5.0,
         "transaction_cost_bps": 5.0,
     }
-    (generated_dir / "selected_strategy.json").write_text(
-        json.dumps(selected), encoding="utf-8"
-    )
+    (generated_dir / "selected_strategy.json").write_text(json.dumps(selected), encoding="utf-8")
     pd.DataFrame(
         {
             "family": ["markov"],
@@ -68,20 +66,19 @@ def test_render_predictive_extension_reads_only_canonical_artifacts(
     pd.DataFrame({"portfolio": ["selected_predictive_net"], "annualized_return": [0.12]}).to_csv(
         table_dir / "selected_test_performance.csv", index=False
     )
-    _dominance((0.01, 0.02, 0.03)).to_csv(
-        table_dir / "test_asset_dominance.csv", index=False
-    )
+    _dominance((0.01, 0.02, 0.03)).to_csv(table_dir / "test_asset_dominance.csv", index=False)
     (figure_dir / "cumulative_performance_all_instruments.png").write_bytes(b"png")
     (figure_dir / "regime_forecast_probabilities.png").write_bytes(b"png")
 
-    displayed: list[object] = []
-    monkeypatch.setattr(notebook_section, "display", displayed.append)
-    monkeypatch.setattr(notebook_section, "Markdown", lambda value: value)
-    monkeypatch.setattr(notebook_section, "Image", lambda filename: f"IMAGE:{filename}")
+    captured: notebook_section.DisplayPayload = []
 
+    def capture(payload: notebook_section.DisplayPayload) -> None:
+        captured.extend(payload)
+
+    monkeypatch.setattr(notebook_section, "_display_payload", capture)
     notebook_section.render_predictive_extension(tmp_path)
 
-    rendered_text = "\n".join(str(item) for item in displayed)
+    rendered_text = "\n".join(str(value) for _, value in captured)
     assert "additive research extension" in rendered_text
     assert "Selected validation configuration" in rendered_text
     assert "beat TLT, GLD, and SPY" in rendered_text
