@@ -7,7 +7,8 @@ from pathlib import Path
 from typing import cast
 
 import pandas as pd
-from IPython.display import Image, Markdown, display
+
+DisplayPayload = list[tuple[str, object]]
 
 
 def predictive_conclusion(dominance: pd.DataFrame) -> str:
@@ -45,19 +46,27 @@ def _selected_text(selected: dict[str, object]) -> str:
     )
 
 
-def render_predictive_extension(root: Path | None = None) -> None:
-    """Display canonical predictive artifacts without fitting, forecasting, or selecting."""
+def _display_payload(payload: DisplayPayload) -> None:
+    from IPython.display import Image, Markdown, display
 
-    repository_root = Path(root) if root is not None else Path(__file__).resolve().parents[3]
-    table_dir = repository_root / "reports/predictive/tables"
-    generated_dir = repository_root / "reports/predictive/generated"
-    figure_dir = repository_root / "reports/predictive/figures"
+    for kind, value in payload:
+        if kind == "markdown":
+            display(Markdown(str(value)))
+        elif kind == "image":
+            display(Image(filename=str(value)))
+        elif kind == "object":
+            display(value)
+        else:
+            raise ValueError(f"Unknown display payload kind: {kind!r}.")
 
-    selected = json.loads((generated_dir / "selected_strategy.json").read_text(encoding="utf-8"))
-    validation = pd.read_csv(table_dir / "candidate_validation_summary.csv")
-    performance = pd.read_csv(table_dir / "selected_test_performance.csv")
-    dominance = pd.read_csv(table_dir / "test_asset_dominance.csv")
 
+def _payload(
+    selected: dict[str, object],
+    validation: pd.DataFrame,
+    performance: pd.DataFrame,
+    dominance: pd.DataFrame,
+    figure_dir: Path,
+) -> DisplayPayload:
     introduction = (
         "## Predictive Extension — Causal One-Step Regime Allocation\n\n"
         "This section is an **additive research extension** to the required assignment "
@@ -72,23 +81,39 @@ def render_predictive_extension(root: Path | None = None) -> None:
         "retuning. Model family, state count, and switching hurdle are selected only by "
         "validation net mean log growth."
     )
-    display(Markdown(introduction))
-    display(Markdown(_selected_text(selected)))
-    display(Markdown("### Validation candidate comparison"))
-    display(validation)
-    display(Markdown("### Final 2021+ holdout performance"))
-    display(performance)
-    display(Markdown("### CAGR comparison against every individual asset"))
-    display(dominance)
-    display(Markdown(predictive_conclusion(dominance)))
-    display(Markdown("### Holdout cumulative performance and drawdown"))
-    display(Image(filename=str(figure_dir / "cumulative_performance_all_instruments.png")))
-    display(Markdown("### One-step regime forecast probabilities used by the selected model"))
-    display(Image(filename=str(figure_dir / "regime_forecast_probabilities.png")))
-    display(
-        Markdown(
+    return [
+        ("markdown", introduction),
+        ("markdown", _selected_text(selected)),
+        ("markdown", "### Validation candidate comparison"),
+        ("object", validation),
+        ("markdown", "### Final 2021+ holdout performance"),
+        ("object", performance),
+        ("markdown", "### CAGR comparison against every individual asset"),
+        ("object", dominance),
+        ("markdown", predictive_conclusion(dominance)),
+        ("markdown", "### Holdout cumulative performance and drawdown"),
+        ("image", figure_dir / "cumulative_performance_all_instruments.png"),
+        ("markdown", "### One-step regime forecast probabilities used by the selected model"),
+        ("image", figure_dir / "regime_forecast_probabilities.png"),
+        (
+            "markdown",
             "**Source note.** All predictive tables and figures are project calculations "
             "from the canonical Step 1 dataset. Every historical decision is independently "
-            "audited to satisfy `training_end < decision_date < return_date`."
-        )
-    )
+            "audited to satisfy `training_end < decision_date < return_date`.",
+        ),
+    ]
+
+
+def render_predictive_extension(root: Path | None = None) -> None:
+    """Display canonical predictive artifacts without fitting, forecasting, or selecting."""
+
+    repository_root = Path(root) if root is not None else Path(__file__).resolve().parents[3]
+    table_dir = repository_root / "reports/predictive/tables"
+    generated_dir = repository_root / "reports/predictive/generated"
+    figure_dir = repository_root / "reports/predictive/figures"
+
+    selected = json.loads((generated_dir / "selected_strategy.json").read_text(encoding="utf-8"))
+    validation = pd.read_csv(table_dir / "candidate_validation_summary.csv")
+    performance = pd.read_csv(table_dir / "selected_test_performance.csv")
+    dominance = pd.read_csv(table_dir / "test_asset_dominance.csv")
+    _display_payload(_payload(selected, validation, performance, dominance, figure_dir))
