@@ -39,8 +39,7 @@ def _validate_notebook(path: Path) -> None:
         for output in cell.get("outputs", []):
             if output.get("output_type") == "error":
                 failures.append(
-                    f"cell {index}: {output.get('ename', 'Error')}: "
-                    f"{output.get('evalue', '')}"
+                    f"cell {index}: {output.get('ename', 'Error')}: {output.get('evalue', '')}"
                 )
     if failures:
         raise RuntimeError("Notebook contains failed outputs: " + "; ".join(failures))
