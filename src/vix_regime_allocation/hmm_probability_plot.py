@@ -63,7 +63,7 @@ def plot_hmm_smoothed_probabilities(
             axis.legend(loc="upper right", ncol=n_states)
         axes[-1].set_xlabel("Date")
         locator = mdates.AutoDateLocator(  # type: ignore[no-untyped-call]
-            minticks=5,
+            minticks=3,
             maxticks=9,
         )
         axes[-1].xaxis.set_major_locator(locator)
