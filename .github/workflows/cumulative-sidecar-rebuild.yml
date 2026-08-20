@@ -1,0 +1,72 @@
+name: Cumulative Comparison Sidecar Rebuild
+
+on:
+  push:
+    branches:
+      - improve/cumulative-comparison-sidecar
+
+permissions:
+  contents: write
+
+jobs:
+  rebuild:
+    runs-on: ubuntu-latest
+    env:
+      MPLBACKEND: Agg
+      CHROME_BIN: /usr/bin/google-chrome
+    steps:
+      - name: Checkout feature branch
+        uses: actions/checkout@v4
+        with:
+          ref: improve/cumulative-comparison-sidecar
+          fetch-depth: 0
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+      - name: Install project
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e '.[dev]' ipykernel
+      - name: Validate focused plot tests
+        run: pytest -q tests/test_backtest_plot.py
+      - name: Execute canonical notebook
+        run: >-
+          python -m jupyter nbconvert --to notebook --execute --inplace
+          --ExecutePreprocessor.timeout=1200 notebooks/gwp2_vix_regime_allocation.ipynb
+      - name: Validate notebook contract
+        run: python scripts/check_notebook_orchestration.py
+      - name: Build synchronized PDF sidecar
+        run: python scripts/build_pdf_report.py
+      - name: Validate synchronized artifacts
+        run: |
+          test -s reports/figures/step5_cumulative_performance.png
+          test -s notebooks/gwp2_vix_regime_allocation.ipynb
+          test -s reports/Stochastic_Modeling_GWP2_Report.pdf
+          python - <<'PY'
+          import hashlib
+          from pathlib import Path
+          from pypdf import PdfReader
+
+          notebook = Path('notebooks/gwp2_vix_regime_allocation.ipynb')
+          report = Path('reports/Stochastic_Modeling_GWP2_Report.pdf')
+          expected = hashlib.sha256(notebook.read_bytes()).hexdigest()
+          actual = PdfReader(report).metadata.get('/NotebookSHA256')
+          assert actual == expected, (actual, expected)
+          PY
+      - name: Commit regenerated notebook and PDF sidecar
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -- \
+            notebooks/gwp2_vix_regime_allocation.ipynb \
+            reports/figures/step5_cumulative_performance.png \
+            reports/Stochastic_Modeling_GWP2_Report.pdf \
+            reports/tables/step5_performance_summary.csv
+          if git diff --cached --quiet; then
+            echo 'Generated artifacts are already synchronized.'
+            exit 0
+          fi
+          git commit -m 'Sync cumulative comparison notebook and PDF sidecar'
+          git push origin HEAD:improve/cumulative-comparison-sidecar
