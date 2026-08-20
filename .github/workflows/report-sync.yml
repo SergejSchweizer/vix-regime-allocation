@@ -36,15 +36,23 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -e '.[dev]' ipykernel
+      - name: Check whether canonical artifacts are current
+        id: freshness
+        continue-on-error: true
+        run: python scripts/check_artifact_provenance.py
       - name: Rebuild deterministic analysis artifacts
+        if: steps.freshness.outcome != 'success'
         run: python scripts/rebuild_analysis_review.py
       - name: Validate orchestration-only notebook
+        if: steps.freshness.outcome != 'success'
         run: python scripts/check_notebook_orchestration.py
       - name: Execute canonical notebook top to bottom
+        if: steps.freshness.outcome != 'success'
         run: >-
           python -m jupyter nbconvert --to notebook --execute --inplace
           --ExecutePreprocessor.timeout=1200 notebooks/gwp2_vix_regime_allocation.ipynb
       - name: Stamp deterministic source provenance
+        if: steps.freshness.outcome != 'success'
         run: |
           python - <<'PY'
           import nbformat
@@ -56,11 +64,13 @@ jobs:
           nbformat.write(notebook, NOTEBOOK)
           PY
       - name: Export HTML from executed notebook
+        if: steps.freshness.outcome != 'success'
         run: >-
           python -m jupyter nbconvert --to html
           --output-dir reports --output gwp2_vix_regime_allocation
           notebooks/gwp2_vix_regime_allocation.ipynb
       - name: Stamp HTML notebook provenance
+        if: steps.freshness.outcome != 'success'
         run: |
           python - <<'PY'
           from scripts.check_artifact_provenance import HTML, compute_source_sha256, notebook_sha256
@@ -75,6 +85,7 @@ jobs:
           HTML.write_text(prefix + html, encoding='utf-8')
           PY
       - name: Build PDF sidecar from executed notebook
+        if: steps.freshness.outcome != 'success'
         env:
           CHROME_BIN: /usr/bin/google-chrome
         run: python scripts/build_pdf_report.py
@@ -84,7 +95,7 @@ jobs:
           python scripts/check_artifact_provenance.py
           pytest -q tests/test_notebook_cumulative_visual.py
       - name: Commit synchronized canonical artifacts
-        if: github.event_name == 'pull_request'
+        if: github.event_name == 'pull_request' && steps.freshness.outcome != 'success'
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
@@ -98,7 +109,7 @@ jobs:
             reports/generated/steps_2_4_manifest.json \
             reports/generated/step5_manifest.json
           if git diff --cached --quiet; then
-            echo 'Canonical notebook, HTML, PDF, and generated analysis artifacts are already synchronized.'
+            echo 'Canonical notebook, HTML, PDF, and generated analysis artifacts are synchronized.'
             exit 0
           fi
           git commit -m 'Sync executed notebook and report sidecars'
