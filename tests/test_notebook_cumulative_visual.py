@@ -1,3 +1,5 @@
+"""Regression contract for the user-visible Step 5 cumulative comparison."""
+
 from __future__ import annotations
 
 import json
@@ -15,6 +17,7 @@ def _source_text(cell: dict[str, Any]) -> str:
 
 
 def test_step5_cumulative_comparison_is_embedded_and_portable() -> None:
+    """The cumulative visual must render inside the notebook on any machine."""
     notebook = json.loads(NOTEBOOK.read_text(encoding="utf-8"))
     matching = [
         cell
