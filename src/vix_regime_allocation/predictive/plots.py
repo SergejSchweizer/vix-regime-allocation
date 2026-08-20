@@ -74,9 +74,7 @@ def _drawdown_frame(wealth: pd.DataFrame) -> pd.DataFrame:
     return pd.DataFrame(result, index=wealth.index)
 
 
-def plot_cumulative_performance(
-    data: pd.DataFrame, daily: pd.DataFrame, output_path: Path
-) -> Path:
+def plot_cumulative_performance(data: pd.DataFrame, daily: pd.DataFrame, output_path: Path) -> Path:
     """Plot cumulative wealth, drawdown, and terminal return for every strategy/benchmark."""
 
     returns = comparison_return_frame(data, daily)
