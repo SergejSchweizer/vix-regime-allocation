@@ -16,6 +16,7 @@ MATH_COMMAND = re.compile(
     r"Psi|Omega)\b"
 )
 INLINE_CODE = re.compile(r"(?<!`)`[^`\n]*`(?!`)")
+HTML_COMMENT = re.compile(r"<!--.*?-->", re.DOTALL)
 RELATION = re.compile(r"(?:=|≈|≤|≥|<|>)")
 
 
@@ -44,6 +45,10 @@ def _without_fenced_code(source: str) -> str:
         else:
             kept.append(line)
     return "".join(kept)
+
+
+def _mask_preserving_newlines(match: re.Match[str]) -> str:
+    return "".join("\n" if char == "\n" else " " for char in match.group(0))
 
 
 def _unescaped(text: str, index: int) -> bool:
@@ -187,7 +192,8 @@ def _scan_math(text: str, cell_index: int) -> tuple[list[Problem], list[tuple[in
 
 def _scan_cell(source: str, cell_index: int) -> list[Problem]:
     stripped_code = _without_fenced_code(source)
-    text = INLINE_CODE.sub(lambda match: " " * len(match.group(0)), stripped_code)
+    text = HTML_COMMENT.sub(_mask_preserving_newlines, stripped_code)
+    text = INLINE_CODE.sub(lambda match: " " * len(match.group(0)), text)
     problems, outside_chunks = _scan_math(text, cell_index)
 
     for chunk_start, chunk in outside_chunks:
