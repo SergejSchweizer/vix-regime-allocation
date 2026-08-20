@@ -7,12 +7,14 @@ README = ROOT / "README.md"
 PYPROJECT = ROOT / "pyproject.toml"
 WORKFLOW = ROOT / ".github" / "workflows" / "quality-gates.yml"
 AUTO_COMPLETE_WORKFLOW = ROOT / ".github" / "workflows" / "auto-complete.yml"
+PDF_SIDECAR_WORKFLOW = ROOT / ".github" / "workflows" / "report-sync.yml"
 
 
 def main() -> None:
     readme_text = README.read_text(encoding="utf-8")
     workflow_text = WORKFLOW.read_text(encoding="utf-8")
     auto_complete_text = AUTO_COMPLETE_WORKFLOW.read_text(encoding="utf-8")
+    pdf_sidecar_text = PDF_SIDECAR_WORKFLOW.read_text(encoding="utf-8")
 
     with PYPROJECT.open("rb") as handle:
         pyproject = tomllib.load(handle)
@@ -55,7 +57,8 @@ def main() -> None:
         "reports/generated/submission_manifest.json",
         "Notebook <-> README: exact technical-result parity",
         "Notebook <-> HTML: exact executed-notebook duplicate",
-        "Notebook <-> standalone PDF: exact rendered-notebook content parity",
+        "Notebook -> PDF sidecar: exact rendered-notebook content parity",
+        "PDF is a derived sidecar",
         "does **not** make this implementation causal or out-of-sample",
     )
     missing = [fragment for fragment in required_readme_fragments if fragment not in readme_text]
@@ -111,9 +114,28 @@ def main() -> None:
             + ", ".join(missing_auto_complete)
         )
 
+    required_pdf_sidecar_fragments = (
+        "name: Notebook PDF Sidecar Sync",
+        "python scripts/build_pdf_report.py",
+        "'/ArtifactRole'",
+        "'notebook-sidecar'",
+        "'/SourceOfTruth'",
+        "'/NotebookSHA256'",
+        "hashlib.sha256(notebook.read_bytes()).hexdigest()",
+        "Sync PDF sidecar with notebook",
+    )
+    missing_pdf_sidecar = [
+        fragment for fragment in required_pdf_sidecar_fragments if fragment not in pdf_sidecar_text
+    ]
+    if missing_pdf_sidecar:
+        raise SystemExit(
+            "PDF sidecar workflow is missing required parity contract text: "
+            + ", ".join(missing_pdf_sidecar)
+        )
+
     print(
         "README planning sidecar is consistent with the canonical backlog, quality gates, "
-        "and auto-complete workflow."
+        "auto-complete workflow, and notebook-derived PDF sidecar contract."
     )
 
 
