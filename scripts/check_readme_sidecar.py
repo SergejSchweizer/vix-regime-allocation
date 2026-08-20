@@ -7,12 +7,14 @@ README = ROOT / "README.md"
 PYPROJECT = ROOT / "pyproject.toml"
 WORKFLOW = ROOT / ".github" / "workflows" / "quality-gates.yml"
 AUTO_COMPLETE_WORKFLOW = ROOT / ".github" / "workflows" / "auto-complete.yml"
+PDF_SIDECAR_WORKFLOW = ROOT / ".github" / "workflows" / "report-sync.yml"
 
 
 def main() -> None:
     readme_text = README.read_text(encoding="utf-8")
     workflow_text = WORKFLOW.read_text(encoding="utf-8")
     auto_complete_text = AUTO_COMPLETE_WORKFLOW.read_text(encoding="utf-8")
+    pdf_sidecar_text = PDF_SIDECAR_WORKFLOW.read_text(encoding="utf-8")
 
     with PYPROJECT.open("rb") as handle:
         pyproject = tomllib.load(handle)
@@ -89,6 +91,7 @@ def main() -> None:
         "backlog-contract",
         "repository-hygiene",
         "analysis-consistency",
+        "artifact-provenance",
         "coverage",
         "quality-gate",
     )
@@ -100,6 +103,7 @@ def main() -> None:
         "python scripts/check_backlog_contract.py",
         "python scripts/check_repository_hygiene.py",
         "python scripts/check_analysis_consistency.py",
+        "python scripts/check_artifact_provenance.py",
         "coverage report --fail-under=90",
         "ruff format --check src tests scripts",
     )
@@ -110,6 +114,7 @@ def main() -> None:
     quality_gate_needs = (
         "repository-hygiene",
         "analysis-consistency",
+        "artifact-provenance",
     )
     for dependency in quality_gate_needs:
         if f"- {dependency}" not in workflow_text:
@@ -140,9 +145,29 @@ def main() -> None:
             + ", ".join(missing_auto_complete)
         )
 
+    required_pdf_sidecar_fragments = (
+        "name: Notebook PDF Sidecar Sync",
+        "python scripts/rebuild_analysis_review.py",
+        "--execute --inplace",
+        "artifact_source_sha256",
+        "--to html",
+        "python scripts/build_pdf_report.py",
+        "python scripts/check_artifact_provenance.py",
+        "Sync executed notebook and report sidecars",
+        "canonical-notebook-report",
+    )
+    missing_pdf_sidecar = [
+        fragment for fragment in required_pdf_sidecar_fragments if fragment not in pdf_sidecar_text
+    ]
+    if missing_pdf_sidecar:
+        raise SystemExit(
+            "Notebook/report sync workflow is missing required parity contract text: "
+            + ", ".join(missing_pdf_sidecar)
+        )
+
     print(
         "README sidecar is consistent with verified Step 1-5 results, the canonical backlog, "
-        "quality gates, and auto-complete workflow."
+        "quality gates, auto-complete workflow, and notebook-derived report artifact chain."
     )
 
 
