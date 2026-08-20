@@ -66,8 +66,16 @@ def run_final_holdout(
         raise RuntimeError("final holdout configuration differs from validation winner.")
 
     index = pd.DatetimeIndex(pd.to_datetime(daily["return_date"]), name="Date")
-    gross = pd.Series(daily["gross_return"].to_numpy(dtype=float), index=index, name="strategy_gross")
-    net = pd.Series(daily["net_return"].to_numpy(dtype=float), index=index, name="strategy_net")
+    gross = pd.Series(
+        daily["gross_return"].to_numpy(dtype=float),
+        index=index,
+        name="strategy_gross",
+    )
+    net = pd.Series(
+        daily["net_return"].to_numpy(dtype=float),
+        index=index,
+        name="strategy_net",
+    )
     selected_assets = daily["selected_asset"].astype(str)
     switches = max(0, int(selected_assets.ne(selected_assets.shift(1)).sum()) - 1)
     mean_turnover = float(daily["turnover"].mean())
@@ -84,6 +92,7 @@ def run_final_holdout(
 
     aligned_assets = asset_returns.loc[index, list(ASSET_ORDER)].copy()
     dominance, margin, dominates = compare_against_assets(net, aligned_assets)
-    if np.any(~np.isfinite(performance.select_dtypes(include=[np.number]).to_numpy(dtype=float))):
+    numeric = performance.select_dtypes(include=[np.number]).to_numpy(dtype=float)
+    if np.any(~np.isfinite(numeric)):
         raise ValueError("holdout performance must be finite.")
     return HoldoutResult(daily, performance, dominance, margin, dominates)
