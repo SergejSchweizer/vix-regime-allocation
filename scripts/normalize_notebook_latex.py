@@ -52,7 +52,10 @@ TAB_COMMANDS = (
 def _repair_control_prefixes(text: str) -> str:
     for control, prefix in CONTROL_PREFIXES:
         pattern = re.compile(re.escape(control) + r"([A-Za-z]+)")
-        text = pattern.sub(lambda match: "\\" + prefix + match.group(1), text)
+        text = pattern.sub(
+            lambda match, prefix=prefix: "\\" + prefix + match.group(1),
+            text,
+        )
     return text
 
 
