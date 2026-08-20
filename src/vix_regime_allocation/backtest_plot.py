@@ -82,16 +82,12 @@ def _validate_instrument_returns(
         raise ValueError("instrument simple returns must be finite and greater than -1.")
 
 
-def _load_instrument_returns(
-    comparison_index: pd.DatetimeIndex, output_path: Path
-) -> pd.DataFrame:
+def _load_instrument_returns(comparison_index: pd.DatetimeIndex, output_path: Path) -> pd.DataFrame:
     """Load TLT/GLD/SPY simple returns on the exact Step 5 comparison dates."""
     repo_root = output_path.resolve().parents[2]
     data_path = repo_root / "data/processed/step1_data.csv"
     if not data_path.is_file():
-        raise FileNotFoundError(
-            "Step 1 data is required to plot all instruments: " f"{data_path}"
-        )
+        raise FileNotFoundError(f"Step 1 data is required to plot all instruments: {data_path}")
     data = pd.read_csv(data_path, parse_dates=["Date"]).set_index("Date")
     data.index = pd.DatetimeIndex(data.index, name="Date")
     log_columns = [f"{asset}_log_return" for asset in ASSET_ORDER]
