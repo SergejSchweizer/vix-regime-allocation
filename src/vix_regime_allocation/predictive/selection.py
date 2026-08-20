@@ -70,9 +70,7 @@ def _select_index(summary: pd.DataFrame) -> int:
         candidates["family"].map(lambda value: family_rank[str(value)]) == best_family_rank
     ]
     minimum_hurdle = float(candidates["switch_hurdle_bps"].min())
-    candidates = candidates.loc[
-        candidates["switch_hurdle_bps"].astype(float) == minimum_hurdle
-    ]
+    candidates = candidates.loc[candidates["switch_hurdle_bps"].astype(float) == minimum_hurdle]
     return int(candidates.index[0])
 
 
