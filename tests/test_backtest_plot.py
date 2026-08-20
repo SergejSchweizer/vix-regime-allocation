@@ -8,7 +8,11 @@ import pandas as pd
 import pytest
 
 import vix_regime_allocation.backtest_plot as module
-from vix_regime_allocation.backtest_plot import COMPARISON_COLUMNS, plot_cumulative_performance
+from vix_regime_allocation.backtest_plot import (
+    COMPARISON_COLUMNS,
+    PLOT_COLUMNS,
+    plot_cumulative_performance,
+)
 
 
 def _comparison() -> pd.DataFrame:
@@ -23,7 +27,19 @@ def _comparison() -> pd.DataFrame:
     )
 
 
-def test_plot_delegates_once_per_portfolio_and_drawdown_includes_initial_wealth(
+def _instrument_returns(comparison: pd.DataFrame | None = None) -> pd.DataFrame:
+    frame = _comparison() if comparison is None else comparison
+    return pd.DataFrame(
+        {
+            "TLT": [0.005, -0.002, 0.004],
+            "GLD": [0.002, 0.006, -0.001],
+            "SPY": frame["spy_buy_hold"].to_numpy(dtype=float),
+        },
+        index=frame.index,
+    )
+
+
+def test_plot_delegates_once_per_series_and_drawdown_includes_initial_wealth(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
     comparison = _comparison()
@@ -36,9 +52,9 @@ def test_plot_delegates_once_per_portfolio_and_drawdown_includes_initial_wealth(
     monkeypatch.setattr(module, "cumulative_wealth", fake_wealth)
     output = tmp_path / "nested" / "figure.png"
     before = set(plt.get_fignums())
-    plot_cumulative_performance(comparison, output)
+    plot_cumulative_performance(comparison, output, _instrument_returns(comparison))
 
-    assert calls == list(COMPARISON_COLUMNS)
+    assert calls == list(PLOT_COLUMNS)
     assert output.exists() and output.stat().st_size > 0
     assert set(plt.get_fignums()) == before
 
@@ -47,7 +63,27 @@ def test_plot_delegates_once_per_portfolio_and_drawdown_includes_initial_wealth(
     assert expected_first_drawdown == pytest.approx(-0.01)
 
 
-def test_saved_figure_has_cumulative_drawdown_and_terminal_summary_panels(
+def test_plot_auto_loads_all_instruments_from_step1_artifact(tmp_path: Path) -> None:
+    comparison = _comparison()
+    data_path = tmp_path / "data/processed/step1_data.csv"
+    data_path.parent.mkdir(parents=True)
+    step1 = pd.DataFrame(
+        {
+            "Date": comparison.index,
+            "TLT_log_return": np.log1p([0.005, -0.002, 0.004]),
+            "GLD_log_return": np.log1p([0.002, 0.006, -0.001]),
+            "SPY_log_return": np.log1p(comparison["spy_buy_hold"].to_numpy(dtype=float)),
+        }
+    )
+    step1.to_csv(data_path, index=False)
+
+    output = tmp_path / "reports/figures/figure.png"
+    plot_cumulative_performance(comparison, output)
+
+    assert output.exists() and output.stat().st_size > 0
+
+
+def test_saved_figure_has_all_instruments_cumulative_drawdown_and_terminal_panels(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
     observed: dict[str, object] = {}
@@ -78,9 +114,10 @@ def test_saved_figure_has_cumulative_drawdown_and_terminal_summary_panels(
 
     monkeypatch.setattr(plt.Figure, "savefig", recording_savefig)
     comparison = _comparison()
-    plot_cumulative_performance(comparison, tmp_path / "figure.png")
+    instruments = _instrument_returns(comparison)
+    plot_cumulative_performance(comparison, tmp_path / "figure.png", instruments)
 
-    assert observed["title"] == "Step 5 Cumulative Performance Comparison"
+    assert observed["title"] == "Step 5 Cumulative Performance Comparison — All Instruments"
     assert observed["cum_ylabel"] == "Cumulative return"
     assert observed["dd_title"] == "Drawdown history"
     assert observed["dd_ylabel"] == "Drawdown"
@@ -90,15 +127,24 @@ def test_saved_figure_has_cumulative_drawdown_and_terminal_summary_panels(
     assert observed["cum_lines"] == [
         "Regime rotation",
         "Equal weight (monthly reset)",
+        "TLT buy and hold",
+        "GLD buy and hold",
         "SPY buy and hold",
     ]
     assert observed["dd_lines"] == observed["cum_lines"]
 
+    plot_returns = pd.concat(
+        [
+            comparison[["regime_rotation", "equal_weight_monthly"]],
+            instruments,
+        ],
+        axis=1,
+    ).loc[:, list(PLOT_COLUMNS)]
     expected_terminal = [
-        float((1.0 + comparison[column]).prod() - 1.0) for column in COMPARISON_COLUMNS
+        float((1.0 + plot_returns[column]).prod() - 1.0) for column in PLOT_COLUMNS
     ]
     np.testing.assert_allclose(observed["terminal_widths"], expected_terminal)
-    assert len(observed["endpoint_labels"]) == 3
+    assert len(observed["endpoint_labels"]) == len(PLOT_COLUMNS)
     assert all(str(label).endswith("%") for label in observed["endpoint_labels"])
 
 
@@ -157,6 +203,48 @@ def test_plot_rejects_invalid_comparison(case: str, tmp_path: Path) -> None:
         plot_cumulative_performance(  # type: ignore[arg-type]
             comparison,
             tmp_path / "figure.png",
+            _instrument_returns(),
+        )
+
+
+@pytest.mark.parametrize(
+    "case",
+    ["not_dataframe", "columns", "index", "nonnumeric", "nonfinite", "invalid_return", "spy"],
+)
+def test_plot_rejects_invalid_instrument_returns(case: str, tmp_path: Path) -> None:
+    comparison = _comparison()
+    instruments: object = _instrument_returns(comparison).copy()
+    if case == "not_dataframe":
+        instruments = []
+    elif case == "columns":
+        instruments = _instrument_returns(comparison).drop(columns=["GLD"])
+    elif case == "index":
+        frame = _instrument_returns(comparison).copy()
+        frame.index = frame.index + pd.Timedelta(days=1)
+        instruments = frame
+    elif case == "nonnumeric":
+        frame = _instrument_returns(comparison).copy()
+        frame["TLT"] = "bad"
+        instruments = frame
+    elif case == "nonfinite":
+        frame = _instrument_returns(comparison).copy()
+        frame.iloc[0, 0] = np.inf
+        instruments = frame
+    elif case == "invalid_return":
+        frame = _instrument_returns(comparison).copy()
+        frame.iloc[0, 0] = -1.0
+        instruments = frame
+    else:
+        frame = _instrument_returns(comparison).copy()
+        frame["SPY"] = frame["SPY"] + 0.001
+        instruments = frame
+
+    error = TypeError if case == "not_dataframe" else ValueError
+    with pytest.raises(error):
+        plot_cumulative_performance(  # type: ignore[arg-type]
+            comparison,
+            tmp_path / "figure.png",
+            instruments,
         )
 
 
@@ -165,4 +253,5 @@ def test_plot_requires_path_object() -> None:
         plot_cumulative_performance(  # type: ignore[arg-type]
             _comparison(),
             "figure.png",
+            _instrument_returns(),
         )
