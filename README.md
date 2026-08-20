@@ -19,6 +19,7 @@ The assignment studies a VIX-driven allocation rule across `TLT`, `GLD`, and `SP
 | Step 2 implementation | Complete: PR-06 through PR-16 and PR-21/PR-22 merged; Markov/HMM tables, figures, canonical state paths, executed notebook, and scientific references available |
 | Step 3 implementation | Complete: PR-17 through PR-19 and PR-23/PR-24 merged; model comparison, selected-state provenance, state-conditional ETF statistics, figure, executed notebook, and scientific references available |
 | Step 4 implementation | Complete: PR-20 and PR-25 merged; canonical state-to-allocation mapping, Steps 2–4 manifest, executed notebook, scientific references, and in-sample limitations available |
+| PDF report | Template-based rendering of the complete executed notebook; notebook SHA-256 embedded in PDF metadata |
 | Step 5 implementation | Not started |
 | Final submission bundle | Planned in PR-48/PR-49 |
 | `main` branch protection | Repository ruleset still must be enabled in GitHub settings |
@@ -57,7 +58,7 @@ The required citation standard is **MLA 9**: in-text citations are placed adjace
 
 Every notebook/PDF citation must resolve to `reports/references.bib`; every entry rendered in an artifact's Works Cited must be cited in that artifact. Duplicate keys, invented metadata, unresolved citations, bibliography-only orphan entries, and URL-only pseudo-citations are invalid. Figures and tables include concise source notes distinguishing the team's own calculations from external data or methodology.
 
-The standalone PDF remains non-technical in its narrative. Bibliographic titles may naturally contain technical terminology; the no-model/no-algorithm wording rule applies to report narrative, not to Works Cited metadata. PR-31 introduces Step1–4 citation-integrity checks and PR-47 extends them through the final Step1–5 notebook, HTML, and PDF.
+The standalone PDF is a faithful rendering of the canonical executed notebook rather than a separately rewritten summary. Therefore the notebook's technical terminology, equations, code-orchestration cells, stored outputs, figures, MLA 9 in-text citations, source notes, and Works Cited are preserved in the PDF. The supplied course template remains the report cover.
 
 ## Assignment implementation plan
 
@@ -133,7 +134,7 @@ Executed-notebook duplicate:
 reports/gwp2_vix_regime_allocation.html
 ```
 
-Standalone no-code report:
+Template-based notebook PDF report:
 
 ```text
 reports/Stochastic_Modeling_GWP2_Report.pdf
@@ -145,20 +146,20 @@ Canonical scientific-source registry:
 reports/references.bib
 ```
 
-The PDF uses page 1 of `reports/Template_Stochastic_Modeling_Group_Work_Project.pdf` as its cover and excludes the template instruction page. It is non-technical: decision results, recommended action, portfolio-impact factors, limitations, and practical takeaways without model/algorithm/library prose. It nevertheless includes MLA 9 in-text scholarly citations, source notes, and a final Works Cited derived from the canonical registry.
+The PDF uses page 1 of `reports/Template_Stochastic_Modeling_Group_Work_Project.pdf` as its course/group cover and excludes the template instruction page. Every notebook cell and stored output is then rendered in notebook order, including markdown, orchestration code, tables, figures, equations, citations, source notes, and Works Cited. `scripts/build_pdf_report.py` records the canonical notebook SHA-256 in the PDF metadata as `/NotebookSHA256` so a stale PDF can be detected without recomputing the analysis.
 
 Parity policy:
 
 ```text
 Notebook <-> README: exact technical-result parity
 Notebook <-> HTML: exact executed-notebook duplicate
-Notebook <-> standalone PDF: decision-result parity with non-technical wording
+Notebook <-> standalone PDF: exact rendered-notebook content parity
 Notebook/PDF citations -> reports/references.bib: resolved citation and Works-Cited integrity
 ```
 
 ## Final submission package
 
-The assignment requires a ZIP containing the executable notebook and its PDF/HTML duplicate, while the no-code PDF is uploaded separately. PR-48/PR-49 therefore produce:
+The assignment requires a ZIP containing the executable notebook and its PDF/HTML duplicate, while the template-based PDF report is uploaded separately. PR-48/PR-49 therefore produce:
 
 ```text
 dist/MScFE_622_GWP2_submission.zip
