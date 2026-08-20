@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from typing import cast
 
 import pandas as pd
 from IPython.display import Image, Markdown, display
@@ -36,10 +37,11 @@ def predictive_conclusion(dominance: pd.DataFrame) -> str:
 
 
 def _selected_text(selected: dict[str, object]) -> str:
+    hurdle = cast(float, selected["switch_hurdle_bps"])
+    cost = cast(float, selected["transaction_cost_bps"])
     return (
         f"**Selected validation configuration:** {selected['family']} K={selected['n_states']}, "
-        f"switching hurdle {float(selected['switch_hurdle_bps']):.0f} bps, "
-        f"transaction cost {float(selected['transaction_cost_bps']):.0f} bps one-way."
+        f"switching hurdle {hurdle:.0f} bps, transaction cost {cost:.0f} bps one-way."
     )
 
 
@@ -56,15 +58,21 @@ def render_predictive_extension(root: Path | None = None) -> None:
     performance = pd.read_csv(table_dir / "selected_test_performance.csv")
     dominance = pd.read_csv(table_dir / "test_asset_dominance.csv")
 
-    display(
-        Markdown(
-            """## Predictive Extension — Causal One-Step Regime Allocation
-
-This section is an **additive research extension** to the required assignment analysis above. It does not replace or reinterpret Steps 1–5. The extension changes the trading question from contemporaneous state classification to a strictly chronological one-step forecast: information available through decision date *t* forecasts the regime distribution for the next observed row, which is then mapped to expected TLT, GLD, and SPY returns.
-
-The experiment is pre-registered in code: expanding-window training, monthly refits, validation from 2015 through 2020, a final untouched 2021+ holdout, four switching hurdles, fixed 5 bps one-way transaction costs, and no final-test retuning. Model family, state count, and switching hurdle are selected only by validation net mean log growth."""
-        )
+    introduction = (
+        "## Predictive Extension — Causal One-Step Regime Allocation\n\n"
+        "This section is an **additive research extension** to the required assignment "
+        "analysis above. It does not replace or reinterpret Steps 1–5. The extension changes "
+        "the trading question from contemporaneous state classification to a strictly "
+        "chronological one-step forecast: information available through decision date *t* "
+        "forecasts the regime distribution for the next observed row, which is then mapped "
+        "to expected TLT, GLD, and SPY returns.\n\n"
+        "The experiment is pre-registered in code: expanding-window training, monthly "
+        "refits, validation from 2015 through 2020, a final untouched 2021+ holdout, four "
+        "switching hurdles, fixed 5 bps one-way transaction costs, and no final-test "
+        "retuning. Model family, state count, and switching hurdle are selected only by "
+        "validation net mean log growth."
     )
+    display(Markdown(introduction))
     display(Markdown(_selected_text(selected)))
     display(Markdown("### Validation candidate comparison"))
     display(validation)
