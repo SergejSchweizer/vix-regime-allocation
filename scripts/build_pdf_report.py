@@ -17,6 +17,7 @@ ROOT = Path(__file__).resolve().parents[1]
 NOTEBOOK = ROOT / "notebooks" / "gwp2_vix_regime_allocation.ipynb"
 TEMPLATE = ROOT / "reports" / "Template_Stochastic_Modeling_Group_Work_Project.pdf"
 OUTPUT = ROOT / "reports" / "Stochastic_Modeling_GWP2_Report.pdf"
+MATH_RENDERING_VERSION = "mathjax-latex-v1"
 
 GROUP_NUMBER = "739"
 GROUP_MEMBERS = (
@@ -24,6 +25,38 @@ GROUP_MEMBERS = (
     "Opeyemi Waliyilah Oladipupo",
     "Sergej Schweizer",
 )
+
+PRINT_MATH_STYLE = """
+<style id="report-math-print-style">
+@media print {
+  mjx-container[display="true"],
+  .MathJax_Display {
+    break-inside: avoid;
+    page-break-inside: avoid;
+    overflow: visible !important;
+  }
+}
+</style>
+"""
+
+MATH_READY_SCRIPT = """
+<script id="report-math-ready-script">
+window.addEventListener("load", async () => {
+  try {
+    if (window.MathJax && window.MathJax.startup && window.MathJax.startup.promise) {
+      await window.MathJax.startup.promise;
+    }
+    if (window.MathJax && window.MathJax.typesetPromise) {
+      await window.MathJax.typesetPromise();
+    }
+    document.documentElement.dataset.mathjaxReady = "true";
+  } catch (error) {
+    document.documentElement.dataset.mathjaxReady = "error";
+    console.error("MathJax rendering failed", error);
+  }
+});
+</script>
+"""
 
 
 def _notebook_sha256(path: Path) -> str:
@@ -50,6 +83,13 @@ def _export_notebook_html(notebook_path: Path, html_path: Path) -> None:
     exporter.exclude_input = False
     exporter.exclude_output = False
     body, _ = exporter.from_filename(str(notebook_path))
+    if "</head>" not in body:
+        raise RuntimeError("nbconvert HTML export is missing a closing head element.")
+    body = body.replace(
+        "</head>",
+        f"{PRINT_MATH_STYLE}{MATH_READY_SCRIPT}</head>",
+        1,
+    )
     html_path.write_text(body, encoding="utf-8")
 
 
@@ -83,7 +123,8 @@ def _print_html_to_pdf(html_path: Path, pdf_path: Path) -> None:
         "--no-sandbox",
         "--allow-file-access-from-files",
         "--no-pdf-header-footer",
-        "--virtual-time-budget=10000",
+        "--run-all-compositor-stages-before-draw",
+        "--virtual-time-budget=15000",
         f"--print-to-pdf={pdf_path}",
         html_path.resolve().as_uri(),
     ]
@@ -162,6 +203,7 @@ def build_report(
                 "/ArtifactRole": "notebook-sidecar",
                 "/SourceOfTruth": "notebooks/gwp2_vix_regime_allocation.ipynb",
                 "/NotebookSHA256": _notebook_sha256(notebook_path),
+                "/MathRenderingVersion": MATH_RENDERING_VERSION,
             }
         )
         with output_path.open("wb") as handle:
