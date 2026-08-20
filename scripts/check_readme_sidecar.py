@@ -149,7 +149,7 @@ def main() -> None:
         "name: Notebook PDF Sidecar Sync",
         "python scripts/rebuild_analysis_review.py",
         "--execute --inplace",
-        "artifact_source_sha256",
+        "SOURCE_DIGEST_KEY",
         "--to html",
         "python scripts/build_pdf_report.py",
         "python scripts/check_artifact_provenance.py",
