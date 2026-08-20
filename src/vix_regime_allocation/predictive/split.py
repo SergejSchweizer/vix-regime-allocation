@@ -53,9 +53,7 @@ def split_periods(data: pd.DataFrame) -> PredictivePeriods:
     return PredictivePeriods(initial, validation, test)
 
 
-def is_monthly_refit(
-    previous_date: pd.Timestamp | None, current_date: pd.Timestamp
-) -> bool:
+def is_monthly_refit(previous_date: pd.Timestamp | None, current_date: pd.Timestamp) -> bool:
     """Return true for the first decision or first observed decision of a new month."""
 
     current = pd.Timestamp(current_date)
