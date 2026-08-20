@@ -19,8 +19,8 @@ The assignment studies a VIX-driven allocation rule across `TLT`, `GLD`, and `SP
 | Step 2 implementation | Complete: PR-06 through PR-16 and PR-21/PR-22 merged; Markov/HMM tables, figures, canonical state paths, executed notebook, and scientific references available |
 | Step 3 implementation | Complete: PR-17 through PR-19 and PR-23/PR-24 merged; model comparison, selected-state provenance, state-conditional ETF statistics, figure, executed notebook, and scientific references available |
 | Step 4 implementation | Complete: PR-20 and PR-25 merged; canonical state-to-allocation mapping, Steps 2–4 manifest, executed notebook, scientific references, and in-sample limitations available |
-| PDF report | Template-based rendering of the complete executed notebook; notebook SHA-256 embedded in PDF metadata |
-| Step 5 implementation | Not started |
+| Step 5 implementation | Core backtest, required benchmarks, metrics, and cumulative comparison are implemented; K=2/K=3 sensitivity/final Step 5 artifact finalization remains pending |
+| PDF report | Derived notebook sidecar: generated only from the executed notebook, with notebook SHA-256 and sidecar-role metadata embedded |
 | Final submission bundle | Planned in PR-48/PR-49 |
 | `main` branch protection | Repository ruleset still must be enabled in GitHub settings |
 
@@ -52,13 +52,13 @@ Immediately before commit and immediately before merge, it must show the branch 
 
 ## Scientific citation policy
 
-The technical notebook and standalone PDF report must both contain **verifiable scientific source attribution**. `reports/references.bib` is the canonical bibliography registry and is created in PR-05, then maintained only by serialized notebook PRs when a new source is required. These citation requirements are implementation requirements, not optional guidance.
+The technical notebook and its PDF sidecar must both contain **verifiable scientific source attribution**. `reports/references.bib` is the canonical bibliography registry and is created in PR-05, then maintained only by serialized notebook PRs when a new source is required. These citation requirements are implementation requirements, not optional guidance.
 
 The required citation standard is **MLA 9**: in-text citations are placed adjacent to externally sourced definitions, equations, methodological claims, and interpretations, and each artifact ends with a **Works Cited** section. Peer-reviewed papers and scholarly books/textbooks provide the academic support for Markov chains, HMM/EM/decoding, information criteria, performance metrics, and backtesting limitations. Official primary sources may additionally document Yahoo/Cboe/index/data definitions, but a bare URL or data-provider page does not substitute for scholarly support of theory or methodology.
 
 Every notebook/PDF citation must resolve to `reports/references.bib`; every entry rendered in an artifact's Works Cited must be cited in that artifact. Duplicate keys, invented metadata, unresolved citations, bibliography-only orphan entries, and URL-only pseudo-citations are invalid. Figures and tables include concise source notes distinguishing the team's own calculations from external data or methodology.
 
-The standalone PDF is a faithful rendering of the canonical executed notebook rather than a separately rewritten summary. Therefore the notebook's technical terminology, equations, code-orchestration cells, stored outputs, figures, MLA 9 in-text citations, source notes, and Works Cited are preserved in the PDF. The supplied course template remains the report cover.
+The PDF is a derived sidecar of the canonical executed notebook, not an independently authored report. The notebook is the single source of truth for analysis, equations, explanations, orchestration calls, stored outputs, tables, figures, citations, source notes, and Works Cited. The PDF may add only the supplied course-template cover before rendering the notebook in order; independent PDF-only analysis or wording is not permitted.
 
 ## Assignment implementation plan
 
@@ -114,6 +114,8 @@ The required backtest uses one **observed-trading-row** execution lag. ETF log r
 
 All three portfolios use identical comparison dates. Required metrics are cumulative return, annualized return, annualized volatility, zero-risk-free Sharpe ratio, and maximum drawdown. Maximum drawdown explicitly includes initial wealth `W_0 = 1` in the running peak so an initial loss is not incorrectly treated as zero drawdown.
 
+The notebook's cumulative-performance figure is deliberately explanatory rather than merely decorative: it shows the three full cumulative-return paths, their drawdown histories, direct endpoint percentage labels, and a terminal cumulative-return bar panel. This makes the historical comparison immediately readable while preserving the full path-dependent information needed to understand drawdowns and timing.
+
 Sensitivity compares two versus three states **within the preferred model family** on common dates.
 
 ### Important in-sample qualification
@@ -122,19 +124,19 @@ The assignment-required one-day lag delays execution but does **not** make this 
 
 ## Canonical analysis artifacts
 
-Primary technical notebook:
+Primary technical notebook and single analysis source of truth:
 
 ```text
 notebooks/gwp2_vix_regime_allocation.ipynb
 ```
 
-Executed-notebook duplicate:
+Executed-notebook HTML sidecar:
 
 ```text
 reports/gwp2_vix_regime_allocation.html
 ```
 
-Template-based notebook PDF report:
+Template-based PDF sidecar:
 
 ```text
 reports/Stochastic_Modeling_GWP2_Report.pdf
@@ -146,27 +148,27 @@ Canonical scientific-source registry:
 reports/references.bib
 ```
 
-The PDF uses page 1 of `reports/Template_Stochastic_Modeling_Group_Work_Project.pdf` as its course/group cover and excludes the template instruction page. Every notebook cell and stored output is then rendered in notebook order, including markdown, orchestration code, tables, figures, equations, citations, source notes, and Works Cited. `scripts/build_pdf_report.py` records the canonical notebook SHA-256 in the PDF metadata as `/NotebookSHA256` so a stale PDF can be detected without recomputing the analysis.
+The PDF uses page 1 of `reports/Template_Stochastic_Modeling_Group_Work_Project.pdf` as its course/group cover and excludes the template instruction page. Every notebook cell and stored output is then rendered in notebook order, including markdown, orchestration calls, tables, figures, equations, citations, source notes, and Works Cited. `scripts/build_pdf_report.py` records `/ArtifactRole=notebook-sidecar`, the source notebook path, and the canonical notebook SHA-256 in PDF metadata. `.github/workflows/report-sync.yml` rebuilds the PDF sidecar and rejects any SHA mismatch, so a stale or independently edited PDF cannot satisfy the sidecar contract.
 
 Parity policy:
 
 ```text
 Notebook <-> README: exact technical-result parity
 Notebook <-> HTML: exact executed-notebook duplicate
-Notebook <-> standalone PDF: exact rendered-notebook content parity
+Notebook -> PDF sidecar: exact rendered-notebook content parity
 Notebook/PDF citations -> reports/references.bib: resolved citation and Works-Cited integrity
 ```
 
 ## Final submission package
 
-The assignment requires a ZIP containing the executable notebook and its PDF/HTML duplicate, while the template-based PDF report is uploaded separately. PR-48/PR-49 therefore produce:
+The assignment requires a ZIP containing the executable notebook and its PDF/HTML duplicate, while the template-based PDF sidecar is uploaded separately. PR-48/PR-49 therefore produce:
 
 ```text
 dist/MScFE_622_GWP2_submission.zip
 reports/generated/submission_manifest.json
 ```
 
-The ZIP contains the notebook, HTML duplicate, README, `pyproject.toml`, canonical `reports/references.bib`, Step 1 processed data, and the local `src/vix_regime_allocation` Python package needed to keep the notebook executable. The standalone PDF is explicitly excluded from the ZIP and remains a separate upload. The bundle is deterministic and hash-manifested.
+The ZIP contains the notebook, HTML duplicate, README, `pyproject.toml`, canonical `reports/references.bib`, Step 1 processed data, and the local `src/vix_regime_allocation` Python package needed to keep the notebook executable. The PDF sidecar is explicitly excluded from the ZIP and remains a separate upload. The bundle is deterministic and hash-manifested.
 
 ## Development setup
 
@@ -201,7 +203,7 @@ Windows PowerShell:
 
 Ruff lint still examines supported Python and notebook code across the repository. The formatter gate is intentionally limited to the Python source, test, and script trees so the formatter does not rewrite the executed scientific notebook as a side effect of CI.
 
-The aggregate `quality-gate` requires all current jobs. PR-32 later adds the first `analysis-sidecars` parity job after the corresponding notebook/README/HTML/PDF artifacts exist; PR-47 extends that checker through Step 5.
+The aggregate `quality-gate` requires all current jobs. The README sidecar checker also validates the notebook-derived PDF sidecar workflow, including the artifact-role metadata and exact notebook SHA-256 parity check.
 
 `.github/workflows/auto-complete.yml` listens only to completed **Quality Gates** runs originating from pull requests. After successful Quality Gates, **Auto Complete** merges only an open, non-draft PR targeting `main` whose current head SHA is exactly the SHA that passed validation. If `main` advanced after that validation, the workflow updates the PR branch and waits for a fresh Quality Gates run instead of merging stale validation. A successful auto-complete uses a merge commit and requests deletion of the feature branch. The workflow does not check out or execute PR code and therefore keeps its write-scoped token isolated from untrusted test execution.
 
