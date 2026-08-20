@@ -86,15 +86,13 @@ def _step1() -> pd.DataFrame:
     # from the processed CSV alone. Every subsequent stored row must reconcile exactly.
     for asset in ("TLT", "GLD", "SPY"):
         expected = np.log(
-            data[asset].iloc[1:].to_numpy(dtype=float)
-            / data[asset].iloc[:-1].to_numpy(dtype=float)
+            data[asset].iloc[1:].to_numpy(dtype=float) / data[asset].iloc[:-1].to_numpy(dtype=float)
         )
         actual = data[f"{asset}_log_return"].iloc[1:].to_numpy(dtype=float)
         np.testing.assert_allclose(actual, expected, rtol=RTOL, atol=ATOL)
-    expected_vix_change = (
-        data["VIX"].iloc[1:].to_numpy(dtype=float)
-        - data["VIX"].iloc[:-1].to_numpy(dtype=float)
-    )
+    expected_vix_change = data["VIX"].iloc[1:].to_numpy(dtype=float) - data["VIX"].iloc[
+        :-1
+    ].to_numpy(dtype=float)
     np.testing.assert_allclose(
         data["VIX_change"].iloc[1:].to_numpy(dtype=float),
         expected_vix_change,
