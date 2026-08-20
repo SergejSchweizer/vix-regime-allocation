@@ -10,7 +10,7 @@ permissions:
 
 jobs:
   refresh:
-    if: github.event.head_commit.message == 'OPS — Refresh notebook visual and PDF sidecar'
+    if: github.event.head_commit.message == 'OPS — Run cumulative visual refresh'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout review branch
@@ -27,29 +27,34 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -e '.[dev]' ipykernel
-      - name: Execute canonical notebook
+      - name: Refresh notebook, figure, and PDF sidecar
+        shell: bash
         run: |
+          set +e
+          : > /tmp/refresh.log
           python -m jupyter nbconvert \
             --to notebook \
             --execute \
             --inplace \
             --ExecutePreprocessor.timeout=900 \
-            notebooks/gwp2_vix_regime_allocation.ipynb
-      - name: Build PDF sidecar
-        env:
-          CHROME_BIN: /usr/bin/google-chrome
-        run: python scripts/build_pdf_report.py
-      - name: Validate refreshed visual and sidecar
-        run: |
-          test -s reports/figures/step5_cumulative_performance.png
-          test -s reports/Stochastic_Modeling_GWP2_Report.pdf
-          python - <<'PY'
+            notebooks/gwp2_vix_regime_allocation.ipynb >> /tmp/refresh.log 2>&1
+          status=$?
+          if [ "$status" -eq 0 ]; then
+            CHROME_BIN=/usr/bin/google-chrome python scripts/build_pdf_report.py >> /tmp/refresh.log 2>&1
+            status=$?
+          fi
+          if [ "$status" -eq 0 ]; then
+            python - <<'PY' >> /tmp/refresh.log 2>&1
           import hashlib
           from pathlib import Path
           import nbformat
           from pypdf import PdfReader
 
+          figure = Path('reports/figures/step5_cumulative_performance.png')
+          report = Path('reports/Stochastic_Modeling_GWP2_Report.pdf')
           notebook_path = Path('notebooks/gwp2_vix_regime_allocation.ipynb')
+          assert figure.is_file() and figure.stat().st_size > 0
+          assert report.is_file() and report.stat().st_size > 0
           notebook = nbformat.read(notebook_path, as_version=4)
           assert not any(
               output.get('output_type') == 'error'
@@ -57,21 +62,31 @@ jobs:
               if cell.cell_type == 'code'
               for output in cell.get('outputs', [])
           )
-          metadata = PdfReader('reports/Stochastic_Modeling_GWP2_Report.pdf').metadata
+          metadata = PdfReader(report).metadata
           assert metadata.get('/ArtifactRole') == 'notebook-sidecar'
+          assert metadata.get('/SourceOfTruth') == 'notebooks/gwp2_vix_regime_allocation.ipynb'
           assert metadata.get('/NotebookSHA256') == hashlib.sha256(notebook_path.read_bytes()).hexdigest()
           PY
-      - name: Commit refreshed artifacts
+            status=$?
+          fi
+          tail -200 /tmp/refresh.log > .github/_tmp_refresh.log
+          echo "STATUS=$status" >> .github/_tmp_refresh.log
+          exit 0
+      - name: Commit refresh result
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add \
-            notebooks/gwp2_vix_regime_allocation.ipynb \
-            reports/figures/step5_cumulative_performance.png \
-            reports/Stochastic_Modeling_GWP2_Report.pdf
+          git add .github/_tmp_refresh.log
+          if grep -q '^STATUS=0$' .github/_tmp_refresh.log; then
+            git add \
+              notebooks/gwp2_vix_regime_allocation.ipynb \
+              reports/figures/step5_cumulative_performance.png \
+              reports/Stochastic_Modeling_GWP2_Report.pdf
+          fi
           if git diff --cached --quiet; then
-            echo 'No refreshed artifacts changed.'
+            echo 'No refresh changes.'
             exit 0
           fi
-          git commit -m 'SYNC — Refresh cumulative visual and PDF sidecar [skip ci]'
+          status=$(sed -n 's/^STATUS=//p' .github/_tmp_refresh.log | tail -1)
+          git commit -m "OPS — Cumulative visual refresh status ${status} [skip ci]"
           git push origin HEAD:report-sidecar-cumulative-visual
