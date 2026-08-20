@@ -57,10 +57,15 @@ def test_selection_rejects_non_validation_dates() -> None:
     }
     signals[("markov", 2)] = signals[("markov", 2)].copy()
     signals[("markov", 2)].loc[0, "return_date"] = pd.Timestamp("2021-01-04")
-    idx = pd.DatetimeIndex(
-        pd.to_datetime(["2015-01-05", "2015-01-06", "2015-01-07", "2015-01-08", "2015-01-09", "2021-01-04"]),
-        name="Date",
-    )
+    dates = [
+        "2015-01-05",
+        "2015-01-06",
+        "2015-01-07",
+        "2015-01-08",
+        "2015-01-09",
+        "2021-01-04",
+    ]
+    idx = pd.DatetimeIndex(pd.to_datetime(dates), name="Date")
     assets = pd.DataFrame(
         np.tile([0.001, 0.002, 0.003], (len(idx), 1)),
         index=idx,
