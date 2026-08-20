@@ -12,6 +12,7 @@ HTML = ROOT / "reports/gwp2_vix_regime_allocation.html"
 PDF = ROOT / "reports/Stochastic_Modeling_GWP2_Report.pdf"
 STEP5_CALL = "nb.step_5_performance_metrics_and_cumulative_compar_034()"
 SOURCE_DIGEST_KEY = "artifact_source_sha256"
+MATH_RENDERING_VERSION = "mathjax-latex-v1"
 
 
 def source_paths() -> list[Path]:
@@ -115,6 +116,8 @@ def validate_pdf(notebook_sha: str) -> None:
         raise RuntimeError("PDF source-of-truth metadata is invalid.")
     if metadata.get("/NotebookSHA256") != notebook_sha:
         raise RuntimeError("PDF was not built from the canonical executed notebook bytes.")
+    if metadata.get("/MathRenderingVersion") != MATH_RENDERING_VERSION:
+        raise RuntimeError("PDF was not built with the required LaTeX/MathJax rendering pipeline.")
 
 
 def main() -> None:
