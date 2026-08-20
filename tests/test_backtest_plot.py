@@ -47,7 +47,7 @@ def test_plot_delegates_once_per_portfolio_and_drawdown_includes_initial_wealth(
     assert expected_first_drawdown == pytest.approx(-0.01)
 
 
-def test_saved_figure_has_cumulative_and_drawdown_panels(
+def test_saved_figure_has_cumulative_and_drawdown_panels_with_terminal_labels(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
     observed: dict[str, object] = {}
@@ -56,6 +56,7 @@ def test_saved_figure_has_cumulative_and_drawdown_panels(
     def recording_savefig(self: plt.Figure, *args: object, **kwargs: object) -> None:
         cumulative_axis, drawdown_axis = self.axes
         observed["title"] = cumulative_axis.get_title()
+        observed["drawdown_title"] = drawdown_axis.get_title()
         observed["cum_ylabel"] = cumulative_axis.get_ylabel()
         observed["dd_ylabel"] = drawdown_axis.get_ylabel()
         observed["xlabel"] = drawdown_axis.get_xlabel()
@@ -69,11 +70,13 @@ def test_saved_figure_has_cumulative_and_drawdown_panels(
             for line in drawdown_axis.lines
             if not str(line.get_label()).startswith("_")
         ]
+        observed["terminal_labels"] = [text.get_text() for text in cumulative_axis.texts]
         original_savefig(self, *args, **kwargs)
 
     monkeypatch.setattr(plt.Figure, "savefig", recording_savefig)
     plot_cumulative_performance(_comparison(), tmp_path / "figure.png")
-    assert observed["title"] == "Step 5 Performance Comparison"
+    assert observed["title"] == "Cumulative Return: Regime Rotation vs Benchmarks"
+    assert observed["drawdown_title"] == "Drawdown over the same comparison period"
     assert observed["cum_ylabel"] == "Cumulative return"
     assert observed["dd_ylabel"] == "Drawdown"
     assert observed["xlabel"] == "Date"
@@ -83,6 +86,7 @@ def test_saved_figure_has_cumulative_and_drawdown_panels(
         "SPY buy and hold",
     ]
     assert observed["dd_lines"] == observed["cum_lines"]
+    assert observed["terminal_labels"] == ["2.0%", "3.0%", "2.0%"]
 
 
 @pytest.mark.parametrize(
