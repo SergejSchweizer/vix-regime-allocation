@@ -163,6 +163,24 @@ jobs:
           MPLBACKEND: Agg
         run: python scripts/check_analysis_consistency.py
 
+  artifact-provenance:
+    name: artifact-provenance
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - name: Install project
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+      - name: Verify notebook HTML PDF provenance
+        run: python scripts/check_artifact_provenance.py
+
   coverage:
     name: coverage
     runs-on: ubuntu-latest
@@ -213,6 +231,7 @@ jobs:
       - backlog-contract
       - repository-hygiene
       - analysis-consistency
+      - artifact-provenance
       - coverage
     steps:
       - name: Require every quality gate
@@ -225,6 +244,7 @@ jobs:
           BACKLOG_CONTRACT: ${{ needs['backlog-contract'].result }}
           REPOSITORY_HYGIENE: ${{ needs['repository-hygiene'].result }}
           ANALYSIS_CONSISTENCY: ${{ needs['analysis-consistency'].result }}
+          ARTIFACT_PROVENANCE: ${{ needs['artifact-provenance'].result }}
           COVERAGE: ${{ needs.coverage.result }}
         run: |
           test "$LINT" = "success"
@@ -235,4 +255,5 @@ jobs:
           test "$BACKLOG_CONTRACT" = "success"
           test "$REPOSITORY_HYGIENE" = "success"
           test "$ANALYSIS_CONSISTENCY" = "success"
+          test "$ARTIFACT_PROVENANCE" = "success"
           test "$COVERAGE" = "success"
