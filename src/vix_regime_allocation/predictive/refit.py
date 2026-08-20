@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import cast
+
 import pandas as pd
 
 from .split import is_monthly_refit
@@ -21,7 +23,7 @@ def build_refit_schedule(
     first = pd.Timestamp(first_decision_date)
     if first not in index:
         raise ValueError("first_decision_date must be an observed row.")
-    first_position = int(index.get_indexer([first])[0])
+    first_position = cast(int, index.get_loc(first))
     if first_position == 0:
         raise ValueError("first_decision_date requires at least one prior training row.")
     decisions = index[first_position:-1]
@@ -33,7 +35,7 @@ def build_refit_schedule(
     for decision in decisions:
         refit = is_monthly_refit(previous, decision)
         if refit:
-            position = int(index.get_indexer([decision])[0])
+            position = cast(int, index.get_loc(decision))
             active_training_end = index[position - 1]
         if active_training_end >= decision:
             raise RuntimeError("training_end must precede decision_date.")
