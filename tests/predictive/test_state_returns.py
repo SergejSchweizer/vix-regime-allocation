@@ -14,7 +14,11 @@ from vix_regime_allocation.predictive.state_returns import (
 def _returns() -> pd.DataFrame:
     idx = pd.date_range("2020-01-01", periods=4, name="Date")
     return pd.DataFrame(
-        {"TLT": [0.0, 0.02, 0.01, 0.03], "GLD": [0.01, 0.03, 0.02, 0.04], "SPY": [0.02, 0.04, 0.03, 0.05]},
+        {
+            "TLT": [0.0, 0.02, 0.01, 0.03],
+            "GLD": [0.01, 0.03, 0.02, 0.04],
+            "SPY": [0.02, 0.04, 0.03, 0.05],
+        },
         index=idx,
     )
 
@@ -41,6 +45,9 @@ def test_state_return_validation() -> None:
     states = pd.Series([0, 0, 0, 0], index=returns.index)
     with pytest.raises(ValueError):
         hard_state_asset_means(returns, states, 2)
-    probs = pd.DataFrame({"state_0": [1.0] * 4, "state_1": [0.0] * 4}, index=returns.index)
+    probs = pd.DataFrame(
+        {"state_0": [1.0] * 4, "state_1": [0.0] * 4},
+        index=returns.index,
+    )
     with pytest.raises(ValueError):
         soft_state_asset_means(returns, probs)
