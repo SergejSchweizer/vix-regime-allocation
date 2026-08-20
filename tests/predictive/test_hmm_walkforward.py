@@ -42,9 +42,7 @@ def test_hmm_walkforward_consumes_current_observation_only(monkeypatch: pytest.M
 
     observed: list[float] = []
 
-    def fake_filter(
-        fitted: HMMFilterModel, alpha: np.ndarray, observation: float
-    ) -> np.ndarray:
+    def fake_filter(fitted: HMMFilterModel, alpha: np.ndarray, observation: float) -> np.ndarray:
         observed.append(observation)
         return np.array([0.6, 0.4])
 
