@@ -69,7 +69,7 @@ def build_markov_signals(
         current_vix = float(cast(float, data.at[decision, "VIX_change"]))
         next_probabilities = forecast_next_regime(model, current_vix)
         expected = expected_asset_returns(next_probabilities, state_means)
-        position = int(index.get_indexer([decision])[0])
+        position = cast(int, index.get_loc(decision))
         return_date = index[position + 1]
         row: dict[str, object] = {
             "decision_date": decision,
