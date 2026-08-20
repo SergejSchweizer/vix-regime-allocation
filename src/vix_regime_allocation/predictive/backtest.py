@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import cast
+
 import numpy as np
 import pandas as pd
 
@@ -71,16 +73,16 @@ def run_candidate_backtest(
         selected = choose_asset(expected, current_asset, hurdle_bps)
         weights = one_hot_weights(selected)
         turn = turnover(previous_weights, weights)
-        return_date = pd.Timestamp(row.return_date)
-        gross = float(asset_returns.at[return_date, selected])
+        return_date = cast(pd.Timestamp, row.return_date)
+        gross = float(cast(float, asset_returns.at[return_date, selected]))
         net = apply_transaction_cost(gross, turn, cost_bps)
         transaction_cost = gross - net
         rows.append(
             {
-                "decision_date": pd.Timestamp(row.decision_date),
+                "decision_date": cast(pd.Timestamp, row.decision_date),
                 "return_date": return_date,
                 "family": str(row.family),
-                "n_states": int(row.n_states),
+                "n_states": int(cast(int, row.n_states)),
                 "switch_hurdle_bps": float(hurdle_bps),
                 "selected_asset": selected,
                 "TLT_weight": float(weights[0]),
