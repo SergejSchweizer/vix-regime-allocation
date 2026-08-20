@@ -38,9 +38,7 @@ def _validate_training(series: pd.Series, n_states: int) -> np.ndarray:
     return values
 
 
-def fit_markov_forecaster(
-    training_vix_change: pd.Series, n_states: int
-) -> MarkovForecastModel:
+def fit_markov_forecaster(training_vix_change: pd.Series, n_states: int) -> MarkovForecastModel:
     """Fit quantile thresholds and a transition matrix from training data only."""
 
     values = _validate_training(training_vix_change, n_states)
@@ -55,9 +53,7 @@ def fit_markov_forecaster(
     if np.any(outgoing == 0.0):
         raise ValueError("each Markov state requires at least one outgoing transition.")
     transition = counts / outgoing[:, None]
-    if not np.allclose(
-        transition.sum(axis=1), 1.0, atol=PROBABILITY_TOL, rtol=0.0
-    ):
+    if not np.allclose(transition.sum(axis=1), 1.0, atol=PROBABILITY_TOL, rtol=0.0):
         raise ValueError("transition rows must sum to one.")
     states = pd.Series(
         states_values,
@@ -68,9 +64,7 @@ def fit_markov_forecaster(
     return MarkovForecastModel(n_states, thresholds, transition, states)
 
 
-def forecast_next_regime(
-    model: MarkovForecastModel, current_vix_change: float
-) -> np.ndarray:
+def forecast_next_regime(model: MarkovForecastModel, current_vix_change: float) -> np.ndarray:
     """Return P(S[t+1] | observed VIX_change[t]) from the frozen transition row."""
 
     value = float(current_vix_change)
