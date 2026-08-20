@@ -6,35 +6,67 @@ from pathlib import Path
 
 import nbformat
 
-# Python string literals can silently turn LaTeX commands such as \neq, \theta,
-# \frac, \beta, \rho, and \alpha into control characters when Markdown is
-# generated programmatically with a single backslash.  Repair only inside math
-# delimiters so prose and code remain untouched.
-ACCIDENTAL_ESCAPES: tuple[tuple[str, str], ...] = (
-    ("\neq", r"\neq"),
-    ("\nabla", r"\nabla"),
-    ("\nu", r"\nu"),
-    ("\theta", r"\theta"),
-    ("\tau", r"\tau"),
-    ("\text", r"\text"),
-    ("\times", r"\times"),
-    ("\frac", r"\frac"),
-    ("\beta", r"\beta"),
-    ("\rho", r"\rho"),
-    ("\alpha", r"\alpha"),
-)
-
+# Programmatically generated Markdown can corrupt LaTeX when a normal Python
+# string contains a single backslash.  Python consumes \a, \b, \f, \n, \r,
+# \t, and \v as control escapes before nbformat ever sees the text.  Repair
+# those artifacts only inside math delimiters so prose and code stay untouched.
 MATH_SPAN = re.compile(
     r"\$\$.*?\$\$|\\\[.*?\\\]|\\\(.*?\\\)|(?<!\$)\$(?!\$)[^$\n]+?\$(?!\$)",
     re.DOTALL,
 )
 
+# These control characters are not meaningful formatting inside a LaTeX math
+# span.  Reconstruct the command prefix and preserve the following letters, so
+# examples such as backspace + "egin" and form-feed + "rac" become \begin and
+# \frac without hard-coding every b/f/r/a/v-prefixed command.
+CONTROL_PREFIXES: tuple[tuple[str, str], ...] = (
+    ("\a", "a"),
+    ("\b", "b"),
+    ("\f", "f"),
+    ("\r", "r"),
+    ("\v", "v"),
+)
+
+# Newline and tab are legitimate layout characters, so repair only known LaTeX
+# commands whose leading \n or \t may have been consumed by Python.
+NEWLINE_COMMANDS = (
+    "nabla",
+    "neq",
+    "nonumber",
+    "not",
+    "nu",
+)
+TAB_COMMANDS = (
+    "tau",
+    "text",
+    "tfrac",
+    "theta",
+    "therefore",
+    "tilde",
+    "times",
+    "to",
+    "top",
+)
+
+
+def _repair_control_prefixes(text: str) -> str:
+    for control, prefix in CONTROL_PREFIXES:
+        pattern = re.compile(re.escape(control) + r"([A-Za-z]+)")
+        text = pattern.sub(lambda match: "\\" + prefix + match.group(1), text)
+    return text
+
+
+def _repair_known_layout_escapes(text: str) -> str:
+    for command in NEWLINE_COMMANDS:
+        text = text.replace("\n" + command[1:], "\\" + command)
+    for command in TAB_COMMANDS:
+        text = text.replace("\t" + command[1:], "\\" + command)
+    return text
+
 
 def _repair_math(match: re.Match[str]) -> str:
-    text = match.group(0)
-    for broken, latex in ACCIDENTAL_ESCAPES:
-        text = text.replace(broken, latex)
-    return text
+    text = _repair_control_prefixes(match.group(0))
+    return _repair_known_layout_escapes(text)
 
 
 def normalize_notebook(path: Path) -> bool:
