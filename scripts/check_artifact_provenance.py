@@ -69,12 +69,16 @@ def validate_notebook() -> tuple[str, str]:
         for output in cell.get("outputs", []):
             if output.get("output_type") == "error":
                 failures.append(
-                    f"cell {index}: {output.get('ename', 'Error')}: {output.get('evalue', '')}"
+                    f"cell {index}: {output.get('ename', 'Error')}: "
+                    f"{output.get('evalue', '')}"
                 )
     if failures:
         raise RuntimeError("Notebook contains failed outputs: " + "; ".join(failures))
     if len(step5_matches) != 1:
-        raise RuntimeError(f"Expected exactly one Step 5 cumulative-output cell, found {len(step5_matches)}.")
+        raise RuntimeError(
+            "Expected exactly one Step 5 cumulative-output cell, "
+            f"found {len(step5_matches)}."
+        )
     if not any(
         output.get("output_type") in {"display_data", "execute_result"}
         and "image/png" in output.get("data", {})
@@ -95,9 +99,9 @@ def validate_html(source_sha: str, notebook_sha: str) -> None:
         raise RuntimeError("Canonical HTML report is missing or empty.")
     prefix = HTML.read_text(encoding="utf-8", errors="strict")[:2048]
     if f"ArtifactSourceSHA256:{source_sha}" not in prefix:
-        raise RuntimeError("HTML source digest does not match the executed notebook source inputs.")
+        raise RuntimeError("HTML source digest does not match the notebook source inputs.")
     if f"NotebookSHA256:{notebook_sha}" not in prefix:
-        raise RuntimeError("HTML notebook digest does not match the canonical executed notebook.")
+        raise RuntimeError("HTML notebook digest does not match the canonical notebook.")
 
 
 def validate_pdf(notebook_sha: str) -> None:
@@ -105,6 +109,8 @@ def validate_pdf(notebook_sha: str) -> None:
         raise RuntimeError("Canonical PDF report is missing or empty.")
     reader = PdfReader(str(PDF))
     metadata = reader.metadata
+    if metadata is None:
+        raise RuntimeError("PDF metadata is missing.")
     if metadata.get("/ArtifactRole") != "notebook-sidecar":
         raise RuntimeError("PDF is missing the notebook-sidecar artifact role.")
     if metadata.get("/SourceOfTruth") != "notebooks/gwp2_vix_regime_allocation.ipynb":
