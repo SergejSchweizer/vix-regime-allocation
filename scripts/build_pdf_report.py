@@ -8,8 +8,8 @@ import tempfile
 from io import BytesIO
 from pathlib import Path
 
-import nbformat
 from nbconvert import HTMLExporter
+import nbformat
 from pypdf import PdfReader, PdfWriter
 from reportlab.pdfgen import canvas
 
