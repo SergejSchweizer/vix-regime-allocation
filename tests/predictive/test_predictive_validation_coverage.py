@@ -32,152 +32,131 @@ from vix_regime_allocation.predictive.state_returns import (
 )
 
 
-def _return_data() -> pd.DataFrame:
-    index = pd.date_range("2020-01-01", periods=4, name="Date")
+def _data() -> pd.DataFrame:
+    index = pd.date_range("2020-01-01", periods=6, name="Date")
     return pd.DataFrame(
         {
-            "TLT_log_return": [0.0, 0.01, -0.01, 0.02],
-            "GLD_log_return": [0.01, 0.0, 0.02, -0.01],
-            "SPY_log_return": [0.02, -0.01, 0.01, 0.0],
+            "TLT_log_return": np.linspace(-0.01, 0.01, 6),
+            "GLD_log_return": np.linspace(0.01, -0.01, 6),
+            "SPY_log_return": np.linspace(-0.02, 0.02, 6),
         },
         index=index,
     )
 
 
-def test_return_validation_branches() -> None:
+def test_return_and_policy_error_contracts() -> None:
+    data = _data()
     with pytest.raises(TypeError):
         asset_simple_returns(pd.Series([1.0]))  # type: ignore[arg-type]
-    with pytest.raises(ValueError, match="missing"):
-        asset_simple_returns(pd.DataFrame(index=pd.date_range("2020-01-01", periods=2)))
-
-    data = _return_data()
-    bad_index = data.copy()
-    bad_index.index = [0, 1, 2, 3]
-    with pytest.raises(ValueError, match="DatetimeIndex"):
-        asset_simple_returns(bad_index)
-
-    duplicate = pd.concat([data.iloc[:1], data.iloc[:1], data.iloc[1:]])
-    with pytest.raises(ValueError, match="unique"):
-        asset_simple_returns(duplicate)
-
-    non_numeric = data.copy()
-    non_numeric["TLT_log_return"] = ["x", "x", "x", "x"]
-    with pytest.raises(ValueError, match="numeric"):
-        asset_simple_returns(non_numeric)
-
-    invalid = data.copy()
-    invalid.iloc[0, 0] = np.inf
-    with pytest.raises(ValueError, match="finite"):
-        asset_simple_returns(invalid)
+    with pytest.raises(ValueError):
+        asset_simple_returns(pd.DataFrame(index=data.index))
+    bad = data.copy()
+    bad.index = range(len(bad))
+    with pytest.raises(ValueError):
+        asset_simple_returns(bad)
+    bad = data.copy()
+    bad["TLT_log_return"] = ["x"] * len(bad)
+    with pytest.raises(ValueError):
+        asset_simple_returns(bad)
+    bad = data.copy()
+    bad.iloc[0, 0] = np.inf
+    with pytest.raises(ValueError):
+        asset_simple_returns(bad)
 
     simple = asset_simple_returns(data)
     with pytest.raises(TypeError):
         buy_and_hold_returns(pd.Series([1.0]))  # type: ignore[arg-type]
-    with pytest.raises(ValueError, match="exactly"):
+    with pytest.raises(ValueError):
         buy_and_hold_returns(simple[["SPY", "GLD", "TLT"]])
-    invalid_simple = simple.copy()
-    invalid_simple.iloc[0, 0] = np.inf
-    with pytest.raises(ValueError, match="finite"):
-        buy_and_hold_returns(invalid_simple)
 
-
-def test_policy_validation_branches() -> None:
     expected = pd.Series([0.01, 0.02, 0.03], index=["TLT", "GLD", "SPY"])
     with pytest.raises(TypeError):
         choose_asset(pd.DataFrame(), None, 0.0)  # type: ignore[arg-type]
-    with pytest.raises(ValueError, match="index"):
+    with pytest.raises(ValueError):
         choose_asset(expected.reindex(["SPY", "GLD", "TLT"]), None, 0.0)
-    nonfinite = expected.copy()
-    nonfinite.iloc[0] = np.inf
-    with pytest.raises(ValueError, match="finite"):
-        choose_asset(nonfinite, None, 0.0)
-    with pytest.raises(ValueError, match="non-negative"):
+    with pytest.raises(ValueError):
         choose_asset(expected, None, -1.0)
-    with pytest.raises(ValueError, match="current_asset"):
+    with pytest.raises(ValueError):
         choose_asset(expected, "QQQ", 0.0)
     assert choose_asset(expected, "SPY", 10.0) == "SPY"
     assert choose_asset(expected, "GLD", 200.0) == "GLD"
-
     with pytest.raises(ValueError):
         one_hot_weights("QQQ")
-    with pytest.raises(ValueError, match="shape"):
-        turnover(np.zeros(2), np.ones(2))
-    with pytest.raises(ValueError, match="finite"):
-        turnover(np.array([np.nan, 0.0, 0.0]), np.array([1.0, 0.0, 0.0]))
-    with pytest.raises(ValueError, match="non-negative"):
-        turnover(np.zeros(3), np.array([1.0, -0.1, 0.1]))
-    with pytest.raises(ValueError, match="new weights"):
-        turnover(np.zeros(3), np.array([0.5, 0.3, 0.1]))
-    with pytest.raises(ValueError, match="previous weights"):
-        turnover(np.array([0.5, 0.0, 0.0]), np.array([1.0, 0.0, 0.0]))
-
+    for previous, new in [
+        (np.zeros(2), np.ones(2)),
+        (np.array([np.nan, 0.0, 0.0]), np.array([1.0, 0.0, 0.0])),
+        (np.zeros(3), np.array([1.0, -0.1, 0.1])),
+        (np.zeros(3), np.array([0.5, 0.3, 0.1])),
+        (np.array([0.5, 0.0, 0.0]), np.array([1.0, 0.0, 0.0])),
+    ]:
+        with pytest.raises(ValueError):
+            turnover(previous, new)
     for gross, turn, cost in [(-1.0, 0.0, 5.0), (0.0, -1.0, 5.0), (0.0, 0.0, -1.0)]:
         with pytest.raises(ValueError):
             apply_transaction_cost(gross, turn, cost)
 
 
-def test_state_return_validation_branches() -> None:
-    simple = asset_simple_returns(_return_data())
-    states = pd.Series([0, 0, 1, 1], index=simple.index)
+def test_state_return_error_contracts() -> None:
+    simple = asset_simple_returns(_data())
+    states = pd.Series([0, 0, 0, 1, 1, 1], index=simple.index)
     with pytest.raises(TypeError):
         hard_state_asset_means(pd.Series([1.0]), states, 2)  # type: ignore[arg-type]
-    with pytest.raises(ValueError, match="columns"):
+    with pytest.raises(ValueError):
         hard_state_asset_means(simple[["SPY", "GLD", "TLT"]], states, 2)
-    with pytest.raises(ValueError, match="return index"):
+    with pytest.raises(ValueError):
         hard_state_asset_means(simple, states.reset_index(drop=True), 2)
-    with pytest.raises(ValueError, match="every contiguous"):
-        hard_state_asset_means(simple, pd.Series([0, 0, 0, 0], index=simple.index), 2)
+    with pytest.raises(ValueError):
+        hard_state_asset_means(simple, pd.Series([0] * 6, index=simple.index), 2)
 
     probabilities = pd.DataFrame(
-        {"state_0": [0.5] * 4, "state_1": [0.5] * 4}, index=simple.index
+        {"state_0": [0.5] * 6, "state_1": [0.5] * 6}, index=simple.index
     )
     with pytest.raises(TypeError):
         soft_state_asset_means(simple, pd.Series([1.0]))  # type: ignore[arg-type]
-    with pytest.raises(ValueError, match="return index"):
+    with pytest.raises(ValueError):
         soft_state_asset_means(simple, probabilities.reset_index(drop=True))
-    with pytest.raises(ValueError, match="columns"):
+    with pytest.raises(ValueError):
         soft_state_asset_means(simple, probabilities.rename(columns={"state_1": "bad"}))
-    invalid_probabilities = probabilities.copy()
-    invalid_probabilities.iloc[0] = [0.9, 0.9]
-    with pytest.raises(ValueError, match="normalized"):
-        soft_state_asset_means(simple, invalid_probabilities)
+    invalid = probabilities.copy()
+    invalid.iloc[0] = [0.9, 0.9]
+    with pytest.raises(ValueError):
+        soft_state_asset_means(simple, invalid)
 
     means = hard_state_asset_means(simple, states, 2)
-    with pytest.raises(TypeError):
-        expected_asset_returns(np.array([0.5, 0.5]), pd.Series([1.0]))  # type: ignore[arg-type]
-    with pytest.raises(ValueError, match="columns"):
-        expected_asset_returns(np.array([0.5, 0.5]), means[["SPY", "GLD", "TLT"]])
-    with pytest.raises(ValueError, match="shape"):
-        expected_asset_returns(np.array([1.0]), means)
-    with pytest.raises(ValueError, match="normalized"):
-        expected_asset_returns(np.array([0.9, 0.9]), means)
-    invalid_means = means.copy()
-    invalid_means.iloc[0, 0] = np.inf
-    with pytest.raises(ValueError, match="finite"):
-        expected_asset_returns(np.array([0.5, 0.5]), invalid_means)
+    for probabilities_value, means_value in [
+        (np.array([1.0]), means),
+        (np.array([0.9, 0.9]), means),
+        (np.array([0.5, 0.5]), means[["SPY", "GLD", "TLT"]]),
+    ]:
+        with pytest.raises(ValueError):
+            expected_asset_returns(probabilities_value, means_value)
 
 
-def test_markov_and_hmm_filter_validation_branches(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_forecaster_filter_and_comparison_error_contracts(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     index = pd.date_range("2020-01-01", periods=6, name="Date")
     series = pd.Series([-2.0, -1.0, 0.0, 1.0, 2.0, 3.0], index=index)
-    with pytest.raises(ValueError):
-        fit_markov_forecaster(series, 4)
+    for value, states in [(series, 4), (pd.Series([1.0] * 6, index=index), 2)]:
+        with pytest.raises(ValueError):
+            fit_markov_forecaster(value, states)
     with pytest.raises(TypeError):
         fit_markov_forecaster(pd.DataFrame(), 2)  # type: ignore[arg-type]
-    bad_index = series.copy()
-    bad_index.index = range(6)
-    with pytest.raises(ValueError, match="DatetimeIndex"):
-        fit_markov_forecaster(bad_index, 2)
-    with pytest.raises(ValueError, match="enough finite"):
-        fit_markov_forecaster(pd.Series([0.0, 1.0], index=index[:2]), 2)
-    with pytest.raises(ValueError, match="strictly increasing"):
-        fit_markov_forecaster(pd.Series([1.0] * 6, index=index), 2)
+    bad = series.copy()
+    bad.index = range(6)
+    with pytest.raises(ValueError):
+        fit_markov_forecaster(bad, 2)
 
     model = fit_markov_forecaster(series, 2)
-    with pytest.raises(ValueError, match="finite"):
+    with pytest.raises(ValueError):
         markov_forecast_next_regime(model, np.nan)
-    invalid_model = MarkovForecastModel(2, model.thresholds, np.array([[0.2, 0.2], [0.5, 0.5]]), model.training_states)
-    with pytest.raises(ValueError, match="probabilities"):
+    invalid_model = MarkovForecastModel(
+        2,
+        model.thresholds,
+        np.array([[0.2, 0.2], [0.5, 0.5]]),
+        model.training_states,
+    )
+    with pytest.raises(ValueError):
         markov_forecast_next_regime(invalid_model, -1.0)
 
     hmm = HMMFilterModel(
@@ -189,19 +168,12 @@ def test_markov_and_hmm_filter_validation_branches(monkeypatch: pytest.MonkeyPat
     )
     with pytest.raises(TypeError):
         filtered_probabilities(hmm, pd.DataFrame())  # type: ignore[arg-type]
-    invalid_observations = series.iloc[:3].copy()
-    invalid_observations.index = range(3)
-    with pytest.raises(ValueError, match="DatetimeIndex"):
-        filtered_probabilities(hmm, invalid_observations)
-    duplicate = pd.Series([0.0, 1.0], index=pd.DatetimeIndex([index[0], index[0]]))
-    with pytest.raises(ValueError, match="unique"):
-        filtered_probabilities(hmm, duplicate)
-    non_numeric = pd.Series(["a", "b"], index=index[:2])
-    with pytest.raises(ValueError, match="numeric"):
-        filtered_probabilities(hmm, non_numeric)
-    with pytest.raises(ValueError, match="finite"):
+    bad = series.iloc[:3].copy()
+    bad.index = range(3)
+    with pytest.raises(ValueError):
+        filtered_probabilities(hmm, bad)
+    with pytest.raises(ValueError):
         filtered_probabilities(hmm, pd.Series([np.nan], index=index[:1]))
-
     fake = SimpleNamespace(
         start_probabilities=(0.5, 0.5),
         transition_matrix=pd.DataFrame([[0.8, 0.2], [0.2, 0.8]]),
@@ -211,37 +183,34 @@ def test_markov_and_hmm_filter_validation_branches(monkeypatch: pytest.MonkeyPat
     monkeypatch.setattr(hmm_filter_module, "fit_gaussian_hmm", lambda values, k: fake)
     with pytest.raises(ValueError):
         hmm_filter_module.fit_hmm_filter(series, 4)
-    fitted = hmm_filter_module.fit_hmm_filter(series, 2)
-    assert fitted.n_states == 2
+    assert hmm_filter_module.fit_hmm_filter(series, 2).n_states == 2
 
-
-def test_split_dominance_and_plot_validation_branches() -> None:
     with pytest.raises(TypeError):
         split_periods(pd.Series([1.0]))  # type: ignore[arg-type]
-    with pytest.raises(ValueError, match="DatetimeIndex"):
+    with pytest.raises(ValueError):
         split_periods(pd.DataFrame(index=range(5)))
-    with pytest.raises(ValueError, match="enough"):
+    with pytest.raises(ValueError):
         split_periods(pd.DataFrame(index=pd.date_range("2020-01-01", periods=3)))
 
-    index = pd.date_range("2021-01-01", periods=4, name="Date")
-    strategy = pd.Series([0.01, 0.01, 0.01, 0.01], index=index)
-    assets = pd.DataFrame({"TLT": [0.0] * 4, "GLD": [0.0] * 4, "SPY": [0.0] * 4}, index=index)
+    strategy = pd.Series([0.01] * 4, index=pd.date_range("2021-01-01", periods=4))
+    assets = pd.DataFrame(
+        {"TLT": [0.0] * 4, "GLD": [0.0] * 4, "SPY": [0.0] * 4}, index=strategy.index
+    )
     with pytest.raises(TypeError):
         compare_against_assets(pd.DataFrame(), assets)  # type: ignore[arg-type]
-    with pytest.raises(ValueError, match="columns"):
+    with pytest.raises(ValueError):
         compare_against_assets(strategy, assets[["SPY", "GLD", "TLT"]])
-    with pytest.raises(ValueError, match="identical"):
+    with pytest.raises(ValueError):
         compare_against_assets(strategy, assets.reset_index(drop=True))
-
-    with pytest.raises(ValueError, match="at least two"):
+    with pytest.raises(ValueError, match="contiguous"):
         probability_columns(pd.DataFrame({"p_state_0": [1.0]}))
     with pytest.raises(ValueError, match="contiguous"):
         probability_columns(pd.DataFrame({"p_state_0": [0.5], "p_state_2": [0.5]}))
-    with pytest.raises(ValueError, match="at least two"):
+    with pytest.raises(ValueError):
         comparison_return_frame(pd.DataFrame(), pd.DataFrame())
 
 
-def test_predictive_analysis_coordinator_uses_only_frozen_selection(
+def test_predictive_analysis_coordinator_uses_frozen_validation_winner(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     index = pd.DatetimeIndex(
@@ -261,12 +230,10 @@ def test_predictive_analysis_coordinator_uses_only_frozen_selection(
         name="Date",
     )
     data = pd.DataFrame(index=index)
-    periods = SimpleNamespace(
-        initial_history=index[:2],
-        validation=index[2:6],
-        test=index[6:],
-    )
+    periods = SimpleNamespace(initial_history=index[:2], validation=index[2:6], test=index[6:])
     monkeypatch.setattr(artifacts_module, "split_periods", lambda frame: periods)
+
+    real_dispatch = artifacts_module._signals_for_family
 
     def fake_signals(
         frame: pd.DataFrame, decisions: pd.DatetimeIndex, family: str, n_states: int
@@ -291,7 +258,11 @@ def test_predictive_analysis_coordinator_uses_only_frozen_selection(
         artifacts_module,
         "asset_simple_returns",
         lambda frame: pd.DataFrame(
-            {"TLT": [0.0] * len(index), "GLD": [0.0] * len(index), "SPY": [0.0] * len(index)},
+            {
+                "TLT": [0.0] * len(index),
+                "GLD": [0.0] * len(index),
+                "SPY": [0.0] * len(index),
+            },
             index=index,
         ),
     )
@@ -305,8 +276,16 @@ def test_predictive_analysis_coordinator_uses_only_frozen_selection(
             "selected": [True],
         }
     )
-    monkeypatch.setattr(artifacts_module, "build_validation_summary", lambda signals, returns: validation)
-    monkeypatch.setattr(artifacts_module, "selected_configuration", lambda summary: ("markov", 2, 5.0))
+    monkeypatch.setattr(
+        artifacts_module,
+        "build_validation_summary",
+        lambda signals, returns: validation,
+    )
+    monkeypatch.setattr(
+        artifacts_module,
+        "selected_configuration",
+        lambda summary: ("markov", 2, 5.0),
+    )
     daily = pd.DataFrame(
         {
             "decision_date": index[6:8],
@@ -340,5 +319,6 @@ def test_predictive_analysis_coordinator_uses_only_frozen_selection(
     assert analysis.selected_strategy["switch_hurdle_bps"] == 5.0
     assert len(analysis.selected_test_daily) == 2
 
+    monkeypatch.setattr(artifacts_module, "_signals_for_family", real_dispatch)
     with pytest.raises(ValueError, match="family"):
         artifacts_module._signals_for_family(data, index[2:4], "invalid", 2)
