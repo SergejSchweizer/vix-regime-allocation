@@ -20,6 +20,7 @@ dependencies = [
 [project.optional-dependencies]
 dev = [
     "coverage[toml]>=7.6",
+    "ipython>=8.0",
     "mypy>=1.11",
     "nbclient>=0.10",
     "nbconvert>=7.16",
