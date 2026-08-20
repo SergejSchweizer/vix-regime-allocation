@@ -17,7 +17,7 @@ ROOT = Path(__file__).resolve().parents[1]
 NOTEBOOK = ROOT / "notebooks" / "gwp2_vix_regime_allocation.ipynb"
 TEMPLATE = ROOT / "reports" / "Template_Stochastic_Modeling_Group_Work_Project.pdf"
 OUTPUT = ROOT / "reports" / "Stochastic_Modeling_GWP2_Report.pdf"
-MATH_RENDERING_VERSION = "mathjax-latex-v1"
+MATH_RENDERING_VERSION = "mathjax-latex-v2"
 
 GROUP_NUMBER = "739"
 GROUP_MEMBERS = (
@@ -39,20 +39,39 @@ PRINT_MATH_STYLE = """
 </style>
 """
 
+# nbconvert currently emits MathJax 2 HTML, while newer exporters can emit
+# MathJax 3.  Queue an explicit final typeset for either API and expose a
+# deterministic readiness marker for diagnostics before Chromium prints.
 MATH_READY_SCRIPT = """
 <script id="report-math-ready-script">
-window.addEventListener("load", async () => {
+window.__reportMathReady = false;
+window.addEventListener("load", () => {
+  const done = (state) => {
+    document.documentElement.dataset.mathjaxReady = state;
+    window.__reportMathReady = state === "true";
+  };
   try {
+    if (window.MathJax && window.MathJax.Hub && window.MathJax.Hub.Queue) {
+      window.MathJax.Hub.Queue(
+        ["Typeset", window.MathJax.Hub],
+        () => done("true")
+      );
+      return;
+    }
     if (window.MathJax && window.MathJax.startup && window.MathJax.startup.promise) {
-      await window.MathJax.startup.promise;
+      window.MathJax.startup.promise
+        .then(() => window.MathJax.typesetPromise ? window.MathJax.typesetPromise() : null)
+        .then(() => done("true"))
+        .catch((error) => {
+          console.error("MathJax rendering failed", error);
+          done("error");
+        });
+      return;
     }
-    if (window.MathJax && window.MathJax.typesetPromise) {
-      await window.MathJax.typesetPromise();
-    }
-    document.documentElement.dataset.mathjaxReady = "true";
+    done("missing");
   } catch (error) {
-    document.documentElement.dataset.mathjaxReady = "error";
     console.error("MathJax rendering failed", error);
+    done("error");
   }
 });
 </script>
@@ -124,7 +143,7 @@ def _print_html_to_pdf(html_path: Path, pdf_path: Path) -> None:
         "--allow-file-access-from-files",
         "--no-pdf-header-footer",
         "--run-all-compositor-stages-before-draw",
-        "--virtual-time-budget=15000",
+        "--virtual-time-budget=30000",
         f"--print-to-pdf={pdf_path}",
         html_path.resolve().as_uri(),
     ]
