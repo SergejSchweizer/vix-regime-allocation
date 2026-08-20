@@ -91,9 +91,7 @@ def forecast_next_regime(model: HMMFilterModel, filtered: np.ndarray) -> np.ndar
     return _validate_probability_vector(forecast, model.n_states).copy()
 
 
-def filtered_probabilities(
-    model: HMMFilterModel, observations: pd.Series
-) -> pd.DataFrame:
+def filtered_probabilities(model: HMMFilterModel, observations: pd.Series) -> pd.DataFrame:
     """Filter a complete training prefix sequentially with no future conditioning."""
 
     if not isinstance(observations, pd.Series):
