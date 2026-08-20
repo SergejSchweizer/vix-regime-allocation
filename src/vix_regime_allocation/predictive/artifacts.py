@@ -83,9 +83,9 @@ def compute_predictive_analysis(data: pd.DataFrame) -> PredictiveAnalysis:
     asset_returns = asset_simple_returns(data)
     validation_summary = build_validation_summary(validation_signals, asset_returns)
     family, n_states, hurdle = selected_configuration(validation_summary)
-    selected_validation = validation_summary.loc[
-        validation_summary["selected"].astype(bool)
-    ].iloc[0]
+    selected_validation = validation_summary.loc[validation_summary["selected"].astype(bool)].iloc[
+        0
+    ]
 
     test_signals = _signals_for_family(data, test_decisions, family, n_states)
     holdout: HoldoutResult = run_final_holdout(
