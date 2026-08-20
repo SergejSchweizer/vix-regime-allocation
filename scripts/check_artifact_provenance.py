@@ -69,15 +69,13 @@ def validate_notebook() -> tuple[str, str]:
         for output in cell.get("outputs", []):
             if output.get("output_type") == "error":
                 failures.append(
-                    f"cell {index}: {output.get('ename', 'Error')}: "
-                    f"{output.get('evalue', '')}"
+                    f"cell {index}: {output.get('ename', 'Error')}: {output.get('evalue', '')}"
                 )
     if failures:
         raise RuntimeError("Notebook contains failed outputs: " + "; ".join(failures))
     if len(step5_matches) != 1:
         raise RuntimeError(
-            "Expected exactly one Step 5 cumulative-output cell, "
-            f"found {len(step5_matches)}."
+            f"Expected exactly one Step 5 cumulative-output cell, found {len(step5_matches)}."
         )
     if not any(
         output.get("output_type") in {"display_data", "execute_result"}
