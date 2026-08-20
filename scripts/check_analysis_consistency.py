@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import math
 from pathlib import Path
 
 import numpy as np
@@ -15,6 +16,7 @@ from vix_regime_allocation.benchmarks import (
     build_spy_buy_hold_returns,
 )
 from vix_regime_allocation.hmm_evaluation import evaluate_hmm_candidate
+from vix_regime_allocation.hmm_model import HMMFitResult
 from vix_regime_allocation.markov_evaluation import evaluate_markov_candidate
 from vix_regime_allocation.model_selection import build_model_comparison, select_preferred_model
 from vix_regime_allocation.sensitivity import build_state_count_sensitivity
@@ -24,6 +26,7 @@ from vix_regime_allocation.transform import OUTPUT_COLUMNS
 ROOT = Path(__file__).resolve().parents[1]
 RTOL = 1e-9
 ATOL = 1e-11
+TRADING_DAYS = 252
 
 
 def _indexed_csv(relative: str) -> pd.DataFrame:
@@ -79,8 +82,8 @@ def _step1() -> pd.DataFrame:
     if np.any(data[["TLT", "GLD", "SPY", "VIX"]].to_numpy(dtype=float) <= 0.0):
         raise AssertionError("Step 1 contains non-positive price/index levels")
 
-    # The first stored return needs the one dropped pre-sample price and cannot be reconstructed
-    # from the processed CSV alone. Every subsequent stored row can and must reconcile exactly.
+    # The first stored return needs the dropped pre-sample price and cannot be reconstructed
+    # from the processed CSV alone. Every subsequent stored row must reconcile exactly.
     for asset in ("TLT", "GLD", "SPY"):
         expected = np.log(
             data[asset].iloc[1:].to_numpy(dtype=float)
@@ -106,17 +109,19 @@ def _persisted_hmm_parameters(n_states: int) -> pd.DataFrame:
 
 
 def _computed_hmm_parameters(candidate: dict[str, object]) -> pd.DataFrame:
-    fit = candidate["fit"]
-    states = fit.states.to_numpy(dtype=int)  # type: ignore[union-attr]
-    counts = np.bincount(states, minlength=fit.n_states)  # type: ignore[union-attr]
+    fit = candidate.get("fit")
+    if not isinstance(fit, HMMFitResult):
+        raise AssertionError("HMM candidate is missing a fit result")
+    states = fit.states.to_numpy(dtype=int)
+    counts = np.bincount(states, minlength=fit.n_states)
     occupancy = counts.astype(float) / len(states)
-    posterior_mean = fit.probabilities.mean(axis=0).to_numpy(dtype=float)  # type: ignore[union-attr]
+    posterior_mean = fit.probabilities.mean(axis=0).to_numpy(dtype=float)
     return pd.DataFrame(
         {
-            "state": np.arange(fit.n_states, dtype=int),  # type: ignore[union-attr]
-            "mean_vix_change": fit.means.to_numpy(dtype=float),  # type: ignore[union-attr]
-            "variance_vix_change": fit.variances.to_numpy(dtype=float),  # type: ignore[union-attr]
-            "start_probability": np.asarray(fit.start_probabilities, dtype=float),  # type: ignore[union-attr]
+            "state": np.arange(fit.n_states, dtype=int),
+            "mean_vix_change": fit.means.to_numpy(dtype=float),
+            "variance_vix_change": fit.variances.to_numpy(dtype=float),
+            "start_probability": np.asarray(fit.start_probabilities, dtype=float),
             "viterbi_observations": counts,
             "viterbi_occupancy": occupancy,
             "posterior_mean_probability": posterior_mean,
@@ -124,7 +129,9 @@ def _computed_hmm_parameters(candidate: dict[str, object]) -> pd.DataFrame:
     )
 
 
-def _verify_regime_models(data: pd.DataFrame) -> tuple[list[dict[str, object]], list[dict[str, object]]]:
+def _verify_regime_models(
+    data: pd.DataFrame,
+) -> tuple[list[dict[str, object]], list[dict[str, object]]]:
     vix_change = data["VIX_change"].rename("VIX_change")
     markov_candidates: list[dict[str, object]] = []
     hmm_candidates: list[dict[str, object]] = []
@@ -132,34 +139,48 @@ def _verify_regime_models(data: pd.DataFrame) -> tuple[list[dict[str, object]], 
     for n_states in (2, 3):
         candidate = evaluate_markov_candidate(vix_change, n_states)
         markov_candidates.append(candidate)
+        candidate_states = candidate.get("states")
+        if not isinstance(candidate_states, pd.Series):
+            raise AssertionError("Markov candidate is missing states")
         _assert_series(
-            candidate["states"],  # type: ignore[arg-type]
+            candidate_states,
             _states(f"reports/tables/step2_markov_{n_states}_states.csv"),
             f"Markov K={n_states} states",
         )
 
         thresholds = pd.read_csv(ROOT / f"reports/tables/step2_markov_{n_states}_thresholds.csv")
-        _assert_frame(candidate["thresholds"], thresholds, f"Markov K={n_states} thresholds")  # type: ignore[arg-type]
+        candidate_thresholds = candidate.get("thresholds")
+        if not isinstance(candidate_thresholds, pd.DataFrame):
+            raise AssertionError("Markov candidate is missing thresholds")
+        _assert_frame(candidate_thresholds, thresholds, f"Markov K={n_states} thresholds")
 
         transition = pd.read_csv(
             ROOT / f"reports/tables/step2_markov_{n_states}_transition.csv"
         ).set_index("from_state")
         transition.index.name = "from_state"
-        _assert_frame(candidate["transition"], transition, f"Markov K={n_states} transition")  # type: ignore[arg-type]
+        candidate_transition = candidate.get("transition")
+        if not isinstance(candidate_transition, pd.DataFrame):
+            raise AssertionError("Markov candidate is missing a transition matrix")
+        _assert_frame(candidate_transition, transition, f"Markov K={n_states} transition")
 
         stationary = pd.read_csv(
             ROOT / f"reports/tables/step2_markov_{n_states}_stationary.csv"
         ).set_index("state")["stationary_probability"]
         stationary.index.name = "state"
         stationary.name = "stationary_probability"
-        _assert_series(candidate["stationary"], stationary, f"Markov K={n_states} stationary")  # type: ignore[arg-type]
+        candidate_stationary = candidate.get("stationary")
+        if not isinstance(candidate_stationary, pd.Series):
+            raise AssertionError("Markov candidate is missing a stationary distribution")
+        _assert_series(candidate_stationary, stationary, f"Markov K={n_states} stationary")
 
     for n_states in (2, 3):
         candidate = evaluate_hmm_candidate(vix_change, n_states)
         hmm_candidates.append(candidate)
-        fit = candidate["fit"]
+        fit = candidate.get("fit")
+        if not isinstance(fit, HMMFitResult):
+            raise AssertionError("HMM candidate is missing a fit result")
         _assert_series(
-            fit.states,  # type: ignore[union-attr]
+            fit.states,
             _states(f"reports/tables/step2_hmm_{n_states}_states.csv"),
             f"HMM K={n_states} Viterbi states",
         )
@@ -167,7 +188,7 @@ def _verify_regime_models(data: pd.DataFrame) -> tuple[list[dict[str, object]], 
             ROOT / f"reports/tables/step2_hmm_{n_states}_transition.csv"
         ).set_index("from_state")
         transition.index.name = "from_state"
-        _assert_frame(fit.transition_matrix, transition, f"HMM K={n_states} transition")  # type: ignore[union-attr]
+        _assert_frame(fit.transition_matrix, transition, f"HMM K={n_states} transition")
         _assert_frame(
             _computed_hmm_parameters(candidate),
             _persisted_hmm_parameters(n_states),
@@ -217,8 +238,56 @@ def _verify_selected_analysis(data: pd.DataFrame) -> tuple[pd.Series, pd.DataFra
     return selected_states, allocation
 
 
+def _independent_rotation_returns(
+    data: pd.DataFrame,
+    states: pd.Series,
+    allocation: pd.DataFrame,
+) -> pd.Series:
+    """Recompute the one-row-lag rotation without calling the backtest engine."""
+    lookup = allocation.set_index("state")["selected_asset"].astype(str)
+    decision_states = states.iloc[:-1].to_numpy(dtype=int)
+    selected_assets = lookup.loc[decision_states].to_numpy(dtype=str)
+    return_index = data.index[1:]
+    log_returns = data.loc[
+        return_index,
+        ["TLT_log_return", "GLD_log_return", "SPY_log_return"],
+    ]
+    simple = np.expm1(log_returns.to_numpy(dtype=float))
+    asset_to_column = {"TLT": 0, "GLD": 1, "SPY": 2}
+    selected_columns = np.array([asset_to_column[asset] for asset in selected_assets], dtype=int)
+    row_numbers = np.arange(len(return_index), dtype=int)
+    values = simple[row_numbers, selected_columns]
+    return pd.Series(values, index=return_index, name="regime_rotation")
+
+
+def _independent_metrics(returns: pd.Series) -> dict[str, float | int]:
+    """Cross-check the five required metrics directly from simple daily returns."""
+    values = returns.to_numpy(dtype=float)
+    n = len(values)
+    wealth = np.cumprod(1.0 + values)
+    terminal_wealth = float(wealth[-1])
+    sample_std = float(np.std(values, ddof=1))
+    peaks = np.maximum.accumulate(np.concatenate(([1.0], wealth)))[1:]
+    drawdowns = wealth / peaks - 1.0
+    return {
+        "cumulative_return": terminal_wealth - 1.0,
+        "annualized_return": terminal_wealth ** (TRADING_DAYS / n) - 1.0,
+        "annualized_volatility": sample_std * math.sqrt(TRADING_DAYS),
+        "sharpe_ratio": float(np.mean(values)) / sample_std * math.sqrt(TRADING_DAYS),
+        "max_drawdown": min(0.0, float(np.min(drawdowns))),
+        "observations": n,
+    }
+
+
 def _verify_step5(data: pd.DataFrame, states: pd.Series, allocation: pd.DataFrame) -> None:
     rotation = build_rotation_returns(data, states, allocation)
+    independent_rotation = _independent_rotation_returns(data, states, allocation)
+    _assert_series(
+        rotation["regime_rotation_return"].rename("regime_rotation"),
+        independent_rotation,
+        "independent lagged rotation",
+    )
+
     comparison_index = pd.DatetimeIndex(rotation.index, name="Date")
     equal_weight = build_equal_weight_monthly_returns(data, comparison_index)
     spy = build_spy_buy_hold_returns(data, comparison_index)
@@ -230,13 +299,22 @@ def _verify_step5(data: pd.DataFrame, states: pd.Series, allocation: pd.DataFram
     persisted_summary = pd.read_csv(ROOT / "reports/tables/step5_performance_summary.csv")
     _assert_frame(summary, persisted_summary, "Step 5 performance summary")
 
+    for row in persisted_summary.itertuples(index=False):
+        portfolio = str(row.portfolio)
+        direct = _independent_metrics(comparison[portfolio])
+        for key, expected in direct.items():
+            actual = getattr(row, key)
+            if key == "observations":
+                if int(actual) != int(expected):
+                    raise AssertionError(f"{portfolio} {key} mismatch")
+            elif not math.isclose(float(actual), float(expected), rel_tol=RTOL, abs_tol=ATOL):
+                raise AssertionError(f"{portfolio} {key} mismatch")
+
     selected = json.loads(
         (ROOT / "reports/generated/step3_selected_model.json").read_text(encoding="utf-8")
     )
     states_by_k = {
-        n_states: _states(
-            f"reports/tables/step2_{selected['family']}_{n_states}_states.csv"
-        )
+        n_states: _states(f"reports/tables/step2_{selected['family']}_{n_states}_states.csv")
         for n_states in (2, 3)
     }
     sensitivity = build_state_count_sensitivity(data, selected["family"], states_by_k)
