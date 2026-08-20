@@ -87,7 +87,7 @@ def plot_cumulative_performance(comparison: pd.DataFrame, output_path: Path) -> 
         drawdown_axis.grid(True, alpha=0.22)
 
         locator = mdates.AutoDateLocator(  # type: ignore[no-untyped-call]
-            minticks=5,
+            minticks=3,
             maxticks=9,
         )
         drawdown_axis.xaxis.set_major_locator(locator)
