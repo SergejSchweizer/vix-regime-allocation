@@ -29,7 +29,9 @@ def validate_predictive_causality(
         for row in validation.itertuples(index=False)
     }
     if actual_grid != set(candidate_grid()):
-        raise RuntimeError("Predictive validation candidate grid differs from the pre-registered grid.")
+        raise RuntimeError(
+            "Predictive validation candidate grid differs from the pre-registered grid."
+        )
     winners = validation.loc[validation["selected"].astype(bool)]
     if len(winners) != 1:
         raise RuntimeError("Predictive validation must contain exactly one selected candidate.")
@@ -47,9 +49,13 @@ def validate_predictive_causality(
     if actual != expected:
         raise RuntimeError("Selected strategy JSON does not match the validation winner.")
     if str(selected.get("validation_start")) != VALIDATION_START.date().isoformat():
-        raise RuntimeError("Selected strategy validation_start is not the fixed pre-registered date.")
+        raise RuntimeError(
+            "Selected strategy validation_start is not the fixed pre-registered date."
+        )
     if str(selected.get("validation_end")) != VALIDATION_END.date().isoformat():
-        raise RuntimeError("Selected strategy validation_end is not the fixed pre-registered date.")
+        raise RuntimeError(
+            "Selected strategy validation_end is not the fixed pre-registered date."
+        )
     if str(selected.get("test_start")) != TEST_START.date().isoformat():
         raise RuntimeError("Selected strategy test_start is not the fixed pre-registered date.")
 
@@ -67,7 +73,9 @@ def validate_predictive_causality(
     decision = pd.to_datetime(daily["decision_date"])
     realized = pd.to_datetime(daily["return_date"])
     if not ((training_end < decision) & (decision < realized)).all():
-        raise RuntimeError("Predictive daily artifact violates training < decision < return chronology.")
+        raise RuntimeError(
+            "Predictive daily artifact violates training < decision < return chronology."
+        )
     if (realized < TEST_START).any():
         raise RuntimeError("Predictive final holdout contains pre-test returns.")
     if not (
