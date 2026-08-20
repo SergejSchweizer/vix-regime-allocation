@@ -133,10 +133,11 @@ def plot_cumulative_performance(
     _validate_comparison(comparison)
     if not isinstance(output_path, Path):
         raise TypeError("output_path must be a pathlib.Path.")
+    comparison_index = pd.DatetimeIndex(comparison.index, name="Date")
     if instrument_returns is None:
-        instrument_returns = _load_instrument_returns(comparison.index, output_path)
+        instrument_returns = _load_instrument_returns(comparison_index, output_path)
     else:
-        _validate_instrument_returns(instrument_returns, comparison.index)
+        _validate_instrument_returns(instrument_returns, comparison_index)
     if not np.allclose(
         comparison["spy_buy_hold"].to_numpy(dtype=float),
         instrument_returns["SPY"].to_numpy(dtype=float),
@@ -174,13 +175,13 @@ def plot_cumulative_performance(
             terminal_returns[column] = float(cumulative_return.iloc[-1])
 
             line = cumulative_axis.plot(
-                comparison.index,
+                comparison_index,
                 cumulative_return,
                 label=label,
                 linewidth=1.45,
             )[0]
             drawdown_axis.plot(
-                comparison.index,
+                comparison_index,
                 _drawdown_from_wealth(wealth),
                 label=label,
                 linewidth=1.0,
@@ -188,7 +189,7 @@ def plot_cumulative_performance(
             )
             cumulative_axis.annotate(
                 f"{terminal_returns[column]:.1%}",
-                xy=(comparison.index[-1], terminal_returns[column]),
+                xy=(comparison_index[-1], terminal_returns[column]),
                 xytext=(7, ENDPOINT_Y_OFFSETS[column]),
                 textcoords="offset points",
                 va="center",
