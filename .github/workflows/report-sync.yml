@@ -1,4 +1,4 @@
-name: Notebook PDF Report Sync
+name: Notebook PDF Sidecar Sync
 
 on:
   pull_request:
@@ -9,10 +9,18 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: notebook-artifact-sync-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build-report:
-    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    if: >-
+      github.actor != 'github-actions[bot]' &&
+      (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
     runs-on: ubuntu-latest
+    env:
+      MPLBACKEND: Agg
     steps:
       - name: Checkout report branch
         uses: actions/checkout@v4
@@ -24,39 +32,95 @@ jobs:
         with:
           python-version: '3.11'
           cache: pip
-      - name: Install report dependencies
+      - name: Install project and notebook dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -e '.[dev]'
-      - name: Build template-based notebook PDF
+          pip install -e '.[dev]' ipykernel
+      - name: Check whether canonical artifacts are current
+        id: freshness
+        continue-on-error: true
+        run: python scripts/check_artifact_provenance.py
+      - name: Rebuild deterministic analysis artifacts
+        if: steps.freshness.outcome != 'success'
+        run: python scripts/rebuild_analysis_review.py
+      - name: Validate orchestration-only notebook
+        if: steps.freshness.outcome != 'success'
+        run: python scripts/check_notebook_orchestration.py
+      - name: Execute canonical notebook top to bottom
+        if: steps.freshness.outcome != 'success'
+        run: >-
+          python -m jupyter nbconvert --to notebook --execute --inplace
+          --ExecutePreprocessor.timeout=1200 notebooks/gwp2_vix_regime_allocation.ipynb
+      - name: Stamp deterministic source provenance
+        if: steps.freshness.outcome != 'success'
+        run: |
+          python - <<'PY'
+          import nbformat
+          from scripts.check_artifact_provenance import NOTEBOOK, SOURCE_DIGEST_KEY, compute_source_sha256
+
+          notebook = nbformat.read(NOTEBOOK, as_version=4)
+          notebook.metadata[SOURCE_DIGEST_KEY] = compute_source_sha256()
+          nbformat.validate(notebook)
+          nbformat.write(notebook, NOTEBOOK)
+          PY
+      - name: Export HTML from executed notebook
+        if: steps.freshness.outcome != 'success'
+        run: >-
+          python -m jupyter nbconvert --to html
+          --output-dir reports --output gwp2_vix_regime_allocation
+          notebooks/gwp2_vix_regime_allocation.ipynb
+      - name: Stamp HTML notebook provenance
+        if: steps.freshness.outcome != 'success'
+        run: |
+          python - <<'PY'
+          from scripts.check_artifact_provenance import HTML, compute_source_sha256, notebook_sha256
+
+          prefix = (
+              f'<!-- ArtifactSourceSHA256:{compute_source_sha256()} '
+              f'NotebookSHA256:{notebook_sha256()} -->\n'
+          )
+          html = HTML.read_text(encoding='utf-8')
+          if html.startswith('<!-- ArtifactSourceSHA256:'):
+              html = html.split('-->\n', 1)[1]
+          HTML.write_text(prefix + html, encoding='utf-8')
+          PY
+      - name: Build PDF sidecar from executed notebook
+        if: steps.freshness.outcome != 'success'
         env:
           CHROME_BIN: /usr/bin/google-chrome
         run: python scripts/build_pdf_report.py
-      - name: Validate generated PDF
+      - name: Verify numerical and artifact consistency
         run: |
-          test -s reports/Stochastic_Modeling_GWP2_Report.pdf
-          python - <<'PY'
-          from pathlib import Path
-          from pypdf import PdfReader
-
-          report = Path('reports/Stochastic_Modeling_GWP2_Report.pdf')
-          template = Path('reports/Template_Stochastic_Modeling_Group_Work_Project.pdf')
-          notebook = Path('notebooks/gwp2_vix_regime_allocation.ipynb')
-          reader = PdfReader(report)
-          assert len(reader.pages) >= 2
-          assert report.stat().st_size > template.stat().st_size
-          assert notebook.stat().st_size > 0
-          assert reader.metadata.get('/NotebookSHA256')
-          PY
-      - name: Commit synchronized report to PR branch
-        if: github.event_name == 'pull_request'
+          python scripts/check_analysis_consistency.py
+          python scripts/check_artifact_provenance.py
+          pytest -q tests/test_notebook_cumulative_visual.py
+      - name: Commit synchronized canonical artifacts
+        if: github.event_name == 'pull_request' && steps.freshness.outcome != 'success'
         run: |
-          if test -z "$(git status --porcelain -- reports/Stochastic_Modeling_GWP2_Report.pdf)"; then
-            echo 'PDF report already matches the notebook.'
-            exit 0
-          fi
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add reports/Stochastic_Modeling_GWP2_Report.pdf
-          git commit -m 'Sync PDF report with notebook [skip ci]'
+          git add -- \
+            notebooks/gwp2_vix_regime_allocation.ipynb \
+            reports/gwp2_vix_regime_allocation.html \
+            reports/Stochastic_Modeling_GWP2_Report.pdf \
+            reports/figures \
+            reports/tables \
+            reports/generated/step3_selected_model.json \
+            reports/generated/steps_2_4_manifest.json \
+            reports/generated/step5_manifest.json
+          if git diff --cached --quiet; then
+            echo 'Canonical notebook, HTML, PDF, and generated analysis artifacts are synchronized.'
+            exit 0
+          fi
+          git commit -m 'Sync executed notebook and report sidecars'
           git push origin HEAD:${{ github.event.pull_request.head.ref }}
+      - name: Upload canonical notebook and reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: canonical-notebook-report
+          path: |
+            notebooks/gwp2_vix_regime_allocation.ipynb
+            reports/gwp2_vix_regime_allocation.html
+            reports/Stochastic_Modeling_GWP2_Report.pdf
+            reports/figures/step5_cumulative_performance.png
+          if-no-files-found: error

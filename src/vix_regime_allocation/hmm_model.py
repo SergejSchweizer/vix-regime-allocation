@@ -72,13 +72,7 @@ def _fit_restart(observations: np.ndarray, n_states: int, seed: int) -> tuple[Ga
 
 
 def _select_restart(observations: np.ndarray, n_states: int) -> tuple[GaussianHMM, int, float]:
-    """Select the best converged restart without letting one failed seed abort the fit.
-
-    Numerical failures are local to one initialization. The deterministic restart policy
-    therefore evaluates every configured seed that can be fitted, ignores failed or
-    non-converged/non-finite restarts, then selects the highest finite log-likelihood.
-    Likelihood ties within the configured tolerance are resolved by the smallest seed.
-    """
+    """Select the best converged restart without letting one failed seed abort the fit."""
     successful: list[tuple[float, int, GaussianHMM]] = []
     for seed in HMM_SEEDS:
         try:
@@ -104,20 +98,40 @@ def _relabel_result(
     vix_change: pd.Series,
 ) -> HMMFitResult:
     n_states = model.n_components
+    n_observations = len(observations)
     original_means = np.asarray(model.means_, dtype=float).reshape(n_states)
     original_variances = np.asarray(model.covars_, dtype=float).reshape(n_states, -1)[:, 0]
+    if np.any(~np.isfinite(original_means)):
+        raise ValueError("HMM means must be finite.")
+    if np.any(~np.isfinite(original_variances)) or np.any(original_variances <= 0.0):
+        raise ValueError("HMM variances must be finite and strictly positive.")
+
     original_indices = np.arange(n_states)
     order = np.lexsort((original_indices, original_means))
-
     old_to_new = np.empty(n_states, dtype=int)
     old_to_new[order] = np.arange(n_states)
+
     original_states = np.asarray(model.predict(observations), dtype=int)
+    if original_states.shape != (n_observations,) or np.any(
+        (original_states < 0) | (original_states >= n_states)
+    ):
+        raise ValueError("HMM decoded states are invalid.")
     states = old_to_new[original_states]
+
     original_probabilities = np.asarray(model.predict_proba(observations), dtype=float)
+    if original_probabilities.shape != (n_observations, n_states):
+        raise ValueError("HMM posterior probability matrix has an invalid shape.")
     probabilities = original_probabilities[:, order]
 
-    start = np.asarray(model.startprob_, dtype=float)[order]
-    transition = np.asarray(model.transmat_, dtype=float)[np.ix_(order, order)]
+    raw_start = np.asarray(model.startprob_, dtype=float)
+    raw_transition = np.asarray(model.transmat_, dtype=float)
+    if raw_start.shape != (n_states,):
+        raise ValueError("HMM start probabilities have an invalid shape.")
+    if raw_transition.shape != (n_states, n_states):
+        raise ValueError("HMM transition matrix has an invalid shape.")
+
+    start = raw_start[order]
+    transition = raw_transition[np.ix_(order, order)]
     means = original_means[order]
     variances = original_variances[order]
 
@@ -129,10 +143,10 @@ def _relabel_result(
         raise ValueError("HMM transition probabilities are invalid.")
     if not np.allclose(transition.sum(axis=1), 1.0, atol=PROBABILITY_TOL, rtol=0.0):
         raise ValueError("HMM transition rows must sum to one.")
-    if np.any(~np.isfinite(variances)) or np.any(variances <= 0.0):
-        raise ValueError("HMM variances must be finite and strictly positive.")
     if np.any(~np.isfinite(probabilities)) or np.any(probabilities < -PROBABILITY_TOL):
         raise ValueError("HMM posterior probabilities are invalid.")
+    if np.any(probabilities > 1.0 + PROBABILITY_TOL):
+        raise ValueError("HMM posterior probabilities cannot exceed one.")
     if not np.allclose(probabilities.sum(axis=1), 1.0, atol=PROBABILITY_TOL, rtol=0.0):
         raise ValueError("HMM posterior rows must sum to one.")
 

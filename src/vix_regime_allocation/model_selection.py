@@ -142,6 +142,12 @@ def _hmm_invalid_reason(candidate: dict[str, object]) -> str | None:
     if fit.n_states != n_states:
         return "fit state count does not match candidate"
 
+    means = fit.means.to_numpy(dtype=float)
+    if len(means) != n_states or np.any(~np.isfinite(means)):
+        return "state means are not finite"
+    if np.any(np.diff(means) < 0.0):
+        return "state means are not in canonical increasing order"
+
     variances = fit.variances.to_numpy(dtype=float)
     if len(variances) != n_states or np.any(~np.isfinite(variances)) or np.any(variances <= 0.0):
         return "state variances are not finite and strictly positive"
@@ -151,6 +157,7 @@ def _hmm_invalid_reason(candidate: dict[str, object]) -> str | None:
         len(start) != n_states
         or np.any(~np.isfinite(start))
         or np.any(start < -PROBABILITY_TOL)
+        or np.any(start > 1.0 + PROBABILITY_TOL)
         or not np.isclose(start.sum(), 1.0, atol=PROBABILITY_TOL, rtol=0.0)
     ):
         return "initial-state probabilities are invalid"
@@ -160,23 +167,27 @@ def _hmm_invalid_reason(candidate: dict[str, object]) -> str | None:
         transition.shape != (n_states, n_states)
         or np.any(~np.isfinite(transition))
         or np.any(transition < -PROBABILITY_TOL)
+        or np.any(transition > 1.0 + PROBABILITY_TOL)
         or not np.allclose(transition.sum(axis=1), 1.0, atol=PROBABILITY_TOL, rtol=0.0)
     ):
         return "transition probabilities are invalid"
 
-    posterior = fit.probabilities.to_numpy(dtype=float)
-    if (
-        posterior.ndim != 2
-        or posterior.shape[1] != n_states
-        or np.any(~np.isfinite(posterior))
-        or np.any(posterior < -PROBABILITY_TOL)
-        or not np.allclose(posterior.sum(axis=1), 1.0, atol=PROBABILITY_TOL, rtol=0.0)
-    ):
-        return "posterior probabilities are invalid"
-
     states = fit.states.to_numpy(dtype=int)
     if len(states) == 0 or np.any((states < 0) | (states >= n_states)):
         return "decoded state path is invalid"
+
+    posterior = fit.probabilities.to_numpy(dtype=float)
+    if (
+        posterior.shape != (len(states), n_states)
+        or np.any(~np.isfinite(posterior))
+        or np.any(posterior < -PROBABILITY_TOL)
+        or np.any(posterior > 1.0 + PROBABILITY_TOL)
+        or not np.allclose(posterior.sum(axis=1), 1.0, atol=PROBABILITY_TOL, rtol=0.0)
+    ):
+        return "posterior probabilities are invalid"
+    if not fit.probabilities.index.equals(fit.states.index):
+        return "posterior and decoded-state dates are misaligned"
+
     occupancy = np.bincount(states, minlength=n_states).astype(float) / len(states)
     if np.any(occupancy < HMM_MIN_STATE_OCCUPANCY):
         return "at least one decoded HMM state has occupancy below 5%"

@@ -1,4 +1,4 @@
-"""Step 5 cumulative-performance and drawdown comparison figure."""
+"""Step 5 cumulative-performance, drawdown, and terminal-outcome comparison figure."""
 
 from __future__ import annotations
 
@@ -53,47 +53,105 @@ def _drawdown_from_wealth(wealth: pd.Series) -> pd.Series:
 
 
 def plot_cumulative_performance(comparison: pd.DataFrame, output_path: Path) -> None:
-    """Plot the required three cumulative-return curves plus their drawdown histories."""
+    """Plot cumulative paths, drawdowns, and an immediate terminal-return comparison.
+
+    The time-series panel preserves the assignment-required cumulative-return comparison.
+    Endpoint labels and the terminal bar panel make the final historical outcome directly
+    readable without requiring the viewer to infer values from the y-axis alone.
+    """
     _validate_comparison(comparison)
     if not isinstance(output_path, Path):
         raise TypeError("output_path must be a pathlib.Path.")
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
-    figure, axes = plt.subplots(2, 1, figsize=(11.5, 8.0), sharex=True)
-    cumulative_axis, drawdown_axis = axes
+    figure = plt.figure(figsize=(13.0, 8.5), constrained_layout=True)
+    grid = figure.add_gridspec(
+        2,
+        2,
+        height_ratios=(2.2, 1.0),
+        width_ratios=(2.2, 1.0),
+    )
+    cumulative_axis = figure.add_subplot(grid[0, :])
+    drawdown_axis = figure.add_subplot(grid[1, 0], sharex=cumulative_axis)
+    terminal_axis = figure.add_subplot(grid[1, 1])
+
+    terminal_returns: dict[str, float] = {}
     try:
         for column in COMPARISON_COLUMNS:
             wealth = cumulative_wealth(comparison[column])
             label = DISPLAY_LABELS[column]
-            cumulative_axis.plot(comparison.index, wealth - 1.0, label=label, linewidth=1.35)
+            cumulative_return = wealth - 1.0
+            terminal_returns[column] = float(cumulative_return.iloc[-1])
+
+            line = cumulative_axis.plot(
+                comparison.index,
+                cumulative_return,
+                label=label,
+                linewidth=1.45,
+            )[0]
             drawdown_axis.plot(
                 comparison.index,
                 _drawdown_from_wealth(wealth),
                 label=label,
                 linewidth=1.0,
+                color=line.get_color(),
+            )
+            cumulative_axis.annotate(
+                f"{terminal_returns[column]:.1%}",
+                xy=(comparison.index[-1], terminal_returns[column]),
+                xytext=(7, 0),
+                textcoords="offset points",
+                va="center",
+                fontsize=9,
+                color=line.get_color(),
             )
 
         cumulative_axis.axhline(0.0, linewidth=0.8)
-        cumulative_axis.set_title("Step 5 Performance Comparison")
+        cumulative_axis.set_title("Step 5 Cumulative Performance Comparison")
         cumulative_axis.set_ylabel("Cumulative return")
         cumulative_axis.yaxis.set_major_formatter(PercentFormatter(xmax=1.0))
         cumulative_axis.legend(ncol=3)
         cumulative_axis.grid(True, alpha=0.22)
+        cumulative_axis.tick_params(labelbottom=False)
 
         drawdown_axis.axhline(0.0, linewidth=0.8)
         drawdown_axis.set_xlabel("Date")
         drawdown_axis.set_ylabel("Drawdown")
+        drawdown_axis.set_title("Drawdown history")
         drawdown_axis.yaxis.set_major_formatter(PercentFormatter(xmax=1.0))
         drawdown_axis.grid(True, alpha=0.22)
 
         locator = mdates.AutoDateLocator(  # type: ignore[no-untyped-call]
-            minticks=5,
+            minticks=3,
             maxticks=9,
         )
         drawdown_axis.xaxis.set_major_locator(locator)
         formatter = mdates.ConciseDateFormatter(locator)  # type: ignore[no-untyped-call]
         drawdown_axis.xaxis.set_major_formatter(formatter)
-        figure.tight_layout()
+
+        terminal_values = np.array(
+            [terminal_returns[column] for column in COMPARISON_COLUMNS],
+            dtype=float,
+        )
+        terminal_labels = [DISPLAY_LABELS[column] for column in COMPARISON_COLUMNS]
+        positions = np.arange(len(COMPARISON_COLUMNS), dtype=float)
+        bars = terminal_axis.barh(positions, terminal_values)
+        terminal_axis.set_yticks(positions, terminal_labels)
+        terminal_axis.invert_yaxis()
+        terminal_axis.set_title("Terminal cumulative return")
+        terminal_axis.set_xlabel("Cumulative return")
+        terminal_axis.xaxis.set_major_formatter(PercentFormatter(xmax=1.0))
+        terminal_axis.axvline(0.0, linewidth=0.8)
+        terminal_axis.grid(True, axis="x", alpha=0.22)
+        for bar, value in zip(bars, terminal_values, strict=True):
+            terminal_axis.text(
+                value,
+                bar.get_y() + bar.get_height() / 2.0,
+                f" {value:.1%}",
+                va="center",
+                fontsize=9,
+            )
+
         figure.savefig(output_path, dpi=190, bbox_inches="tight")
     finally:
         plt.close(figure)

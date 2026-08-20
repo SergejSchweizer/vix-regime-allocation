@@ -30,6 +30,21 @@ def _load_indexed_csv(path: Path) -> pd.DataFrame:
     return frame
 
 
+def _replace_once_or_accept(
+    text: str,
+    old: str,
+    new: str,
+    *,
+    label: str,
+) -> tuple[str, bool]:
+    """Apply one deterministic markdown migration, or accept an already-migrated cell."""
+    if new in text:
+        return text, True
+    if old in text:
+        return text.replace(old, new, 1), True
+    return text, False
+
+
 def _update_notebook_markdown() -> None:
     nb = nbformat.read(NOTEBOOK, as_version=4)
 
@@ -43,9 +58,15 @@ def _update_notebook_markdown() -> None:
     )
     greek_hits = 0
     for cell in nb.cells:
-        if cell.cell_type == "markdown" and greek_old in cell.source:
-            cell.source = cell.source.replace(greek_old, greek_new)
-            greek_hits += 1
+        if cell.cell_type != "markdown":
+            continue
+        cell.source, matched = _replace_once_or_accept(
+            cell.source,
+            greek_old,
+            greek_new,
+            label="HMM Greek-letter declaration",
+        )
+        greek_hits += int(matched)
     if greek_hits != 1:
         raise RuntimeError(f"Expected one HMM Greek-letter declaration, found {greek_hits}.")
 
@@ -68,9 +89,15 @@ def _update_notebook_markdown() -> None:
     )
     plot_hits = 0
     for cell in nb.cells:
-        if cell.cell_type == "markdown" and old_plot_text in cell.source:
-            cell.source = cell.source.replace(old_plot_text, new_plot_text)
-            plot_hits += 1
+        if cell.cell_type != "markdown":
+            continue
+        cell.source, matched = _replace_once_or_accept(
+            cell.source,
+            old_plot_text,
+            new_plot_text,
+            label="Step 3 plot explanation",
+        )
+        plot_hits += int(matched)
     if plot_hits != 1:
         raise RuntimeError(f"Expected one Step 3 plot explanation, found {plot_hits}.")
 
@@ -81,8 +108,8 @@ def _update_notebook_markdown() -> None:
         "is the winner. The two state-count decisions are therefore made separately inside "
         "the Markov and HMM families before the deterministic method-validity rule is applied."
     )
-    selection_addition = selection_anchor + (
-        "\n\nThe HMM $K=3$ candidate is a near-boundary case under that project validity rule: "
+    boundary_text = (
+        "The HMM $K=3$ candidate is a near-boundary case under that project validity rule: "
         "its least-populated Viterbi state contains exactly 259 of 5,465 observations, "
         "or 4.739249771271729% of the sample. This is only 0.260750228728271 percentage "
         "points below the fixed 5% occupancy threshold. The fallback to Markov $K=2$ is "
@@ -91,8 +118,16 @@ def _update_notebook_markdown() -> None:
     )
     selection_hits = 0
     for cell in nb.cells:
-        if cell.cell_type == "markdown" and selection_anchor in cell.source:
-            cell.source = cell.source.replace(selection_anchor, selection_addition)
+        if cell.cell_type != "markdown":
+            continue
+        if boundary_text in cell.source:
+            selection_hits += 1
+        elif selection_anchor in cell.source:
+            cell.source = cell.source.replace(
+                selection_anchor,
+                selection_anchor + "\n\n" + boundary_text,
+                1,
+            )
             selection_hits += 1
     if selection_hits != 1:
         raise RuntimeError(f"Expected one model-selection explanation, found {selection_hits}.")

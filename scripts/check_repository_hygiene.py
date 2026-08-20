@@ -10,16 +10,21 @@ FORBIDDEN_PREFIXES = (
     ".github/workflows/_tmp_",
     "scripts/_tmp_",
 )
+FORBIDDEN_EXACT_PATHS = {
+    ".github/review_artifact_trigger",
+    ".github/workflows/audit-regenerate.yml",
+    ".github/workflows/complete-audit.yml",
+}
 
 
 def find_forbidden_files(root: Path = ROOT) -> list[str]:
-    """Return tracked-worktree-style temporary paths that must never ship."""
+    """Return temporary/diagnostic paths that must never ship in the repository."""
     forbidden: list[str] = []
     for path in root.rglob("*"):
         if not path.is_file():
             continue
         relative = path.relative_to(root).as_posix()
-        if relative.startswith(FORBIDDEN_PREFIXES):
+        if relative.startswith(FORBIDDEN_PREFIXES) or relative in FORBIDDEN_EXACT_PATHS:
             forbidden.append(relative)
     return sorted(forbidden)
 

@@ -2,7 +2,7 @@
 
 Regime-based allocation project for **MScFE 622: Stochastic Modeling — Group Work Project #2**.
 
-The assignment studies a VIX-driven allocation rule across `TLT`, `GLD`, and `SPY` using discrete Markov chains and Gaussian Hidden Markov Models, then backtests the chosen regime policy against monthly equal-weight and buy-and-hold SPY benchmarks.
+The project classifies daily VIX changes into volatility regimes, studies how TLT, GLD, and SPY behaved inside those regimes, converts the preferred regime specification into a deterministic allocation rule, and evaluates that rule against monthly equal-weight and SPY buy-and-hold benchmarks.
 
 ## Current repository status
 
@@ -11,116 +11,125 @@ The assignment studies a VIX-driven allocation rule across `TLT`, `GLD`, and `SP
 | Report template | Added and populated with known team names |
 | Canonical implementation backlog | Fully audited in [`BACKLOG.md`](BACKLOG.md), PR-01 through PR-49 |
 | Backlog structural validator | `scripts/check_backlog_contract.py` |
-| Python package scaffold | Bootstrapped |
+| Python package | Implemented under `src/vix_regime_allocation` |
 | Push / pull-request quality gates | Configured |
 | Auto-complete after successful Quality Gates | Configured in `.github/workflows/auto-complete.yml` |
 | Combined source coverage threshold | 90% |
-| Step 1 implementation | Complete: PR-01 through PR-05 merged; canonical dataset, figures, notebook, and scientific references available |
-| Step 2 implementation | Complete: PR-06 through PR-16 and PR-21/PR-22 merged; Markov/HMM tables, figures, canonical state paths, executed notebook, and scientific references available |
-| Step 3 implementation | Complete: PR-17 through PR-19 and PR-23/PR-24 merged; model comparison, selected-state provenance, state-conditional ETF statistics, figure, executed notebook, and scientific references available |
-| Step 4 implementation | Complete: PR-20 and PR-25 merged; canonical state-to-allocation mapping, Steps 2–4 manifest, executed notebook, scientific references, and in-sample limitations available |
+| Step 1 implementation | Complete: canonical common-sample dataset, return transformations, figures, notebook output, and scientific references |
+| Step 2 implementation | Complete: Markov K=2/K=3 and Gaussian-HMM K=2/K=3 estimates, state paths, transition outputs, diagnostics, and figures |
+| Step 3 implementation | Complete: within-family AIC/BIC analysis, deterministic preferred-model rule, selected-state provenance, and state-conditional ETF statistics |
+| Step 4 implementation | Complete: deterministic 100% state-to-ETF allocation mapping |
+| Step 5 implementation | Complete: one-observed-row lagged rotation, monthly equal-weight and SPY benchmarks, performance metrics, K=2/K=3 sensitivity, cumulative/drawdown figure, and Step 5 manifest |
+| Numerical artifact consistency | Checked by `scripts/check_analysis_consistency.py` and the `analysis-consistency` quality-gate job |
 | PDF report | Template-based rendering of the complete executed notebook; notebook SHA-256 embedded in PDF metadata |
-| Step 5 implementation | Not started |
 | Final submission bundle | Planned in PR-48/PR-49 |
 | `main` branch protection | Repository ruleset still must be enabled in GitHub settings |
 
-No uncomputed assignment result is claimed in this README.
+The repository does not claim an uncomputed result. Canonical numerical artifacts are now recomputed and cross-checked in CI rather than merely checked for file existence.
 
-## Canonical backlog
+## Verified empirical result
 
-`BACKLOG.md` is the **single canonical planning source**. It fixes PR dependencies, file ownership, public interfaces, schemas, numerical conventions, tie rules, test evidence, notebook serialization, sidecar parity, Step 5 backtesting semantics, scientific-citation integrity, final submission packaging, and the Git branch/status/commit contract for every PR.
+The preferred specification remains **Markov K=2**. Within the HMM family, K=3 has the lower BIC, but its least-populated Viterbi state contains 259 of 5,465 observations, or 4.739249771271729%, below the project's fixed 5% minimum-occupancy diagnostic. The fallback is therefore a deterministic project rule for avoiding a very small decoded state; it is not a statistical proof that the HMM is intrinsically invalid.
 
-The backlog is deliberately optimized for two weak coding agents. Every PR has explicit lower-numbered dependencies (or `none`), a complete write set, contiguous numbered tasks, one matching acceptance criterion for every task, an exact feature-branch name, an explicit `git status --short --branch` clean-tree check, and an exact commit message containing the PR number and PR name. `scripts/check_backlog_contract.py` verifies PR-01..PR-49, backward-only dependencies, contiguous task IDs, one-to-one acceptance coverage, and this Git metadata.
+The resulting Step 4 mapping is:
 
-## Git workflow per backlog PR
+| State | Interpretation from daily VIX change | Selected ETF |
+|---|---|---|
+| 0 | Lower daily VIX-change regime | SPY |
+| 1 | Higher daily VIX-change regime | TLT |
 
-Every PR section in `BACKLOG.md` declares these three fields explicitly:
+The required one-observed-row lagged backtest produces these canonical results over 5,464 comparison observations:
+
+| Portfolio | Cumulative return | Annualized return | Annualized volatility | Sharpe | Maximum drawdown |
+|---|---:|---:|---:|---:|---:|
+| Regime rotation | 84.9021% | 2.8754% | 16.0369% | 0.2572 | -53.7600% |
+| Equal weight, monthly reset | 542.0849% | 8.9548% | 9.7112% | 0.9319 | -23.0437% |
+| SPY buy and hold | 879.8148% | 11.0994% | 18.8845% | 0.6520 | -55.1894% |
+
+The poor rotation result is **not an arithmetic failure discovered in Step 5**. Independent recomputation reproduces the lagged daily returns and all five performance metrics. The important modeling distinction is that Step 3 measures a **contemporaneous** relation between `VIX_change_t` and ETF return `r_t`, whereas Step 5 must use state `t-1` to select the asset earning return `t`. A strong same-day VIX/ETF association therefore need not contain useful next-observation predictive information.
+
+The preferred-family state-count sensitivity reinforces rather than reverses the result: Markov K=2 has cumulative return 84.9021% and Sharpe 0.2572, while Markov K=3 has cumulative return 76.2162%, Sharpe 0.2422, and maximum drawdown -65.0533% on the same 5,464 dates.
+
+## Core mathematical conventions
+
+### Step 1 — ETF log return and VIX first difference
+
+For ETF `i` and observed trading row `t`:
 
 ```text
-Git branch
-Git status
-Commit message
+r[i,t] = ln(P[i,t] / P[i,t-1])
 ```
 
-The required status command is:
+For the VIX observation used by both model families:
 
-```bash
-git status --short --branch
+```text
+VIX_change[t] = VIX[t] - VIX[t-1]
 ```
 
-Immediately before commit and immediately before merge, it must show the branch declared by that PR and no staged, modified, or untracked files. Branch names start with the matching lowercase PR identifier (for example `pr-01-...`), and commit messages start with the matching uppercase PR identifier and exact PR name (for example `PR-01 — Yahoo adjusted-close loader`).
+The common sample is formed **before** lagged quantities are calculated; there is no forward fill, backward fill, or interpolation.
 
-## Scientific citation policy
+### Step 2 — discrete transition probabilities
 
-The technical notebook and standalone PDF report must both contain **verifiable scientific source attribution**. `reports/references.bib` is the canonical bibliography registry and is created in PR-05, then maintained only by serialized notebook PRs when a new source is required. These citation requirements are implementation requirements, not optional guidance.
+For transition counts `N[i,j]`:
 
-The required citation standard is **MLA 9**: in-text citations are placed adjacent to externally sourced definitions, equations, methodological claims, and interpretations, and each artifact ends with a **Works Cited** section. Peer-reviewed papers and scholarly books/textbooks provide the academic support for Markov chains, HMM/EM/decoding, information criteria, performance metrics, and backtesting limitations. Official primary sources may additionally document Yahoo/Cboe/index/data definitions, but a bare URL or data-provider page does not substitute for scholarly support of theory or methodology.
+```text
+P[i,j] = N[i,j] / sum_j N[i,j]
+```
 
-Every notebook/PDF citation must resolve to `reports/references.bib`; every entry rendered in an artifact's Works Cited must be cited in that artifact. Duplicate keys, invented metadata, unresolved citations, bibliography-only orphan entries, and URL-only pseudo-citations are invalid. Figures and tables include concise source notes distinguishing the team's own calculations from external data or methodology.
+The stationary row distribution is the normalized non-negative solution of:
 
-The standalone PDF is a faithful rendering of the canonical executed notebook rather than a separately rewritten summary. Therefore the notebook's technical terminology, equations, code-orchestration cells, stored outputs, figures, MLA 9 in-text citations, source notes, and Works Cited are preserved in the PDF. The supplied course template remains the report cover.
+**Greek letter used below:** π — *pi*, pronounced “pie”.
 
-## Assignment implementation plan
+```text
+π P = π
+```
 
-### Step 1 — Data Preparation and Exploration
+### Step 3 — information criteria
 
-Use Yahoo Finance adjusted closes for `TLT`, `GLD`, `SPY`, and `^VIX`, maximum common dates, no imputation, ETF daily log returns, and daily VIX first difference. PR-01 implements the deterministic adjusted-close loader with explicit Yahoo arguments, `Adj Close` extraction, `^VIX`→`VIX` renaming, canonical column order, timezone-naive sorted unique `Date` index, positive/finite non-missing price validation, and mocked offline tests. Missing price observations are intentionally preserved for PR-02, which constructs the common-date sample.
+For maximized log-likelihood `log L`, free-parameter count `k`, and observation count `n`:
 
-Canonical Step 1 outputs generated across PR-01 through PR-05 are:
+```text
+AIC = 2k - 2 log L
+BIC = k ln(n) - 2 log L
+```
+
+Because the quantile-state Markov likelihood and Gaussian-HMM likelihood are defined on different observation spaces, raw AIC/BIC values are **not** used for cross-family ranking. State count is selected by BIC within each family, after which the fixed HMM-validity/fallback rule is applied.
+
+### Step 4 — allocation rule
+
+For each selected state, the strategy assigns 100% weight to the ETF with the largest historical state-conditional mean daily log return. Exact ties use the fixed priority `TLT -> GLD -> SPY`. The optional 60/40 rule is not used.
+
+### Step 5 — execution, compounding, and metrics
+
+The decision from observed state `t-1` determines the portfolio weights applied to ETF simple returns at row `t`. Log returns are converted before portfolio arithmetic:
+
+```text
+simple_return[i,t] = exp(r[i,t]) - 1
+portfolio_return[t] = sum_i weight[i,t-1] * simple_return[i,t]
+```
+
+Cumulative wealth starts at `W_0 = 1` and compounds simple returns. The project uses 252 trading days and a zero risk-free rate for annualized volatility and Sharpe. Maximum drawdown includes initial wealth in the running peak, so a loss at the first comparison observation cannot be incorrectly treated as zero drawdown.
+
+**Greek letter used below:** σ — *sigma*, pronounced “SIG-muh”.
+
+```text
+annualized volatility = σ_daily * sqrt(252)
+Sharpe = mean(daily simple return) / σ_daily * sqrt(252)
+```
+
+## Why the result must remain qualified
+
+The required one-row execution lag prevents trading on a state observed on the same return row, but it **does not make this implementation causal or out-of-sample**. Regime thresholds/model parameters, the selected full-sample state path, and the state-conditional means used for the allocation map are estimated from the full historical sample. A genuinely predictive experiment would require rolling or expanding estimation, one-sided state inference, allocation estimates using decision-time information only, and explicit turnover/transaction-cost modeling.
+
+This qualification is central to the interpretation: the current project is a deterministic, reproducible assignment backtest, not evidence of a production-ready trading edge.
+
+## Canonical artifacts
+
+Processed data:
 
 ```text
 data/processed/step1_data.csv
-reports/figures/step1_etf_log_returns.png
-reports/figures/step1_vix_change.png
 ```
-
-### Step 2 — Modeling VIX Regimes
-
-Implemented both assignment families with exactly two and three states:
-
-- quantile-discretized Markov chains with transition matrices and stationary distributions;
-- univariate Gaussian HMMs with deterministic restarts, fitted parameters, Viterbi states, and smoothed probabilities.
-
-All four candidate state sequences are persisted as canonical `Date,state` CSVs instead of being refit/redecoded later merely to recover an existing state path.
-
-### Step 3 — State Selection and Interpretation
-
-Implemented log-likelihood, AIC, and BIC comparison. Because Markov and HMM likelihoods are defined on different observation spaces, state count is selected by BIC **within family**, not by raw cross-family AIC/BIC comparison. The preferred-method rule selected **Markov K=2**: HMM K=3 won within the HMM family by BIC but failed the fixed minimum 5% decoded-state-occupancy diagnostic, so the deterministic Markov fallback was used.
-
-The preferred state sequence is persisted at:
-
-```text
-reports/tables/step3_selected_states.csv
-```
-
-State-conditional TLT/GLD/SPY mean daily log return, sample standard deviation (`ddof=1`), and count are computed and visualized in `reports/tables/step3_state_asset_statistics.csv` and `reports/figures/step3_state_asset_statistics.png`.
-
-### Step 4 — Rotation Strategy
-
-Implemented the deterministic 100% state-based rotation rule from the canonical Step 3 statistics. For the selected Markov K=2 specification, **State 0 maps to SPY** and **State 1 maps to TLT**; GLD is not selected by the maximum-conditional-mean rule in either state. Exact ties use:
-
-```text
-TLT -> GLD -> SPY
-```
-
-The optional 60/40 variant is not used. The mapping is persisted at `reports/tables/step4_allocation_mapping.csv`, and `reports/generated/steps_2_4_manifest.json` records the frozen Step 1 SHA plus every canonical Step 2–4 table and figure. The notebook explicitly states that the mapping is full-sample/in-sample and is not a causal out-of-sample trading rule.
-
-### Step 5 — Backtesting and Evaluation
-
-The required backtest uses one **observed-trading-row** execution lag. ETF log returns are converted to simple returns before portfolio arithmetic. The comparison benchmarks are exactly:
-
-- 1/3 TLT + 1/3 GLD + 1/3 SPY, rebalanced on the first observed comparison trading date of each calendar month and allowed to drift intra-month;
-- buy-and-hold SPY.
-
-All three portfolios use identical comparison dates. Required metrics are cumulative return, annualized return, annualized volatility, zero-risk-free Sharpe ratio, and maximum drawdown. Maximum drawdown explicitly includes initial wealth `W_0 = 1` in the running peak so an initial loss is not incorrectly treated as zero drawdown.
-
-Sensitivity compares two versus three states **within the preferred model family** on common dates.
-
-### Important in-sample qualification
-
-The assignment-required one-day lag delays execution but does **not** make this implementation causal or out-of-sample. The backlog requires the notebook/report to disclose that regime thresholds/model parameters are fitted on the full sample, HMM Viterbi states are full-sequence decoded when HMM is preferred, and state-conditional allocation means are full-sample estimates. A stronger validation would require rolling/expanding estimation, one-sided/filtered state inference, and decision-time-only allocation estimation; that is documented as future work rather than silently claimed as completed.
-
-## Canonical analysis artifacts
 
 Primary technical notebook:
 
@@ -138,6 +147,26 @@ Template-based notebook PDF report:
 
 ```text
 reports/Stochastic_Modeling_GWP2_Report.pdf
+reports/Template_Stochastic_Modeling_Group_Work_Project.pdf
+```
+
+Selected-state provenance and allocation:
+
+```text
+reports/generated/step3_selected_model.json
+reports/tables/step3_selected_states.csv
+reports/tables/step3_state_asset_statistics.csv
+reports/tables/step4_allocation_mapping.csv
+```
+
+Step 5 outputs:
+
+```text
+reports/tables/step5_daily_returns.csv
+reports/tables/step5_performance_summary.csv
+reports/tables/step5_state_count_sensitivity.csv
+reports/figures/step5_cumulative_performance.png
+reports/generated/step5_manifest.json
 ```
 
 Canonical scientific-source registry:
@@ -146,7 +175,13 @@ Canonical scientific-source registry:
 reports/references.bib
 ```
 
-The PDF uses page 1 of `reports/Template_Stochastic_Modeling_Group_Work_Project.pdf` as its course/group cover and excludes the template instruction page. Every notebook cell and stored output is then rendered in notebook order, including markdown, orchestration code, tables, figures, equations, citations, source notes, and Works Cited. `scripts/build_pdf_report.py` records the canonical notebook SHA-256 in the PDF metadata as `/NotebookSHA256` so a stale PDF can be detected without recomputing the analysis.
+## Scientific citation policy
+
+The technical notebook and PDF contain **verifiable scientific source attribution**. `reports/references.bib` is the canonical bibliography registry. The required citation standard is **MLA 9**: in-text citations are adjacent to externally sourced definitions, equations, methodological claims, and interpretations, and the analysis ends with a **Works Cited** section.
+
+Peer-reviewed papers and scholarly books/textbooks support Markov chains, HMM/EM/decoding, information criteria, performance metrics, and backtesting limitations. Official primary sources may additionally document Yahoo/Cboe/index/data definitions, but a bare provider URL does not replace scholarly support for theory or methodology.
+
+Every notebook/PDF citation must resolve to `reports/references.bib`; bibliography entries rendered in an artifact must actually be cited. Duplicate keys, invented metadata, unresolved citations, bibliography-only orphan entries, and URL-only pseudo-citations are invalid.
 
 Parity policy:
 
@@ -157,16 +192,20 @@ Notebook <-> standalone PDF: exact rendered-notebook content parity
 Notebook/PDF citations -> reports/references.bib: resolved citation and Works-Cited integrity
 ```
 
-## Final submission package
+The PDF uses page 1 of the supplied template as the course/group cover and excludes the template instruction page. `scripts/build_pdf_report.py` records the canonical notebook SHA-256 in PDF metadata as `/NotebookSHA256` so stale rendering can be detected.
 
-The assignment requires a ZIP containing the executable notebook and its PDF/HTML duplicate, while the template-based PDF report is uploaded separately. PR-48/PR-49 therefore produce:
+## Complete numerical verification
 
-```text
-dist/MScFE_622_GWP2_submission.zip
-reports/generated/submission_manifest.json
-```
+`scripts/check_analysis_consistency.py` is deliberately broader than the ordinary unit tests. On every quality-gate run it:
 
-The ZIP contains the notebook, HTML duplicate, README, `pyproject.toml`, canonical `reports/references.bib`, Step 1 processed data, and the local `src/vix_regime_allocation` Python package needed to keep the notebook executable. The standalone PDF is explicitly excluded from the ZIP and remains a separate upload. The bundle is deterministic and hash-manifested.
+- reconstructs all Step 1 quantities that can be checked from the persisted common sample;
+- recomputes Markov K=2/K=3 state paths, thresholds, transitions, stationary distributions, likelihoods, AIC, and BIC;
+- refits deterministic Gaussian-HMM K=2/K=3 candidates and reconciles persisted Viterbi paths, transitions, parameters, and diagnostics;
+- recomputes Step 3 model selection, state-conditional ETF statistics, and Step 4 allocation;
+- recomputes Step 5 lagged rotation, both benchmarks, performance summary, sensitivity table, and artifact manifest;
+- independently reconstructs the lagged rotation and the five required performance metrics without delegating those checks back to the backtest/summary functions.
+
+This gate is intended to detect stale generated files and numerical drift even when individual source-level unit tests still pass.
 
 ## Development setup
 
@@ -187,7 +226,7 @@ Windows PowerShell:
 
 ## Quality gates
 
-`.github/workflows/quality-gates.yml` runs on push and pull requests. Core jobs start independently and therefore remain parallel:
+`.github/workflows/quality-gates.yml` runs on pushes and pull requests. Independent jobs remain parallel where possible.
 
 | Gate | Command | Requirement |
 |---|---|---|
@@ -197,15 +236,13 @@ Windows PowerShell:
 | Integration tests (`integration-tests`) | `coverage run -m pytest -m integration` | pass |
 | README sidecar | `python scripts/check_readme_sidecar.py` | pass |
 | Backlog contract | `python scripts/check_backlog_contract.py` | pass |
+| Repository hygiene | `python scripts/check_repository_hygiene.py` | pass |
+| Analysis consistency | `python scripts/check_analysis_consistency.py` | pass |
 | Coverage | combined unit + integration | `>=90%` |
 
-Ruff lint still examines supported Python and notebook code across the repository. The formatter gate is intentionally limited to the Python source, test, and script trees so the formatter does not rewrite the executed scientific notebook as a side effect of CI.
+The aggregate `quality-gate` requires every job above. The numerical audit is therefore part of the merge gate rather than an optional review workflow.
 
-The aggregate `quality-gate` requires all current jobs. PR-32 later adds the first `analysis-sidecars` parity job after the corresponding notebook/README/HTML/PDF artifacts exist; PR-47 extends that checker through Step 5.
-
-`.github/workflows/auto-complete.yml` listens only to completed **Quality Gates** runs originating from pull requests. After successful Quality Gates, **Auto Complete** merges only an open, non-draft PR targeting `main` whose current head SHA is exactly the SHA that passed validation. If `main` advanced after that validation, the workflow updates the PR branch and waits for a fresh Quality Gates run instead of merging stale validation. A successful auto-complete uses a merge commit and requests deletion of the feature branch. The workflow does not check out or execute PR code and therefore keeps its write-scoped token isolated from untrusted test execution.
-
-Local planning-stage checks:
+Local verification:
 
 ```bash
 ruff check .
@@ -218,20 +255,49 @@ coverage combine
 coverage report --fail-under=90
 python scripts/check_readme_sidecar.py
 python scripts/check_backlog_contract.py
+python scripts/check_repository_hygiene.py
+python scripts/check_analysis_consistency.py
 ```
 
-## Main-branch rule
+## Canonical backlog and Git workflow
 
-The intended `main` ruleset is:
+`BACKLOG.md` is the **single canonical planning source**. It specifies PR dependencies, file ownership, interfaces, schemas, numerical conventions, notebook serialization, sidecar parity, backtesting semantics, citation integrity, final packaging, and Git contracts.
+
+### Git workflow per backlog PR
+
+Each backlog PR declares its branch, clean-tree requirement, and exact commit message. The required check is:
+
+```bash
+git status --short --branch
+```
+
+For example, PR-01 starts with the exact commit name `PR-01 — Yahoo adjusted-close loader`. Immediately before commit and merge, the declared feature branch must have no staged, modified, or untracked files.
+
+## Auto Complete and main-branch rule
+
+`.github/workflows/auto-complete.yml` listens to completed **Quality Gates** runs associated with pull requests. After successful Quality Gates, **Auto Complete** verifies the tested head SHA, rejects draft/stale/wrong-base PRs, updates a branch when `main` advanced, and only then merges the validated PR.
+
+The intended server-side `main` ruleset is still:
 
 - require changes through a pull request;
-- require the `quality-gate` status check before merge;
-- require the PR branch to be up to date with `main` before merge;
-- require zero approving reviews so fully automated backlog PRs can complete without a human approval bottleneck;
+- require `quality-gate` before merge;
+- require the PR branch to be up to date with `main`;
+- require zero approving reviews for the automated backlog workflow;
 - block force pushes;
 - block branch deletion.
 
-The Auto Complete workflow is already configured to merge only after successful Quality Gates and to refresh a stale PR before a new validation run. GitHub repository settings must still enable the `main` branch/ruleset above for server-side enforcement; until that setting is enabled, the workflow discipline is implemented but direct privileged pushes remain technically possible.
+GitHub repository settings must still enable that ruleset for server-side enforcement; workflow discipline alone does not technically prevent a privileged direct push.
+
+## Final submission package
+
+The planned final package is:
+
+```text
+dist/MScFE_622_GWP2_submission.zip
+reports/generated/submission_manifest.json
+```
+
+The ZIP is intended to contain the executable notebook, its HTML duplicate, README, `pyproject.toml`, `reports/references.bib`, processed Step 1 data, and the local Python package needed for notebook execution. The template-based PDF remains a separate submission artifact.
 
 ## Team
 
