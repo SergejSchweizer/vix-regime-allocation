@@ -13,9 +13,7 @@ def test_one_failed_restart_does_not_abort_remaining_seeds(
     class FakeModel:
         monitor_ = SimpleNamespace(converged=True)
 
-    def fake_restart(
-        observations: np.ndarray, n_states: int, seed: int
-    ) -> tuple[FakeModel, float]:
+    def fake_restart(observations: np.ndarray, n_states: int, seed: int) -> tuple[FakeModel, float]:
         del observations, n_states
         if seed == 42:
             raise ValueError("singular initialization")
