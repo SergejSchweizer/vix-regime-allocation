@@ -55,7 +55,7 @@ def main() -> None:
         "reports/generated/submission_manifest.json",
         "Notebook <-> README: exact technical-result parity",
         "Notebook <-> HTML: exact executed-notebook duplicate",
-        "Notebook <-> standalone PDF: decision-result parity",
+        "Notebook <-> standalone PDF: exact rendered-notebook content parity",
         "does **not** make this implementation causal or out-of-sample",
     )
     missing = [fragment for fragment in required_readme_fragments if fragment not in readme_text]
