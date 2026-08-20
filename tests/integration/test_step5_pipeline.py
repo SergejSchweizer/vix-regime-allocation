@@ -92,8 +92,15 @@ def test_step5_source_pipeline_end_to_end_offline(tmp_path: Path) -> None:
     assert summary["observations"].tolist() == [len(comparison)] * 3
     assert np.isfinite(summary.drop(columns=["portfolio"]).to_numpy(dtype=float)).all()
 
+    log_columns = ["TLT_log_return", "GLD_log_return", "SPY_log_return"]
+    instrument_returns = pd.DataFrame(
+        np.expm1(data.loc[comparison_index, log_columns].to_numpy(dtype=float)),
+        index=comparison_index,
+        columns=["TLT", "GLD", "SPY"],
+    )
+    instrument_returns.index.name = "Date"
     figure_path = tmp_path / "step5_cumulative_performance.png"
-    plot_cumulative_performance(comparison, figure_path)
+    plot_cumulative_performance(comparison, figure_path, instrument_returns)
     assert figure_path.is_file() and figure_path.stat().st_size > 0
 
     sensitivity = build_state_count_sensitivity(data, "markov", states_by_k)
