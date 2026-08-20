@@ -59,9 +59,7 @@ def soft_state_asset_means(
     if (
         np.any(~np.isfinite(probabilities))
         or np.any(probabilities < -PROBABILITY_TOL)
-        or not np.allclose(
-            probabilities.sum(axis=1), 1.0, atol=PROBABILITY_TOL, rtol=0.0
-        )
+        or not np.allclose(probabilities.sum(axis=1), 1.0, atol=PROBABILITY_TOL, rtol=0.0)
     ):
         raise ValueError("filtered probabilities must be finite and normalized.")
     returns = simple_returns.to_numpy(dtype=float)
@@ -69,9 +67,7 @@ def soft_state_asset_means(
     if np.any(masses <= 0.0):
         raise ValueError("each HMM state requires positive filtered probability mass.")
     means = probabilities.T @ returns / masses[:, None]
-    result = pd.DataFrame(
-        means, index=pd.Index(range(n_states), name="state"), columns=ASSET_ORDER
-    )
+    result = pd.DataFrame(means, index=pd.Index(range(n_states), name="state"), columns=ASSET_ORDER)
     if np.any(~np.isfinite(result.to_numpy(dtype=float))):
         raise ValueError("soft-state means must be finite.")
     return result
