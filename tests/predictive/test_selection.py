@@ -29,11 +29,7 @@ def _signals(family: str, n_states: int) -> pd.DataFrame:
 
 def test_exact_grid_and_deterministic_tie_selection() -> None:
     assert len(candidate_grid()) == 16
-    signals = {
-        (family, k): _signals(family, k)
-        for family in ("markov", "hmm")
-        for k in (2, 3)
-    }
+    signals = {(family, k): _signals(family, k) for family in ("markov", "hmm") for k in (2, 3)}
     idx = pd.DatetimeIndex(pd.bdate_range("2015-01-05", periods=5), name="Date")
     assets = pd.DataFrame(
         {
@@ -50,11 +46,7 @@ def test_exact_grid_and_deterministic_tie_selection() -> None:
 
 
 def test_selection_rejects_non_validation_dates() -> None:
-    signals = {
-        (family, k): _signals(family, k)
-        for family in ("markov", "hmm")
-        for k in (2, 3)
-    }
+    signals = {(family, k): _signals(family, k) for family in ("markov", "hmm") for k in (2, 3)}
     signals[("markov", 2)] = signals[("markov", 2)].copy()
     signals[("markov", 2)].loc[0, "return_date"] = pd.Timestamp("2021-01-04")
     dates = [
