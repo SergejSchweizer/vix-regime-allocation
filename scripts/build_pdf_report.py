@@ -133,7 +133,12 @@ def build_report(
     template_path: Path = TEMPLATE,
     output_path: Path = OUTPUT,
 ) -> Path:
-    """Render every notebook cell/output and prepend the supplied template cover."""
+    """Build the PDF strictly as a derived sidecar of the executed notebook.
+
+    The notebook is the single source of truth. The PDF adds only the supplied course cover
+    and then renders the notebook in order; it must never introduce independent analysis,
+    equations, explanations, tables, or figures.
+    """
     _validate_notebook(notebook_path)
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
@@ -153,7 +158,9 @@ def build_report(
         writer.add_metadata(
             {
                 "/Title": "MScFE 622 Group Work Project 2 — VIX Regime Allocation",
-                "/Subject": "Template-based PDF rendering of the canonical executed notebook",
+                "/Subject": "Derived PDF sidecar of the canonical executed notebook",
+                "/ArtifactRole": "notebook-sidecar",
+                "/SourceOfTruth": "notebooks/gwp2_vix_regime_allocation.ipynb",
                 "/NotebookSHA256": _notebook_sha256(notebook_path),
             }
         )

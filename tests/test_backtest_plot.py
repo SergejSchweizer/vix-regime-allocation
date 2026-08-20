@@ -47,18 +47,21 @@ def test_plot_delegates_once_per_portfolio_and_drawdown_includes_initial_wealth(
     assert expected_first_drawdown == pytest.approx(-0.01)
 
 
-def test_saved_figure_has_cumulative_and_drawdown_panels(
+def test_saved_figure_has_cumulative_drawdown_and_terminal_summary_panels(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
     observed: dict[str, object] = {}
     original_savefig = plt.Figure.savefig
 
     def recording_savefig(self: plt.Figure, *args: object, **kwargs: object) -> None:
-        cumulative_axis, drawdown_axis = self.axes
+        cumulative_axis, drawdown_axis, terminal_axis = self.axes
         observed["title"] = cumulative_axis.get_title()
         observed["cum_ylabel"] = cumulative_axis.get_ylabel()
+        observed["dd_title"] = drawdown_axis.get_title()
         observed["dd_ylabel"] = drawdown_axis.get_ylabel()
         observed["xlabel"] = drawdown_axis.get_xlabel()
+        observed["terminal_title"] = terminal_axis.get_title()
+        observed["terminal_xlabel"] = terminal_axis.get_xlabel()
         observed["cum_lines"] = [
             line.get_label()
             for line in cumulative_axis.lines
@@ -69,20 +72,34 @@ def test_saved_figure_has_cumulative_and_drawdown_panels(
             for line in drawdown_axis.lines
             if not str(line.get_label()).startswith("_")
         ]
+        observed["terminal_widths"] = [patch.get_width() for patch in terminal_axis.patches]
+        observed["endpoint_labels"] = [text.get_text() for text in cumulative_axis.texts]
         original_savefig(self, *args, **kwargs)
 
     monkeypatch.setattr(plt.Figure, "savefig", recording_savefig)
-    plot_cumulative_performance(_comparison(), tmp_path / "figure.png")
-    assert observed["title"] == "Step 5 Performance Comparison"
+    comparison = _comparison()
+    plot_cumulative_performance(comparison, tmp_path / "figure.png")
+
+    assert observed["title"] == "Step 5 Cumulative Performance Comparison"
     assert observed["cum_ylabel"] == "Cumulative return"
+    assert observed["dd_title"] == "Drawdown history"
     assert observed["dd_ylabel"] == "Drawdown"
     assert observed["xlabel"] == "Date"
+    assert observed["terminal_title"] == "Terminal cumulative return"
+    assert observed["terminal_xlabel"] == "Cumulative return"
     assert observed["cum_lines"] == [
         "Regime rotation",
         "Equal weight (monthly reset)",
         "SPY buy and hold",
     ]
     assert observed["dd_lines"] == observed["cum_lines"]
+
+    expected_terminal = [
+        float((1.0 + comparison[column]).prod() - 1.0) for column in COMPARISON_COLUMNS
+    ]
+    np.testing.assert_allclose(observed["terminal_widths"], expected_terminal)
+    assert len(observed["endpoint_labels"]) == 3
+    assert all(str(label).endswith("%") for label in observed["endpoint_labels"])
 
 
 @pytest.mark.parametrize(

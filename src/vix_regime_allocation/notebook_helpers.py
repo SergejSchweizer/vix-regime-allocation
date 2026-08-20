@@ -620,7 +620,7 @@ def step_5_performance_metrics_and_cumulative_compar_034() -> Any:  # pragma: no
     plot_cumulative_performance(step5_daily, figure_path)
     display(Markdown("### Required performance summary"))
     display(performance_summary)
-    display(Markdown(f"![Cumulative performance comparison]({figure_path.as_posix()})"))
+    display(Image(filename=str(figure_path)))
     rows = performance_summary.set_index("portfolio")
     lines = []
     for portfolio, label in [
