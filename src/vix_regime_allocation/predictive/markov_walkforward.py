@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import cast
+
 import numpy as np
 import pandas as pd
 
@@ -52,9 +54,9 @@ def build_markov_signals(
     rows: list[dict[str, object]] = []
 
     for schedule_row in schedule.itertuples(index=False):
-        decision = pd.Timestamp(schedule_row.decision_date)
+        decision = cast(pd.Timestamp, schedule_row.decision_date)
         if bool(schedule_row.refit) or model is None or state_means is None:
-            active_training_end = pd.Timestamp(schedule_row.training_end)
+            active_training_end = cast(pd.Timestamp, schedule_row.training_end)
             training = data.loc[:active_training_end]
             vix = training["VIX_change"].astype(float).rename("VIX_change")
             model = fit_markov_forecaster(vix, n_states)
@@ -64,9 +66,10 @@ def build_markov_signals(
 
         if active_training_end is None or active_training_end >= decision:
             raise RuntimeError("active training window is not causal.")
-        next_probabilities = forecast_next_regime(model, float(data.at[decision, "VIX_change"]))
+        current_vix = float(cast(float, data.at[decision, "VIX_change"]))
+        next_probabilities = forecast_next_regime(model, current_vix)
         expected = expected_asset_returns(next_probabilities, state_means)
-        position = int(index.get_loc(decision))
+        position = int(index.get_indexer([decision])[0])
         return_date = index[position + 1]
         row: dict[str, object] = {
             "decision_date": decision,
