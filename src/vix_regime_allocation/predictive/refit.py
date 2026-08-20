@@ -21,7 +21,7 @@ def build_refit_schedule(
     first = pd.Timestamp(first_decision_date)
     if first not in index:
         raise ValueError("first_decision_date must be an observed row.")
-    first_position = int(index.get_loc(first))
+    first_position = int(index.get_indexer([first])[0])
     if first_position == 0:
         raise ValueError("first_decision_date requires at least one prior training row.")
     decisions = index[first_position:-1]
@@ -33,7 +33,7 @@ def build_refit_schedule(
     for decision in decisions:
         refit = is_monthly_refit(previous, decision)
         if refit:
-            position = int(index.get_loc(decision))
+            position = int(index.get_indexer([decision])[0])
             active_training_end = index[position - 1]
         if active_training_end >= decision:
             raise RuntimeError("training_end must precede decision_date.")
