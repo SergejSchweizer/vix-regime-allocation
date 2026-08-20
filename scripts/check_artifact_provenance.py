@@ -21,6 +21,9 @@ def source_paths() -> list[Path]:
             ROOT / "data/processed/step1_data.csv",
             ROOT / "reports/references.bib",
             ROOT / "scripts/rebuild_analysis_review.py",
+            ROOT / "scripts/build_pdf_report.py",
+            ROOT / "scripts/check_latex_formatting.py",
+            ROOT / "scripts/normalize_notebook_latex.py",
         ]
     )
     missing = [path for path in paths if not path.is_file()]
