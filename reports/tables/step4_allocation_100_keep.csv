@@ -1,0 +1,3 @@
+method,state,rank_1_asset,rank_2_asset,rank_1_mean_log_return,rank_2_mean_log_return,TLT_weight,GLD_weight,SPY_weight
+100_keep,0,SPY,GLD,0.0012057730070918274,0.00034711203555829584,0.0,0.0,1.0
+100_keep,1,TLT,GLD,0.0009196051681435003,0.0005885668382821591,1.0,0.0,0.0
