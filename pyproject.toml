@@ -54,6 +54,28 @@ select = ["E", "F", "I", "B", "UP"]
 "tests/predictive/test_selection.py" = ["E501"]
 "tests/predictive/test_state_returns.py" = ["E501"]
 
+# Temporary legacy-format quarantine. PR-66 removes this block after the HMM-only
+# revision wave has rewritten or deleted these pre-existing predictive files.
+[tool.ruff.format]
+exclude = [
+    "scripts/check_predictive_causality.py",
+    "src/vix_regime_allocation/predictive/artifacts.py",
+    "src/vix_regime_allocation/predictive/hmm_filter.py",
+    "src/vix_regime_allocation/predictive/holdout.py",
+    "src/vix_regime_allocation/predictive/markov_forecast.py",
+    "src/vix_regime_allocation/predictive/plots.py",
+    "src/vix_regime_allocation/predictive/policy.py",
+    "src/vix_regime_allocation/predictive/selection.py",
+    "src/vix_regime_allocation/predictive/split.py",
+    "src/vix_regime_allocation/predictive/state_returns.py",
+    "tests/predictive/test_artifacts.py",
+    "tests/predictive/test_hmm_filter.py",
+    "tests/predictive/test_hmm_walkforward.py",
+    "tests/predictive/test_refit.py",
+    "tests/predictive/test_selection.py",
+    "tests/predictive/test_state_returns.py",
+]
+
 [tool.mypy]
 python_version = "3.11"
 strict = true
