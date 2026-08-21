@@ -39,9 +39,7 @@ def build_dual_method_comparison(
     spy = build_spy_buy_hold_returns(data, keep_index)
     comparison = pd.DataFrame(
         {
-            "hmm_100_keep": rotations["100_keep"]["regime_rotation_return"].to_numpy(
-                dtype=float
-            ),
+            "hmm_100_keep": rotations["100_keep"]["regime_rotation_return"].to_numpy(dtype=float),
             "hmm_60_40_spread": rotations["60_40_spread"]["regime_rotation_return"].to_numpy(
                 dtype=float
             ),
