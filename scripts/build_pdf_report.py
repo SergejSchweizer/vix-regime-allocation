@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import os
+import re
 import shutil
 import subprocess
 import tempfile
@@ -25,24 +26,91 @@ GROUP_MEMBERS = (
     "Sergej Schweizer",
 )
 
+REQUIRED_CODE_CALLS = (
+    "nb.step_1_data_overview()",
+    "nb.step_2_hmm_diagnostics()",
+    "nb.step_3_hmm_selection()",
+    "nb.step_4_dual_allocations()",
+    "nb.step_5_hmm_dual_method_comparison()",
+    "sensitivity_nb.step_5_state_count_sensitivity()",
+    "nb.canonical_works_cited()",
+)
+REQUIRED_NARRATIVE_TOKENS = (
+    "Hidden Markov Model",
+    "Expectation-Maximization",
+    "Baum-Welch",
+    "100% Keep",
+    "60/40 Spread",
+    "hmm_100_keep",
+    "hmm_60_40_spread",
+    "equal_weight_monthly",
+    "spy_buy_hold",
+    "Works Cited",
+)
+CITATION_TOKENS = ("Baum", "Rabiner", "Viterbi", "Akaike", "Schwarz")
+FORBIDDEN_MARKOV_RESULT_PATTERNS = (
+    re.compile(r"\bmarkov\s+k\s*=\s*[23]\b", re.IGNORECASE),
+    re.compile(r"step2_markov_", re.IGNORECASE),
+    re.compile(r"step4_allocation_mapping\.csv", re.IGNORECASE),
+    re.compile(r"markov_vix_states", re.IGNORECASE),
+    re.compile(r"\bselected\s+(?:model|family)\s*[:=]\s*markov\b", re.IGNORECASE),
+)
+
 
 def _notebook_sha256(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
-def _validate_notebook(path: Path) -> None:
+def _cell_source(cell: object) -> str:
+    source = getattr(cell, "source", "")
+    return "".join(source) if isinstance(source, list) else str(source)
+
+
+def _validate_notebook(path: Path) -> str:
+    """Validate the canonical source-of-truth notebook before any PDF rendering."""
     notebook = nbformat.read(path, as_version=4)
+    nbformat.validate(notebook)
     failures: list[str] = []
+    code_sources: list[str] = []
+    narrative_parts: list[str] = []
+
     for index, cell in enumerate(notebook.cells):
+        source = _cell_source(cell)
+        narrative_parts.append(source)
         if cell.cell_type != "code":
             continue
+        if not source.strip():
+            continue
+        code_sources.append(source.strip())
+        if cell.get("execution_count") is None:
+            failures.append(f"cell {index}: non-empty code cell is not executed")
         for output in cell.get("outputs", []):
             if output.get("output_type") == "error":
                 failures.append(
                     f"cell {index}: {output.get('ename', 'Error')}: {output.get('evalue', '')}"
                 )
+
+    narrative = "\n".join(narrative_parts)
+    for required in REQUIRED_CODE_CALLS:
+        if code_sources.count(required) != 1:
+            failures.append(f"required notebook helper call must occur exactly once: {required}")
+
+    for token in REQUIRED_NARRATIVE_TOKENS:
+        if token not in narrative:
+            failures.append(f"notebook is missing required HMM/dual-method content: {token}")
+
+    if not any(token in narrative for token in CITATION_TOKENS):
+        failures.append("notebook is missing scholarly in-text citation content")
+    if "reports/references.bib" not in narrative:
+        failures.append("notebook is missing the canonical bibliography registry reference")
+
+    for pattern in FORBIDDEN_MARKOV_RESULT_PATTERNS:
+        if pattern.search(narrative):
+            failures.append(f"notebook contains forbidden Markov-result leakage: {pattern.pattern}")
+
     if failures:
-        raise RuntimeError("Notebook contains failed outputs: " + "; ".join(failures))
+        raise RuntimeError("Notebook validation failed: " + "; ".join(failures))
+    return _notebook_sha256(path)
 
 
 def _export_notebook_html(notebook_path: Path, html_path: Path) -> None:
@@ -100,12 +168,12 @@ def _template_cover(template_path: Path) -> object:
     cover = reader.pages[0]
     width = float(cover.mediabox.width)
     height = float(cover.mediabox.height)
+    if width <= 0 or height <= 0:
+        raise RuntimeError("The supplied PDF template cover has invalid page dimensions.")
 
     overlay_bytes = BytesIO()
     overlay = canvas.Canvas(overlay_bytes, pagesize=(width, height))
 
-    # Keep the supplied template title/course framing and replace only the lower
-    # group-information area so the report carries the actual team membership.
     lower_area_height = height * 0.40
     overlay.setFillColorRGB(1, 1, 1)
     overlay.rect(0, 0, width, lower_area_height, stroke=0, fill=1)
@@ -128,18 +196,32 @@ def _template_cover(template_path: Path) -> object:
     return cover
 
 
+def _validate_pdf_metadata(pdf_path: Path, notebook_sha: str, expected_body_pages: int) -> None:
+    if not pdf_path.is_file() or pdf_path.stat().st_size == 0:
+        raise RuntimeError("Generated report is empty.")
+    reader = PdfReader(str(pdf_path))
+    if len(reader.pages) != expected_body_pages + 1:
+        raise RuntimeError(
+            "Generated report must contain one template cover plus notebook pages only."
+        )
+    metadata = reader.metadata or {}
+    if metadata.get("/NotebookSHA256") != notebook_sha:
+        raise RuntimeError(
+            "Generated report notebook SHA-256 metadata does not match source bytes."
+        )
+    if metadata.get("/ArtifactRole") != "notebook-sidecar":
+        raise RuntimeError("Generated report is missing notebook-sidecar metadata.")
+    if metadata.get("/SourceOfTruth") != "notebooks/gwp2_vix_regime_allocation.ipynb":
+        raise RuntimeError("Generated report has an invalid source-of-truth metadata path.")
+
+
 def build_report(
     notebook_path: Path = NOTEBOOK,
     template_path: Path = TEMPLATE,
     output_path: Path = OUTPUT,
 ) -> Path:
-    """Build the PDF strictly as a derived sidecar of the executed notebook.
-
-    The notebook is the single source of truth. The PDF adds only the supplied course cover
-    and then renders the notebook in order; it must never introduce independent analysis,
-    equations, explanations, tables, or figures.
-    """
-    _validate_notebook(notebook_path)
+    """Render a validated executed notebook after exactly page 1 of the supplied template."""
+    notebook_sha = _validate_notebook(notebook_path)
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
     with tempfile.TemporaryDirectory(prefix="gwp2-report-") as temp_dir_name:
@@ -148,10 +230,15 @@ def build_report(
         notebook_pdf = temp_dir / "notebook.pdf"
         _export_notebook_html(notebook_path, html_path)
         _print_html_to_pdf(html_path, notebook_pdf)
+        if not notebook_pdf.is_file() or notebook_pdf.stat().st_size == 0:
+            raise RuntimeError("Notebook rendering produced an empty PDF.")
+
+        body = PdfReader(str(notebook_pdf))
+        if not body.pages:
+            raise RuntimeError("Notebook rendering produced no PDF pages.")
 
         writer = PdfWriter()
         writer.add_page(_template_cover(template_path))
-        body = PdfReader(str(notebook_pdf))
         for page in body.pages:
             writer.add_page(page)
 
@@ -161,14 +248,14 @@ def build_report(
                 "/Subject": "Derived PDF sidecar of the canonical executed notebook",
                 "/ArtifactRole": "notebook-sidecar",
                 "/SourceOfTruth": "notebooks/gwp2_vix_regime_allocation.ipynb",
-                "/NotebookSHA256": _notebook_sha256(notebook_path),
+                "/NotebookSHA256": notebook_sha,
             }
         )
         with output_path.open("wb") as handle:
             writer.write(handle)
 
-    if output_path.stat().st_size == 0:
-        raise RuntimeError("Generated report is empty.")
+        _validate_pdf_metadata(output_path, notebook_sha, expected_body_pages=len(body.pages))
+
     return output_path
 
 
