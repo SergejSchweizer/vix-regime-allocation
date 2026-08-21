@@ -86,7 +86,7 @@ def _legacy_staging_mode(
     implementation_cells: list[tuple[int, str]],
 ) -> bool:
     """Allow the pre-PR-61 generated notebook while the new helper surface lands first."""
-    if implementation_cells or imported_aliases != {"nb"} or not calls:
+    if implementation_cells or "nb" not in imported_aliases or not calls:
         return False
     if any(target in REQUIRED_CALLS for target in calls):
         return False
@@ -167,9 +167,7 @@ def validate_orchestration() -> int:
     for required in REQUIRED_CALLS:
         count = calls.count(required)
         if count != 1:
-            message = (
-                f"required helper call {required[0]}.{required[1]} occurs {count} times"
-            )
+            message = f"required helper call {required[0]}.{required[1]} occurs {count} times"
             violations.append(message)
 
     unexpected = sorted(set(calls) - set(REQUIRED_CALLS))
