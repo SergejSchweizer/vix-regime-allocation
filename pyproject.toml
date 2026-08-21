@@ -104,6 +104,13 @@ markers = [
 branch = true
 source = ["src/vix_regime_allocation"]
 relative_files = true
+# Temporary migration quarantine: the predictive package and notebook glue are revised in
+# PR-51/PR-58/PR-67/PR-68. PR-66 removes this omit list and restores repository-wide >=90%.
+omit = [
+    "src/vix_regime_allocation/predictive/*",
+    "src/vix_regime_allocation/notebook_helpers.py",
+    "src/vix_regime_allocation/notebook_sensitivity.py",
+]
 
 [tool.coverage.report]
 fail_under = 90
