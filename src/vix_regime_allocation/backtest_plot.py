@@ -245,9 +245,7 @@ def _validate_dual_comparison(comparison: pd.DataFrame) -> pd.DatetimeIndex:
     return pd.DatetimeIndex(comparison.index, name="Date")
 
 
-def plot_four_portfolio_cumulative_performance(
-    comparison: pd.DataFrame, output_path: Path
-) -> None:
+def plot_four_portfolio_cumulative_performance(comparison: pd.DataFrame, output_path: Path) -> None:
     """Plot exactly the two HMM allocation methods and the two required benchmarks."""
     index = _validate_dual_comparison(comparison)
     if not isinstance(output_path, Path):
