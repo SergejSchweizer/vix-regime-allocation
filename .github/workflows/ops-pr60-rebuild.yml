@@ -10,6 +10,7 @@ permissions:
 
 jobs:
   rebuild:
+    # This scratch-only workflow intentionally never lands on main.
     if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     env:
