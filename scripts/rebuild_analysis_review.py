@@ -124,6 +124,9 @@ def _steps_2_to_4(
         fits[n_states] = fit
         states_by_k[n_states] = fit.states.astype("int64").rename("state")
 
+    statistics_three_state = compute_state_asset_statistics(data, states_by_k[3])
+    _write_csv(statistics_three_state, "reports/tables/step3_hmm_3_state_asset_statistics.csv")
+
     plot_hmm_vix_states(
         data["VIX"],
         states_by_k[2],
@@ -135,7 +138,14 @@ def _steps_2_to_4(
         fits[3].probabilities,
         FIGURES / "step2_hmm_smoothed_probabilities.png",
     )
-    plot_state_asset_statistics(statistics, FIGURES / "step3_state_asset_statistics.png")
+    plot_state_asset_statistics(
+        statistics, FIGURES / "step3_state_asset_statistics.png", model_label="Selected HMM K=2"
+    )
+    plot_state_asset_statistics(
+        statistics_three_state,
+        FIGURES / "step3_hmm_3_state_asset_statistics.png",
+        model_label="Diagnostic HMM K=3",
+    )
 
     tables = [
         f"reports/tables/step2_hmm_{k}_{suffix}.csv"
@@ -145,6 +155,7 @@ def _steps_2_to_4(
         "reports/tables/step3_model_comparison.csv",
         "reports/tables/step3_selected_states.csv",
         "reports/tables/step3_state_asset_statistics.csv",
+        "reports/tables/step3_hmm_3_state_asset_statistics.csv",
         "reports/tables/step4_allocation_100_keep.csv",
         "reports/tables/step4_allocation_60_40_spread.csv",
     ]
@@ -161,6 +172,7 @@ def _steps_2_to_4(
                     "reports/figures/step2_hmm_vix_states.png",
                     "reports/figures/step2_hmm_smoothed_probabilities.png",
                     "reports/figures/step3_state_asset_statistics.png",
+                    "reports/figures/step3_hmm_3_state_asset_statistics.png",
                 ]
             ),
         },

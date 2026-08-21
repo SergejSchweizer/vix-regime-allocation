@@ -2,9 +2,8 @@
 
 from __future__ import annotations
 
-import json
 from pathlib import Path
-from typing import Any, cast
+from typing import Any
 
 import pandas as pd
 
@@ -136,20 +135,11 @@ def step_2_hmm_diagnostics() -> None:  # pragma: no cover
 
 
 def step_3_hmm_selection() -> None:  # pragma: no cover
-    """Display the HMM-only model comparison, selected state path, and ETF statistics."""
-    from IPython.display import Image, Markdown, display
+    """Display the HMM-only model comparison and state-conditional ETF statistics."""
+    from IPython.display import HTML, Image, Markdown, display
 
     root = _root()
     comparison = pd.read_csv(root / "reports/tables/step3_model_comparison.csv")
-    selected = cast(
-        dict[str, object],
-        json.loads(
-            (root / "reports/generated/step3_selected_model.json").read_text(encoding="utf-8")
-        ),
-    )
-    if selected.get("family") != "hmm":
-        raise RuntimeError("Canonical selected model must be HMM.")
-    states = _indexed_csv("reports/tables/step3_selected_states.csv")
     statistics = pd.read_csv(root / "reports/tables/step3_state_asset_statistics.csv")
 
     display(Markdown("### Step 3 — HMM-only model selection"))
@@ -164,22 +154,8 @@ def step_3_hmm_selection() -> None:  # pragma: no cover
         decimal_columns=("log_likelihood", "aic", "bic"),
     )
     _display_table(
-        pd.Series(selected, name="value").rename_axis("selection_field").reset_index(),
-        number=8,
-        title="Selected HMM specification",
-        description="The final state-count decision and the canonical artifact used downstream.",
-    )
-    _display_table(
-        states.head().reset_index(),
-        number=9,
-        title="Decoded-state path preview",
-        description=(
-            "The first five dates of the Viterbi-decoded state series for the selected HMM."
-        ),
-    )
-    _display_table(
         statistics,
-        number=10,
+        number=8,
         title="State-conditional ETF return statistics",
         description=(
             "Mean and standard deviation of daily ETF log returns conditional on the selected "
@@ -188,6 +164,22 @@ def step_3_hmm_selection() -> None:  # pragma: no cover
         percent_columns=("mean_log_return", "std_log_return"),
     )
     display(Image(filename=str(root / "reports/figures/step3_state_asset_statistics.png")))
+    display(
+        HTML(
+            '<p style="margin: 0.25em 0 1em; font-size: 8px; line-height: 1.35;">'
+            "<strong>Figure 3.</strong> State-conditional ETF mean returns and dispersion for "
+            "the selected HMM K=2.</p>"
+        )
+    )
+    display(Image(filename=str(root / "reports/figures/step3_hmm_3_state_asset_statistics.png")))
+    display(
+        HTML(
+            '<p style="margin: 0.25em 0 1em; font-size: 8px; line-height: 1.35;">'
+            "<strong>Figure 4.</strong> State-conditional ETF mean returns and dispersion for "
+            "the diagnostic HMM K=3; it is shown for comparison but is not selected because "
+            "one decoded state fails the 5% occupancy requirement.</p>"
+        )
+    )
 
 
 def step_4_dual_allocations() -> None:  # pragma: no cover
@@ -199,7 +191,7 @@ def step_4_dual_allocations() -> None:  # pragma: no cover
     }
     _display_table(
         allocations["100_keep"],
-        number=11,
+        number=9,
         title="100% Keep allocation by HMM state",
         description="Each state is allocated entirely to its highest-ranked ETF.",
         percent_columns=(
@@ -212,7 +204,7 @@ def step_4_dual_allocations() -> None:  # pragma: no cover
     )
     _display_table(
         allocations["60_40_spread"],
-        number=12,
+        number=10,
         title="60/40 Spread allocation by HMM state",
         description="Each state allocates 60% to the top-ranked ETF and 40% to the runner-up.",
         percent_columns=(
@@ -243,7 +235,7 @@ def step_5_hmm_dual_method_comparison() -> None:  # pragma: no cover
     display(Markdown("### Step 5 — One-observation-lag portfolio comparison"))
     _display_table(
         summary,
-        number=13,
+        number=11,
         title="Backtest performance of HMM allocations and benchmarks",
         description=(
             "Cumulative and annualized performance over the common one-observation-lag "

@@ -4,6 +4,9 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import matplotlib
+
+matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -51,7 +54,9 @@ def _validate_statistics(statistics: pd.DataFrame) -> int:
     return n_states
 
 
-def plot_state_asset_statistics(statistics: pd.DataFrame, output_path: Path) -> None:
+def plot_state_asset_statistics(
+    statistics: pd.DataFrame, output_path: Path, *, model_label: str | None = None
+) -> None:
     """Plot conditional means and dispersion separately, both in daily basis points.
 
     Sample standard deviation is intentionally not drawn as an error bar around the mean:
@@ -84,7 +89,12 @@ def plot_state_asset_statistics(statistics: pd.DataFrame, output_path: Path) -> 
 
         mean_axis.axhline(0.0, linewidth=0.9)
         mean_axis.set_ylabel("Mean daily log return (bp)")
-        mean_axis.set_title("State-conditional ETF return means and dispersion")
+        title = (
+            f"{model_label}: state-conditional ETF return means and dispersion"
+            if model_label
+            else "State-conditional ETF return means and dispersion"
+        )
+        mean_axis.set_title(title)
         mean_axis.grid(True, axis="y", alpha=0.22)
         mean_axis.legend(title="ETF", ncol=3)
 
@@ -92,7 +102,7 @@ def plot_state_asset_statistics(statistics: pd.DataFrame, output_path: Path) -> 
             state_positions,
             [f"State {state}" for state in range(n_states)],
         )
-        std_axis.set_xlabel("Preferred-model state")
+        std_axis.set_xlabel("HMM state" if model_label else "Preferred-model state")
         std_axis.set_ylabel("Sample daily standard deviation (bp)")
         std_axis.grid(True, axis="y", alpha=0.22)
         std_axis.legend(title="ETF", ncol=3)

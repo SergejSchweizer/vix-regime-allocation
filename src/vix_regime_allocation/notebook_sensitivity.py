@@ -53,7 +53,7 @@ def step_5_state_count_sensitivity() -> None:  # pragma: no cover - notebook pre
     display(
         HTML(
             '<p style="margin: 1em 0 0.25em; font-size: 0.9em; line-height: 1.35;">'
-            "<strong>Table 14. HMM state-count and allocation-method sensitivity.</strong> "
+            "<strong>Table 12. HMM state-count and allocation-method sensitivity.</strong> "
             "Performance across the two candidate HMM state counts and the two required "
             "allocation rules on the common evaluation sample.</p>"
         )
