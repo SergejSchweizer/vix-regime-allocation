@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 import pandas as pd
 
@@ -62,8 +62,11 @@ def step_3_hmm_selection() -> dict[str, object]:  # pragma: no cover
 
     root = _root()
     comparison = pd.read_csv(root / "reports/tables/step3_model_comparison.csv")
-    selected = json.loads(
-        (root / "reports/generated/step3_selected_model.json").read_text(encoding="utf-8")
+    selected = cast(
+        dict[str, object],
+        json.loads(
+            (root / "reports/generated/step3_selected_model.json").read_text(encoding="utf-8")
+        ),
     )
     if selected.get("family") != "hmm":
         raise RuntimeError("Canonical selected model must be HMM.")
