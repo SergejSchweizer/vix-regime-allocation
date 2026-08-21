@@ -72,7 +72,9 @@ def _check_artifact_parity(readme_text: str) -> None:
                 f"{float(row['SPY_weight']):.2f} |"
             )
             if table_row not in readme_text:
-                raise SystemExit(f"README allocation row is stale for {method}, state {row['state']}.")
+                raise SystemExit(
+                    f"README allocation row is stale for {method}, state {row['state']}."
+                )
 
     performance_rows = _read_csv(PERFORMANCE)
     expected_portfolios = [
