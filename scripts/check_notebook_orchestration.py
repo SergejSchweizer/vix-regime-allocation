@@ -1,4 +1,4 @@
-"""Enforce that the GWP2 notebook contains helper imports and calls only."""
+"""Enforce the helper-only HMM notebook orchestration contract."""
 
 from __future__ import annotations
 
@@ -16,6 +16,15 @@ HELPERS = {
         ROOT / "src/vix_regime_allocation/notebook_sensitivity.py",
     ),
 }
+REQUIRED_CALLS: tuple[tuple[str, str], ...] = (
+    ("nb", "step_1_data_overview"),
+    ("nb", "step_2_hmm_diagnostics"),
+    ("nb", "step_3_hmm_selection"),
+    ("nb", "step_4_dual_allocations"),
+    ("nb", "step_5_hmm_dual_method_comparison"),
+    ("sensitivity_nb", "step_5_state_count_sensitivity"),
+    ("nb", "canonical_works_cited"),
+)
 
 
 def _source_text(cell: dict[str, Any]) -> str:
@@ -76,6 +85,8 @@ def validate_orchestration() -> int:
         source = _source_text(cell).strip()
         if not source:
             continue
+        if "markov" in source.lower():
+            violations.append(f"cell {index}: forbidden non-HMM helper/code reference")
 
         alias = _import_alias(source)
         if alias is not None:
@@ -95,20 +106,28 @@ def validate_orchestration() -> int:
             violations.append(f"cell {index}: helper {alias}.{call_name} does not exist")
         calls.append(target)
 
-    if "nb" not in imported_aliases:
-        violations.append("missing notebook_helpers import")
-    if not calls:
-        violations.append("notebook contains no helper calls")
+    for alias in HELPERS:
+        if alias not in imported_aliases:
+            violations.append(f"missing {alias} helper import")
     duplicate_calls = sorted({target for target in calls if calls.count(target) > 1})
     if duplicate_calls:
         violations.append(f"duplicate helper calls: {duplicate_calls}")
+
+    for required in REQUIRED_CALLS:
+        count = calls.count(required)
+        if count != 1:
+            violations.append(f"required helper call {required[0]}.{required[1]} occurs {count} times")
+
+    unexpected = sorted(set(calls) - set(REQUIRED_CALLS))
+    if unexpected:
+        violations.append(f"unexpected analytical helper calls: {unexpected}")
 
     if violations:
         raise SystemExit("Notebook orchestration contract failed:\n- " + "\n- ".join(violations))
 
     print(
-        f"Notebook orchestration contract passed: {len(calls)} helper calls, "
-        "no implementation code."
+        f"Notebook orchestration contract passed: {len(calls)} HMM-only helper calls, "
+        "no embedded analytical code."
     )
     return len(calls)
 
