@@ -210,5 +210,3 @@ def test_malformed_comparison_fails() -> None:
     wrong_family.loc[0, "family"] = "markov"
     with pytest.raises(ValueError, match="HMM only"):
         select_preferred_hmm(wrong_family, candidates)
-
-# Synchronize PR quality gates against the current staged-rebuild base.
