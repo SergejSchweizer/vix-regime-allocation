@@ -176,7 +176,9 @@ def _step_5(
     states_by_k: dict[int, pd.Series],
 ) -> None:
     comparison, _ = build_dual_method_comparison(data, selected_states, statistics)
-    _write_csv(comparison.rename_axis("Date").reset_index(), "reports/tables/step5_daily_returns.csv")
+    _write_csv(
+        comparison.rename_axis("Date").reset_index(), "reports/tables/step5_daily_returns.csv"
+    )
 
     summary = build_four_portfolio_performance_summary(comparison)
     _write_csv(summary, "reports/tables/step5_performance_summary.csv")
