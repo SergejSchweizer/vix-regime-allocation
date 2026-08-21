@@ -113,10 +113,11 @@ def build_hmm_state_count_sensitivity(
 
     common_index: pd.DatetimeIndex | None = None
     for returns in rotations.values():
+        returns_index = pd.DatetimeIndex(returns.index, name="Date")
         if common_index is None:
-            common_index = pd.DatetimeIndex(returns.index, name="Date")
+            common_index = returns_index
         else:
-            common_index = common_index.intersection(returns.index, sort=False)
+            common_index = common_index.intersection(returns_index, sort=False)
     if common_index is None or len(common_index) < 2:
         raise ValueError("all four HMM sensitivity paths must share at least two return dates.")
     if not common_index.is_monotonic_increasing:
@@ -163,5 +164,7 @@ def build_state_count_sensitivity(
     rows: list[dict[str, float | int | str]] = []
     for n_states in (2, 3):
         metrics = performance_metrics(rotations[n_states].reindex(common_index))
+        if tuple(metrics.keys()) != PERFORMANCE_KEYS:
+            raise ValueError("performance_metrics returned an unexpected metric schema.")
         rows.append({"family": preferred_family, "n_states": n_states, **metrics})
     return pd.DataFrame(rows, columns=list(SENSITIVITY_COLUMNS))
