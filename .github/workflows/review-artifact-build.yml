@@ -39,23 +39,56 @@ jobs:
         run: >-
           python -m jupyter nbconvert --to notebook --execute --inplace
           --ExecutePreprocessor.timeout=1200 notebooks/gwp2_vix_regime_allocation.ipynb
-      - name: Validate generated artifacts
+      - name: Validate generated HMM-only artifacts
         run: |
+          test -s reports/tables/step4_allocation_100_keep.csv
+          test -s reports/tables/step4_allocation_60_40_spread.csv
+          test -s reports/tables/step5_performance_summary.csv
           test -s reports/tables/step5_state_count_sensitivity.csv
+          test -s reports/generated/step3_selected_model.json
+          test -s reports/generated/steps_2_4_manifest.json
           test -s reports/generated/step5_manifest.json
+          test -s reports/references.bib
           test -s reports/figures/step1_etf_log_returns.png
-          test -s reports/figures/step2_markov_vix_states.png
           test -s reports/figures/step2_hmm_vix_states.png
           test -s reports/figures/step2_hmm_smoothed_probabilities.png
           test -s reports/figures/step3_state_asset_statistics.png
           test -s reports/figures/step5_cumulative_performance.png
+          python scripts/check_analysis_consistency.py
+          python scripts/check_repository_hygiene.py
+          python - <<'PY'
+          import csv
+          import json
+          from pathlib import Path
+
+          with Path("reports/tables/step5_performance_summary.csv").open(
+              encoding="utf-8", newline=""
+          ) as handle:
+              names = [row["portfolio"] for row in csv.DictReader(handle)]
+          assert names == [
+              "hmm_100_keep",
+              "hmm_60_40_spread",
+              "equal_weight_monthly",
+              "spy_buy_hold",
+          ]
+          selected = json.loads(
+              Path("reports/generated/step3_selected_model.json").read_text(encoding="utf-8")
+          )
+          assert selected["family"] == "hmm"
+          PY
           ruff check src tests scripts notebooks/gwp2_vix_regime_allocation.ipynb
       - name: Stage generated files
         run: |
           mkdir -p /tmp/review-artifacts
           cp notebooks/gwp2_vix_regime_allocation.ipynb /tmp/review-artifacts/
+          cp reports/tables/step4_allocation_100_keep.csv /tmp/review-artifacts/
+          cp reports/tables/step4_allocation_60_40_spread.csv /tmp/review-artifacts/
+          cp reports/tables/step5_performance_summary.csv /tmp/review-artifacts/
           cp reports/tables/step5_state_count_sensitivity.csv /tmp/review-artifacts/
+          cp reports/generated/step3_selected_model.json /tmp/review-artifacts/
+          cp reports/generated/steps_2_4_manifest.json /tmp/review-artifacts/
           cp reports/generated/step5_manifest.json /tmp/review-artifacts/
+          cp reports/references.bib /tmp/review-artifacts/
           cp reports/figures/*.png /tmp/review-artifacts/
       - name: Upload generated artifacts
         uses: actions/upload-artifact@v4
