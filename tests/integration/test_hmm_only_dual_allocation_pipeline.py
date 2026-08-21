@@ -25,10 +25,8 @@ from vix_regime_allocation.sensitivity import (
     build_hmm_state_count_sensitivity,
 )
 from vix_regime_allocation.state_statistics import compute_state_asset_statistics
-from vix_regime_allocation.strategy_comparison import (
-    COMPARISON_COLUMNS as STEP5_COLUMNS,
-    build_dual_method_comparison,
-)
+from vix_regime_allocation.strategy_comparison import COMPARISON_COLUMNS as STEP5_COLUMNS
+from vix_regime_allocation.strategy_comparison import build_dual_method_comparison
 from vix_regime_allocation.transform import OUTPUT_COLUMNS
 
 pytestmark = pytest.mark.integration
