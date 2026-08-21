@@ -1,6 +1,6 @@
 {
   "family": "hmm",
-  "input_data_sha256": "554df7352a6cbd61c063f4bca8f6b0666307c45f73abb269479adf129f380bbb",
+  "input_data_sha256": "c6b0e67a145f809313986ca0ef726d1dd42ffdaf57b04f091848ae1b20d261c1",
   "n_states": 2,
   "selected_states_path": "reports/tables/step3_selected_states.csv",
   "selection_reason": "Among valid HMM candidates, BIC selected K=2; a BIC tie within tolerance is resolved toward the lower state count.",
