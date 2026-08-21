@@ -18,6 +18,7 @@ ROOT = Path(__file__).resolve().parents[1]
 NOTEBOOK = ROOT / "notebooks" / "gwp2_vix_regime_allocation.ipynb"
 TEMPLATE = ROOT / "reports" / "Template_Stochastic_Modeling_Group_Work_Project.pdf"
 OUTPUT = ROOT / "reports" / "Stochastic_Modeling_GWP2_Report.pdf"
+BIBLIOGRAPHY = ROOT / "reports" / "references.bib"
 
 GROUP_NUMBER = "739"
 GROUP_MEMBERS = (
@@ -35,7 +36,7 @@ REQUIRED_CODE_CALLS = (
     "sensitivity_nb.step_5_state_count_sensitivity()",
     "nb.canonical_works_cited()",
 )
-REQUIRED_NARRATIVE_TOKENS = (
+REQUIRED_CONTENT_TOKENS = (
     "Hidden Markov Model",
     "Expectation-Maximization",
     "Baum-Welch",
@@ -66,17 +67,41 @@ def _cell_source(cell: object) -> str:
     return "".join(source) if isinstance(source, list) else str(source)
 
 
+def _text(value: object) -> str:
+    if isinstance(value, list):
+        return "".join(str(part) for part in value)
+    return "" if value is None else str(value)
+
+
+def _output_text(output: object) -> str:
+    if not hasattr(output, "get"):
+        return ""
+    output_type = output.get("output_type")
+    if output_type == "stream":
+        return _text(output.get("text"))
+    if output_type not in {"execute_result", "display_data"}:
+        return ""
+    data = output.get("data", {})
+    if not hasattr(data, "get"):
+        return ""
+    return "\n".join(
+        _text(data.get(mime))
+        for mime in ("text/plain", "text/markdown", "text/html")
+        if data.get(mime) is not None
+    )
+
+
 def _validate_notebook(path: Path) -> str:
     """Validate the canonical source-of-truth notebook before any PDF rendering."""
     notebook = nbformat.read(path, as_version=4)
     nbformat.validate(notebook)
     failures: list[str] = []
     code_sources: list[str] = []
-    narrative_parts: list[str] = []
+    content_parts: list[str] = []
 
     for index, cell in enumerate(notebook.cells):
         source = _cell_source(cell)
-        narrative_parts.append(source)
+        content_parts.append(source)
         if cell.cell_type != "code":
             continue
         if not source.strip():
@@ -89,23 +114,26 @@ def _validate_notebook(path: Path) -> str:
                 failures.append(
                     f"cell {index}: {output.get('ename', 'Error')}: {output.get('evalue', '')}"
                 )
+            rendered = _output_text(output)
+            if rendered:
+                content_parts.append(rendered)
 
-    narrative = "\n".join(narrative_parts)
+    content = "\n".join(content_parts)
     for required in REQUIRED_CODE_CALLS:
         if code_sources.count(required) != 1:
             failures.append(f"required notebook helper call must occur exactly once: {required}")
 
-    for token in REQUIRED_NARRATIVE_TOKENS:
-        if token not in narrative:
+    for token in REQUIRED_CONTENT_TOKENS:
+        if token not in content:
             failures.append(f"notebook is missing required HMM/dual-method content: {token}")
 
-    if not any(token in narrative for token in CITATION_TOKENS):
+    if not any(token in content for token in CITATION_TOKENS):
         failures.append("notebook is missing scholarly in-text citation content")
-    if "reports/references.bib" not in narrative:
-        failures.append("notebook is missing the canonical bibliography registry reference")
+    if not BIBLIOGRAPHY.is_file() or BIBLIOGRAPHY.stat().st_size == 0:
+        failures.append("canonical bibliography registry reports/references.bib is missing or empty")
 
     for pattern in FORBIDDEN_MARKOV_RESULT_PATTERNS:
-        if pattern.search(narrative):
+        if pattern.search(content):
             failures.append(f"notebook contains forbidden Markov-result leakage: {pattern.pattern}")
 
     if failures:
