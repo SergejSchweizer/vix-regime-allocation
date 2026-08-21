@@ -6,7 +6,11 @@ import pytest
 
 import vix_regime_allocation.sensitivity as module
 from vix_regime_allocation.performance import PERFORMANCE_KEYS
-from vix_regime_allocation.sensitivity import SENSITIVITY_COLUMNS, build_state_count_sensitivity
+from vix_regime_allocation.sensitivity import (
+    HMM_SENSITIVITY_COLUMNS,
+    METHOD_ORDER,
+    build_hmm_state_count_sensitivity,
+)
 from vix_regime_allocation.transform import OUTPUT_COLUMNS
 
 
@@ -28,41 +32,45 @@ def _states(data: pd.DataFrame) -> dict[int, pd.Series]:
     }
 
 
-def test_sensitivity_delegates_all_shared_steps_and_uses_common_dates(
+def test_hmm_sensitivity_exact_four_rows_and_common_dates(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     data = _data()
     states_by_k = _states(data)
-    calls: list[tuple[str, int]] = []
+    calls: list[tuple[str, int, str]] = []
 
     def fake_stats(_: pd.DataFrame, states: pd.Series) -> pd.DataFrame:
         k = int(states.nunique())
-        calls.append(("stats", k))
+        calls.append(("stats", k, ""))
         return pd.DataFrame({"k": [k]})
 
-    def fake_allocation(stats: pd.DataFrame) -> pd.DataFrame:
+    def fake_allocation(stats: pd.DataFrame, method: str = "100_keep") -> pd.DataFrame:
         k = int(stats.loc[0, "k"])
-        calls.append(("allocation", k))
-        return pd.DataFrame({"k": [k]})
+        calls.append(("allocation", k, method))
+        return pd.DataFrame({"k": [k], "method": [method]})
 
-    def fake_rotation(_: pd.DataFrame, states: pd.Series, allocation: pd.DataFrame) -> pd.DataFrame:
+    def fake_rotation(
+        _: pd.DataFrame, states: pd.Series, allocation: pd.DataFrame
+    ) -> pd.DataFrame:
         k = int(states.nunique())
-        assert int(allocation.loc[0, "k"]) == k
-        calls.append(("rotation", k))
-        index = data.index[1:] if k == 2 else data.index[2:]
-        return pd.DataFrame({"regime_rotation_return": np.full(len(index), 0.001 * k)}, index=index)
+        method = str(allocation.loc[0, "method"])
+        calls.append(("rotation", k, method))
+        start = 1 if k == 2 and method == "100_keep" else 2
+        index = data.index[start:]
+        value = 0.001 * k + (0.0001 if method == "60_40_spread" else 0.0)
+        return pd.DataFrame({"regime_rotation_return": np.full(len(index), value)}, index=index)
 
-    metric_calls: list[tuple[str, int]] = []
+    metric_calls: list[tuple[str, int, str]] = []
 
     def fake_metrics(series: pd.Series) -> dict[str, float | int]:
-        k = 2 if series.name == "regime_rotation_k2" else 3
-        metric_calls.append((str(series.index[0].date()), len(series)))
+        metric_calls.append((str(series.index[0].date()), len(series), str(series.name)))
+        n = float(len(metric_calls))
         return {
-            "cumulative_return": float(k),
-            "annualized_return": float(k) + 0.1,
-            "annualized_volatility": float(k) + 0.2,
-            "sharpe_ratio": float(k) + 0.3,
-            "max_drawdown": -float(k) / 10.0,
+            "cumulative_return": n,
+            "annualized_return": n + 0.1,
+            "annualized_volatility": n + 0.2,
+            "sharpe_ratio": n + 0.3,
+            "max_drawdown": -n / 10.0,
             "observations": len(series),
         }
 
@@ -71,25 +79,63 @@ def test_sensitivity_delegates_all_shared_steps_and_uses_common_dates(
     monkeypatch.setattr(module, "build_rotation_returns", fake_rotation)
     monkeypatch.setattr(module, "performance_metrics", fake_metrics)
 
-    result = build_state_count_sensitivity(data, "markov", states_by_k)
+    result = build_hmm_state_count_sensitivity(data, states_by_k)
 
-    assert calls == [
-        ("stats", 2),
-        ("allocation", 2),
-        ("rotation", 2),
-        ("stats", 3),
-        ("allocation", 3),
-        ("rotation", 3),
+    assert tuple(result.columns) == HMM_SENSITIVITY_COLUMNS
+    assert result[["family", "n_states", "method"]].to_records(index=False).tolist() == [
+        ("hmm", 2, "100_keep"),
+        ("hmm", 2, "60_40_spread"),
+        ("hmm", 3, "100_keep"),
+        ("hmm", 3, "60_40_spread"),
     ]
-    assert metric_calls == [(str(data.index[2].date()), 4), (str(data.index[2].date()), 4)]
-    assert tuple(result.columns) == SENSITIVITY_COLUMNS
-    assert result["family"].tolist() == ["markov", "markov"]
-    assert result["n_states"].tolist() == [2, 3]
-    assert result["observations"].tolist() == [4, 4]
-    assert result["cumulative_return"].tolist() == [2.0, 3.0]
+    assert result["observations"].tolist() == [4, 4, 4, 4]
+    assert calls == [
+        ("stats", 2, ""),
+        ("allocation", 2, "100_keep"),
+        ("rotation", 2, "100_keep"),
+        ("allocation", 2, "60_40_spread"),
+        ("rotation", 2, "60_40_spread"),
+        ("stats", 3, ""),
+        ("allocation", 3, "100_keep"),
+        ("rotation", 3, "100_keep"),
+        ("allocation", 3, "60_40_spread"),
+        ("rotation", 3, "60_40_spread"),
+    ]
+    assert [row[:2] for row in metric_calls] == [
+        (str(data.index[2].date()), 4),
+        (str(data.index[2].date()), 4),
+        (str(data.index[2].date()), 4),
+        (str(data.index[2].date()), 4),
+    ]
+    assert {name for _, _, name in metric_calls} == {
+        "hmm_k2_100_keep",
+        "hmm_k2_60_40_spread",
+        "hmm_k3_100_keep",
+        "hmm_k3_60_40_spread",
+    }
 
 
-def test_sensitivity_rejects_unexpected_metric_schema(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_hmm_sensitivity_uses_both_methods_for_each_k(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    data = _data()
+    allocations: list[str] = []
+    original = module.build_state_allocation
+
+    def spy(stats: pd.DataFrame, method: str = "100_keep") -> pd.DataFrame:
+        allocations.append(method)
+        return original(stats, method)
+
+    monkeypatch.setattr(module, "build_state_allocation", spy)
+    result = build_hmm_state_count_sensitivity(data, _states(data))
+    assert allocations == ["100_keep", "60_40_spread", "100_keep", "60_40_spread"]
+    assert result["method"].tolist() == list(METHOD_ORDER) * 2
+    assert result.loc[result["n_states"] == 3, "observations"].nunique() == 1
+
+
+def test_hmm_sensitivity_rejects_unexpected_metric_schema(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     data = _data()
 
     def malformed(_: pd.Series) -> dict[str, float | int]:
@@ -97,26 +143,25 @@ def test_sensitivity_rejects_unexpected_metric_schema(monkeypatch: pytest.Monkey
 
     monkeypatch.setattr(module, "performance_metrics", malformed)
     with pytest.raises(ValueError, match="unexpected metric schema"):
-        build_state_count_sensitivity(data, "markov", _states(data))
+        build_hmm_state_count_sensitivity(data, _states(data))
 
 
-@pytest.mark.parametrize("family", ["", "other", "MARKOV"])
-def test_sensitivity_rejects_invalid_family(family: str) -> None:
-    data = _data()
-    with pytest.raises(ValueError):
-        build_state_count_sensitivity(data, family, _states(data))
-
-
-def test_sensitivity_rejects_wrong_state_mapping_contract() -> None:
+def test_hmm_sensitivity_has_no_family_argument() -> None:
     data = _data()
     with pytest.raises(TypeError):
-        build_state_count_sensitivity(data, "markov", [])  # type: ignore[arg-type]
+        build_hmm_state_count_sensitivity(data, "markov", _states(data))  # type: ignore[call-arg]
+
+
+def test_hmm_sensitivity_rejects_wrong_state_mapping_contract() -> None:
+    data = _data()
+    with pytest.raises(TypeError):
+        build_hmm_state_count_sensitivity(data, [])  # type: ignore[arg-type]
     with pytest.raises(ValueError):
-        build_state_count_sensitivity(data, "markov", {2: _states(data)[2]})
+        build_hmm_state_count_sensitivity(data, {2: _states(data)[2]})
 
 
 @pytest.mark.parametrize("case", ["name", "index", "dtype", "labels", "count"])
-def test_sensitivity_rejects_invalid_states(case: str) -> None:
+def test_hmm_sensitivity_rejects_invalid_states(case: str) -> None:
     data = _data()
     states_by_k = _states(data)
     states = states_by_k[3].copy()
@@ -132,7 +177,7 @@ def test_sensitivity_rejects_invalid_states(case: str) -> None:
         states = pd.Series([0, 0, 0, 1, 1, 2], index=data.index, name="state", dtype=int)
     states_by_k[3] = states
     with pytest.raises(ValueError):
-        build_state_count_sensitivity(data, "markov", states_by_k)
+        build_hmm_state_count_sensitivity(data, states_by_k)
 
 
 @pytest.mark.parametrize(
@@ -148,7 +193,7 @@ def test_sensitivity_rejects_invalid_states(case: str) -> None:
         "nonfinite",
     ],
 )
-def test_sensitivity_rejects_invalid_data(case: str) -> None:
+def test_hmm_sensitivity_rejects_invalid_data(case: str) -> None:
     data: object = _data().copy()
     if case == "type":
         data = []
@@ -165,14 +210,7 @@ def test_sensitivity_rejects_invalid_data(case: str) -> None:
     elif case == "duplicate":
         frame = _data().copy()
         frame.index = pd.DatetimeIndex(
-            [
-                "2026-01-02",
-                "2026-01-02",
-                "2026-01-06",
-                "2026-01-07",
-                "2026-01-08",
-                "2026-01-09",
-            ],
+            ["2026-01-02", "2026-01-02", "2026-01-06", "2026-01-07", "2026-01-08", "2026-01-09"],
             name="Date",
         )
         data = frame
@@ -189,4 +227,4 @@ def test_sensitivity_rejects_invalid_data(case: str) -> None:
 
     error = TypeError if case == "type" else ValueError
     with pytest.raises(error):
-        build_state_count_sensitivity(data, "markov", {})  # type: ignore[arg-type]
+        build_hmm_state_count_sensitivity(data, {})  # type: ignore[arg-type]
