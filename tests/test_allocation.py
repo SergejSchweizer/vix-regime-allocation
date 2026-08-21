@@ -5,6 +5,7 @@ import itertools
 import pandas as pd
 import pytest
 
+import vix_regime_allocation.allocation as allocation_module
 from vix_regime_allocation.allocation import (
     ALLOCATION_COLUMNS,
     METHOD_ALLOCATION_COLUMNS,
@@ -125,12 +126,18 @@ def test_unsupported_method_fails(method: str) -> None:
     "mutator",
     [
         lambda frame: frame.drop(columns=["std_log_return"]),
+        lambda frame: frame.iloc[:0].copy(),
+        lambda frame: frame.assign(state=frame["state"].astype(float)),
         lambda frame: frame.assign(asset=frame["asset"].replace({"SPY": "QQQ"})),
         lambda frame: pd.concat([frame, frame.iloc[[0]]], ignore_index=True),
         lambda frame: frame.loc[~((frame["state"] == 0) & (frame["asset"] == "SPY"))].copy(),
+        lambda frame: frame.assign(mean_log_return="bad"),
+        lambda frame: frame.assign(std_log_return="bad"),
+        lambda frame: frame.assign(observations=frame["observations"].astype(float)),
         lambda frame: frame.assign(mean_log_return=float("nan")),
         lambda frame: frame.assign(std_log_return=-0.1),
         lambda frame: frame.assign(observations=1),
+        lambda frame: frame.assign(state=frame["state"].replace({1: 2})),
     ],
 )
 def test_build_state_allocation_rejects_malformed_statistics(mutator) -> None:  # type: ignore[no-untyped-def]
@@ -142,6 +149,18 @@ def test_build_state_allocation_rejects_malformed_statistics(mutator) -> None:  
     )
     with pytest.raises(ValueError):
         build_state_allocation(mutator(statistics), "100_keep")
+
+
+def test_legacy_translation_rejects_non_keep_method() -> None:
+    statistics = _statistics(
+        [
+            {"TLT": 0.001, "GLD": 0.002, "SPY": 0.003},
+            {"TLT": 0.003, "GLD": 0.002, "SPY": 0.001},
+        ]
+    )
+    spread = build_state_allocation(statistics, "60_40_spread")
+    with pytest.raises(ValueError, match="100_keep only"):
+        allocation_module._legacy_100_keep(spread)
 
 
 def test_build_state_allocation_rejects_non_dataframe_and_non_string_method() -> None:
