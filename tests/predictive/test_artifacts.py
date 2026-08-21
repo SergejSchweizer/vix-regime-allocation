@@ -5,15 +5,16 @@ import json
 from pathlib import Path
 
 import pandas as pd
+import pytest
 
 from vix_regime_allocation.predictive.artifacts import PredictiveAnalysis, write_predictive_artifacts
 
 
-def _analysis() -> PredictiveAnalysis:
+def _analysis(family: str = "hmm") -> PredictiveAnalysis:
     validation = pd.DataFrame(
         [
             {
-                "family": "markov",
+                "family": family,
                 "n_states": 2,
                 "switch_hurdle_bps": 0.0,
                 "mean_log_growth": 0.001,
@@ -27,7 +28,7 @@ def _analysis() -> PredictiveAnalysis:
                 "training_end": "2020-12-31",
                 "decision_date": "2021-01-04",
                 "return_date": "2021-01-05",
-                "family": "markov",
+                "family": family,
                 "n_states": 2,
                 "switch_hurdle_bps": 0.0,
                 "net_return": 0.01,
@@ -48,7 +49,7 @@ def _analysis() -> PredictiveAnalysis:
         ]
     )
     selected = {
-        "family": "markov",
+        "family": family,
         "n_states": 2,
         "switch_hurdle_bps": 0.0,
         "transaction_cost_bps": 5.0,
@@ -64,13 +65,18 @@ def _analysis() -> PredictiveAnalysis:
     return PredictiveAnalysis(validation, daily, performance, dominance, selected, 0.02, True)
 
 
-def test_artifact_writer_and_manifest_are_deterministic(tmp_path: Path) -> None:
+def _write_input(tmp_path: Path) -> Path:
     data_dir = tmp_path / "data/processed"
     data_dir.mkdir(parents=True)
-    data_path = data_dir / "step1_data.csv"
-    data_path.write_text("Date,x\n2020-01-01,1\n", encoding="utf-8")
+    path = data_dir / "step1_data.csv"
+    path.write_text("Date,x\n2020-01-01,1\n", encoding="utf-8")
+    return path
 
+
+def test_artifact_writer_and_manifest_are_deterministic_and_hmm_only(tmp_path: Path) -> None:
+    data_path = _write_input(tmp_path)
     outputs = write_predictive_artifacts(tmp_path, _analysis())
+
     assert set(outputs) == {
         "candidate_validation_summary",
         "selected_test_daily",
@@ -80,6 +86,7 @@ def test_artifact_writer_and_manifest_are_deterministic(tmp_path: Path) -> None:
         "manifest",
     }
     selected = json.loads(outputs["selected_strategy"].read_text(encoding="utf-8"))
+    assert selected["family"] == "hmm"
     assert set(selected) == {
         "family",
         "n_states",
@@ -100,3 +107,31 @@ def test_artifact_writer_and_manifest_are_deterministic(tmp_path: Path) -> None:
     assert manifest["input_data_sha256"] == hashlib.sha256(data_path.read_bytes()).hexdigest()
     for relative, digest in manifest["sha256"].items():
         assert hashlib.sha256((tmp_path / relative).read_bytes()).hexdigest() == digest
+
+    first_manifest = outputs["manifest"].read_bytes()
+    second = write_predictive_artifacts(tmp_path, _analysis())
+    assert second["manifest"].read_bytes() == first_manifest
+
+
+def test_artifact_writer_rejects_markov_selected_family(tmp_path: Path) -> None:
+    _write_input(tmp_path)
+    with pytest.raises(ValueError, match="family must be exactly 'hmm'"):
+        write_predictive_artifacts(tmp_path, _analysis("markov"))
+
+
+def test_artifact_writer_rejects_markov_table_rows(tmp_path: Path) -> None:
+    _write_input(tmp_path)
+    analysis = _analysis()
+    bad_validation = analysis.validation_summary.copy()
+    bad_validation.loc[0, "family"] = "markov"
+    bad = PredictiveAnalysis(
+        bad_validation,
+        analysis.selected_test_daily,
+        analysis.selected_test_performance,
+        analysis.test_asset_dominance,
+        analysis.selected_strategy,
+        analysis.cagr_dominance_margin,
+        analysis.dominates_all_individual_assets,
+    )
+    with pytest.raises(ValueError, match="validation_summary must contain HMM rows only"):
+        write_predictive_artifacts(tmp_path, bad)
