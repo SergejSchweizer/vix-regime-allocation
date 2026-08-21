@@ -1,4 +1,4 @@
-"""Step 3 HMM-only comparison and deterministic preferred-state-count selection."""
+"""HMM-only selection with temporary legacy mixed-family compatibility wrappers."""
 
 from __future__ import annotations
 
@@ -22,6 +22,17 @@ COMPARISON_COLUMNS: tuple[str, ...] = (
     "converged",
     "min_viterbi_occupancy",
     "valid",
+)
+LEGACY_COMPARISON_COLUMNS: tuple[str, ...] = (
+    "family",
+    "n_states",
+    "log_likelihood",
+    "n_parameters",
+    "n_observations",
+    "aic",
+    "bic",
+    "converged",
+    "criterion_scope",
 )
 _SUPPORTED_STATES: tuple[int, int] = (2, 3)
 
@@ -150,7 +161,7 @@ def _hmm_invalid_reason(candidate: dict[str, object]) -> str | None:
 
 
 def build_hmm_model_comparison(hmm_candidates: list[dict[str, object]]) -> pd.DataFrame:
-    """Build the exact two-row HMM K=2/K=3 Step 3 comparison table."""
+    """Build the exact two-row HMM K=2/K=3 comparison table."""
     candidates = _validated_hmm_candidates(hmm_candidates)
     rows: list[dict[str, object]] = []
     for n_states in _SUPPORTED_STATES:
@@ -176,7 +187,7 @@ def _validate_hmm_comparison(comparison: pd.DataFrame) -> None:
     if not isinstance(comparison, pd.DataFrame):
         raise TypeError("comparison must be a pandas DataFrame.")
     if tuple(comparison.columns) != COMPARISON_COLUMNS:
-        raise ValueError("comparison columns do not match the canonical HMM-only Step 3 schema.")
+        raise ValueError("comparison columns do not match the canonical HMM-only schema.")
     if len(comparison) != 2:
         raise ValueError("comparison must contain exactly two HMM candidate rows.")
     if comparison["family"].astype(str).tolist() != ["hmm", "hmm"]:
@@ -194,7 +205,6 @@ def select_preferred_hmm(
     """Select the valid HMM candidate with minimum BIC; never fall back to another family."""
     _validate_hmm_comparison(comparison)
     candidates = _validated_hmm_candidates(hmm_candidates)
-
     valid_rows = comparison.loc[comparison["valid"].astype(bool), ["n_states", "bic"]].copy()
     if valid_rows.empty:
         reasons = [
@@ -202,8 +212,7 @@ def select_preferred_hmm(
             for k in _SUPPORTED_STATES
         ]
         raise RuntimeError("No valid HMM candidate is available; " + "; ".join(reasons))
-    finite_bic = np.isfinite(valid_rows["bic"].to_numpy(dtype=float))
-    valid_rows = valid_rows.loc[finite_bic]
+    valid_rows = valid_rows.loc[np.isfinite(valid_rows["bic"].to_numpy(dtype=float))]
     if valid_rows.empty:
         raise RuntimeError("No valid HMM candidate has a finite BIC.")
 
@@ -233,13 +242,90 @@ def select_preferred_hmm(
     }
 
 
-# Transitional wrappers kept until PR-57 removes mixed-family orchestration callers.
+# The following mixed-family wrappers preserve the pre-revision canonical artifacts until
+# PR-57/PR-60 replace the old analysis pipeline. They are not used by the HMM-only API above.
+def _validated_legacy_candidates(
+    candidates: list[dict[str, object]], family: str
+) -> dict[int, dict[str, object]]:
+    if len(candidates) != len(_SUPPORTED_STATES):
+        raise ValueError(f"{family} candidates must contain exactly K=2 and K=3.")
+    by_states: dict[int, dict[str, object]] = {}
+    for candidate in candidates:
+        if not isinstance(candidate, dict):
+            raise TypeError("Each candidate must be a dictionary.")
+        if candidate.get("family") != family:
+            raise ValueError(f"Candidate family must be {family!r}.")
+        n_states = candidate.get("n_states")
+        if isinstance(n_states, bool) or not isinstance(n_states, int):
+            raise ValueError("Candidate n_states must be an integer.")
+        if n_states not in _SUPPORTED_STATES or n_states in by_states:
+            raise ValueError(f"{family} candidates must contain unique K=2 and K=3 entries.")
+        for key in ("log_likelihood", "aic", "bic"):
+            value = candidate.get(key)
+            if isinstance(value, bool) or not isinstance(value, (int, float)):
+                raise ValueError(f"Candidate {key} must be numeric.")
+            if not math.isfinite(float(value)):
+                raise ValueError(f"Candidate {key} must be finite.")
+        for key in ("n_parameters", "n_observations"):
+            value = candidate.get(key)
+            if isinstance(value, bool) or not isinstance(value, int) or value <= 0:
+                raise ValueError(f"Candidate {key} must be a positive integer.")
+        if not isinstance(candidate.get("converged"), bool):
+            raise ValueError("Candidate converged must be Boolean.")
+        by_states[n_states] = candidate
+    return by_states
+
+
 def build_model_comparison(
     markov_candidates: list[dict[str, object]], hmm_candidates: list[dict[str, object]]
 ) -> pd.DataFrame:
-    """Compatibility wrapper; Markov inputs are ignored and can never enter selection."""
-    del markov_candidates
-    return build_hmm_model_comparison(hmm_candidates)
+    """Legacy four-row comparison retained solely for old artifact parity during migration."""
+    markov = _validated_legacy_candidates(markov_candidates, "markov")
+    hmm = _validated_legacy_candidates(hmm_candidates, "hmm")
+    rows: list[dict[str, object]] = []
+    for family, candidates in (("markov", markov), ("hmm", hmm)):
+        for n_states in _SUPPORTED_STATES:
+            candidate = candidates[n_states]
+            rows.append(
+                {
+                    "family": family,
+                    "n_states": n_states,
+                    "log_likelihood": float(cast(float, candidate["log_likelihood"])),
+                    "n_parameters": int(cast(int, candidate["n_parameters"])),
+                    "n_observations": int(cast(int, candidate["n_observations"])),
+                    "aic": float(cast(float, candidate["aic"])),
+                    "bic": float(cast(float, candidate["bic"])),
+                    "converged": bool(candidate["converged"]),
+                    "criterion_scope": "within_family_only",
+                }
+            )
+    return pd.DataFrame(rows, columns=list(LEGACY_COMPARISON_COLUMNS))
+
+
+def _validate_legacy_comparison(comparison: pd.DataFrame) -> None:
+    if not isinstance(comparison, pd.DataFrame):
+        raise TypeError("comparison must be a pandas DataFrame.")
+    if tuple(comparison.columns) != LEGACY_COMPARISON_COLUMNS:
+        raise ValueError("legacy comparison columns do not match the pre-revision schema.")
+    if len(comparison) != 4:
+        raise ValueError("legacy comparison must contain exactly four candidate rows.")
+    expected_pairs = {("markov", 2), ("markov", 3), ("hmm", 2), ("hmm", 3)}
+    actual_pairs = set(
+        zip(comparison["family"].astype(str), comparison["n_states"].astype(int), strict=True)
+    )
+    if actual_pairs != expected_pairs:
+        raise ValueError("legacy comparison must contain Markov/HMM K=2/K=3 exactly once.")
+    if not (comparison["criterion_scope"] == "within_family_only").all():
+        raise ValueError("legacy criteria may only be interpreted within model family.")
+
+
+def _legacy_best_within_family(comparison: pd.DataFrame, family: str) -> int:
+    rows = comparison.loc[comparison["family"] == family, ["n_states", "bic"]].sort_values(
+        "n_states", kind="stable"
+    )
+    best_bic = float(rows["bic"].min())
+    tied = rows.loc[rows["bic"].astype(float).sub(best_bic).abs() <= BIC_TIE_TOL, "n_states"]
+    return int(tied.min())
 
 
 def select_preferred_model(
@@ -247,8 +333,47 @@ def select_preferred_model(
     markov_candidates: list[dict[str, object]],
     hmm_candidates: list[dict[str, object]],
 ) -> dict[str, object]:
-    """Compatibility wrapper for HMM-only preferred selection."""
-    del markov_candidates
-    result = select_preferred_hmm(comparison, hmm_candidates)
-    selected_n_states = int(cast(int, result["n_states"]))
-    return {**result, "hmm_best_n_states": selected_n_states}
+    """Legacy valid-HMM-or-Markov rule retained only until the canonical rebuild PRs land."""
+    _validate_legacy_comparison(comparison)
+    markov = _validated_legacy_candidates(markov_candidates, "markov")
+    hmm = _validated_legacy_candidates(hmm_candidates, "hmm")
+    markov_best = _legacy_best_within_family(comparison, "markov")
+    hmm_best = _legacy_best_within_family(comparison, "hmm")
+    selected_hmm = hmm[hmm_best]
+    invalid_reason = _hmm_invalid_reason(selected_hmm)
+    if invalid_reason is None:
+        selected_family = "hmm"
+        selected_n_states = hmm_best
+        selected_candidate = selected_hmm
+        reason = (
+            f"Within-family BIC selected HMM K={hmm_best}; all fixed HMM validity "
+            "diagnostics passed."
+        )
+    else:
+        selected_family = "markov"
+        selected_n_states = markov_best
+        selected_candidate = markov[markov_best]
+        reason = (
+            f"Within-family BIC selected HMM K={hmm_best}, but {invalid_reason}; "
+            f"the fixed fallback selects Markov K={markov_best}."
+        )
+    if selected_family == "hmm":
+        fit = selected_candidate.get("fit")
+        if not isinstance(fit, HMMFitResult):  # pragma: no cover - guarded above
+            raise RuntimeError("Validated HMM candidate unexpectedly lacks its fit result.")
+        states = fit.states.copy()
+    else:
+        candidate_states = selected_candidate.get("states")
+        if not isinstance(candidate_states, pd.Series):
+            raise ValueError("Selected Markov candidate must contain its canonical state Series.")
+        states = candidate_states.copy()
+    states.name = "state"
+    return {
+        "family": selected_family,
+        "n_states": selected_n_states,
+        "states": states,
+        "state_source": f"reports/tables/step2_{selected_family}_{selected_n_states}_states.csv",
+        "selection_reason": reason,
+        "markov_best_n_states": markov_best,
+        "hmm_best_n_states": hmm_best,
+    }
