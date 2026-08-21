@@ -31,7 +31,9 @@ def build_dual_method_comparison(
     keep_index = pd.DatetimeIndex(rotations["100_keep"].index, name="Date")
     spread_index = pd.DatetimeIndex(rotations["60_40_spread"].index, name="Date")
     if not keep_index.equals(spread_index):
-        raise RuntimeError("Both HMM allocation methods must produce exactly identical return dates.")
+        raise RuntimeError(
+            "Both HMM allocation methods must produce exactly identical return dates."
+        )
 
     equal_weight = build_equal_weight_monthly_returns(data, keep_index)
     spy = build_spy_buy_hold_returns(data, keep_index)
