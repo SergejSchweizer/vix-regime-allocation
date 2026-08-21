@@ -155,3 +155,5 @@ def test_build_state_allocation_rejects_non_dataframe_and_non_string_method() ->
     )
     with pytest.raises(TypeError, match="method must be a string"):
         build_state_allocation(statistics, 1)  # type: ignore[arg-type]
+
+# Synchronize PR quality gates against the current staged-rebuild base.
