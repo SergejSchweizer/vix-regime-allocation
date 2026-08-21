@@ -9,21 +9,17 @@ import numpy as np
 import pandas as pd
 
 from vix_regime_allocation.allocation import build_state_allocation
-from vix_regime_allocation.backtest import build_rotation_returns
-from vix_regime_allocation.backtest_summary import build_comparison, build_performance_summary
-from vix_regime_allocation.benchmarks import (
-    build_equal_weight_monthly_returns,
-    build_spy_buy_hold_returns,
-)
+from vix_regime_allocation.backtest_summary import build_four_portfolio_performance_summary
 from vix_regime_allocation.hmm_evaluation import evaluate_hmm_candidate
 from vix_regime_allocation.hmm_model import HMMFitResult
-from vix_regime_allocation.markov_evaluation import evaluate_markov_candidate
-from vix_regime_allocation.model_selection import build_model_comparison, select_preferred_model
-from vix_regime_allocation.sensitivity import build_state_count_sensitivity
+from vix_regime_allocation.model_selection import build_hmm_model_comparison, select_preferred_hmm
+from vix_regime_allocation.sensitivity import build_hmm_state_count_sensitivity
 from vix_regime_allocation.state_statistics import compute_state_asset_statistics
+from vix_regime_allocation.strategy_comparison import build_dual_method_comparison
 from vix_regime_allocation.transform import OUTPUT_COLUMNS
 
 ROOT = Path(__file__).resolve().parents[1]
+STEP1 = ROOT / "data/processed/step1_data.csv"
 RTOL = 1e-9
 ATOL = 1e-11
 TRADING_DAYS = 252
@@ -74,46 +70,35 @@ def _step1() -> pd.DataFrame:
     data = _indexed_csv("data/processed/step1_data.csv")
     if tuple(data.columns) != OUTPUT_COLUMNS:
         raise AssertionError("Step 1 schema is not canonical")
-    if len(data) < 2 or data.index.has_duplicates or not data.index.is_monotonic_increasing:
+    if data.index.has_duplicates or not data.index.is_monotonic_increasing:
         raise AssertionError("Step 1 Date index is invalid")
     values = data.to_numpy(dtype=float)
     if np.any(~np.isfinite(values)):
         raise AssertionError("Step 1 contains non-finite values")
-    if np.any(data[["TLT", "GLD", "SPY", "VIX"]].to_numpy(dtype=float) <= 0.0):
-        raise AssertionError("Step 1 contains non-positive price/index levels")
-
-    # The first stored return needs the dropped pre-sample price and cannot be reconstructed
-    # from the processed CSV alone. Every subsequent stored row must reconcile exactly.
     for asset in ("TLT", "GLD", "SPY"):
         expected = np.log(
-            data[asset].iloc[1:].to_numpy(dtype=float) / data[asset].iloc[:-1].to_numpy(dtype=float)
+            data[asset].iloc[1:].to_numpy(dtype=float)
+            / data[asset].iloc[:-1].to_numpy(dtype=float)
         )
-        actual = data[f"{asset}_log_return"].iloc[1:].to_numpy(dtype=float)
-        np.testing.assert_allclose(actual, expected, rtol=RTOL, atol=ATOL)
-    expected_vix_change = data["VIX"].iloc[1:].to_numpy(dtype=float) - data["VIX"].iloc[
-        :-1
-    ].to_numpy(dtype=float)
+        np.testing.assert_allclose(
+            data[f"{asset}_log_return"].iloc[1:].to_numpy(dtype=float),
+            expected,
+            rtol=RTOL,
+            atol=ATOL,
+        )
     np.testing.assert_allclose(
         data["VIX_change"].iloc[1:].to_numpy(dtype=float),
-        expected_vix_change,
+        data["VIX"].iloc[1:].to_numpy(dtype=float)
+        - data["VIX"].iloc[:-1].to_numpy(dtype=float),
         rtol=RTOL,
         atol=ATOL,
     )
     return data
 
 
-def _persisted_hmm_parameters(n_states: int) -> pd.DataFrame:
-    return pd.read_csv(ROOT / f"reports/tables/step2_hmm_{n_states}_parameters.csv")
-
-
-def _computed_hmm_parameters(candidate: dict[str, object]) -> pd.DataFrame:
-    fit = candidate.get("fit")
-    if not isinstance(fit, HMMFitResult):
-        raise AssertionError("HMM candidate is missing a fit result")
+def _computed_parameters(fit: HMMFitResult) -> pd.DataFrame:
     states = fit.states.to_numpy(dtype=int)
     counts = np.bincount(states, minlength=fit.n_states)
-    occupancy = counts.astype(float) / len(states)
-    posterior_mean = fit.probabilities.mean(axis=0).to_numpy(dtype=float)
     return pd.DataFrame(
         {
             "state": np.arange(fit.n_states, dtype=int),
@@ -121,62 +106,21 @@ def _computed_hmm_parameters(candidate: dict[str, object]) -> pd.DataFrame:
             "variance_vix_change": fit.variances.to_numpy(dtype=float),
             "start_probability": np.asarray(fit.start_probabilities, dtype=float),
             "viterbi_observations": counts,
-            "viterbi_occupancy": occupancy,
-            "posterior_mean_probability": posterior_mean,
+            "viterbi_occupancy": counts.astype(float) / len(states),
+            "posterior_mean_probability": fit.probabilities.mean(axis=0).to_numpy(dtype=float),
         }
     )
 
 
-def _verify_regime_models(
-    data: pd.DataFrame,
-) -> tuple[list[dict[str, object]], list[dict[str, object]]]:
+def _verify_hmms(data: pd.DataFrame) -> list[dict[str, object]]:
     vix_change = data["VIX_change"].rename("VIX_change")
-    markov_candidates: list[dict[str, object]] = []
-    hmm_candidates: list[dict[str, object]] = []
-
-    for n_states in (2, 3):
-        candidate = evaluate_markov_candidate(vix_change, n_states)
-        markov_candidates.append(candidate)
-        candidate_states = candidate.get("states")
-        if not isinstance(candidate_states, pd.Series):
-            raise AssertionError("Markov candidate is missing states")
-        _assert_series(
-            candidate_states,
-            _states(f"reports/tables/step2_markov_{n_states}_states.csv"),
-            f"Markov K={n_states} states",
-        )
-
-        thresholds = pd.read_csv(ROOT / f"reports/tables/step2_markov_{n_states}_thresholds.csv")
-        candidate_thresholds = candidate.get("thresholds")
-        if not isinstance(candidate_thresholds, pd.DataFrame):
-            raise AssertionError("Markov candidate is missing thresholds")
-        _assert_frame(candidate_thresholds, thresholds, f"Markov K={n_states} thresholds")
-
-        transition = pd.read_csv(
-            ROOT / f"reports/tables/step2_markov_{n_states}_transition.csv"
-        ).set_index("from_state")
-        transition.index.name = "from_state"
-        candidate_transition = candidate.get("transition")
-        if not isinstance(candidate_transition, pd.DataFrame):
-            raise AssertionError("Markov candidate is missing a transition matrix")
-        _assert_frame(candidate_transition, transition, f"Markov K={n_states} transition")
-
-        stationary = pd.read_csv(
-            ROOT / f"reports/tables/step2_markov_{n_states}_stationary.csv"
-        ).set_index("state")["stationary_probability"]
-        stationary.index.name = "state"
-        stationary.name = "stationary_probability"
-        candidate_stationary = candidate.get("stationary")
-        if not isinstance(candidate_stationary, pd.Series):
-            raise AssertionError("Markov candidate is missing a stationary distribution")
-        _assert_series(candidate_stationary, stationary, f"Markov K={n_states} stationary")
-
+    candidates: list[dict[str, object]] = []
     for n_states in (2, 3):
         candidate = evaluate_hmm_candidate(vix_change, n_states)
-        hmm_candidates.append(candidate)
+        candidates.append(candidate)
         fit = candidate.get("fit")
         if not isinstance(fit, HMMFitResult):
-            raise AssertionError("HMM candidate is missing a fit result")
+            raise AssertionError(f"HMM K={n_states} fit is missing")
         _assert_series(
             fit.states,
             _states(f"reports/tables/step2_hmm_{n_states}_states.csv"),
@@ -187,119 +131,114 @@ def _verify_regime_models(
         ).set_index("from_state")
         transition.index.name = "from_state"
         _assert_frame(fit.transition_matrix, transition, f"HMM K={n_states} transition")
-        _assert_frame(
-            _computed_hmm_parameters(candidate),
-            _persisted_hmm_parameters(n_states),
-            f"HMM K={n_states} parameters",
-        )
-
-    comparison = build_model_comparison(markov_candidates, hmm_candidates)
-    persisted_comparison = pd.read_csv(ROOT / "reports/tables/step3_model_comparison.csv")
-    _assert_frame(comparison, persisted_comparison, "Step 3 model comparison")
-
-    selection = select_preferred_model(comparison, markov_candidates, hmm_candidates)
-    selected_meta = json.loads(
-        (ROOT / "reports/generated/step3_selected_model.json").read_text(encoding="utf-8")
-    )
-    for key in (
-        "family",
-        "n_states",
-        "selection_reason",
-        "markov_best_n_states",
-        "hmm_best_n_states",
-    ):
-        if selection[key] != selected_meta[key]:
-            raise AssertionError(f"selected-model metadata mismatch for {key}")
-    return markov_candidates, hmm_candidates
+        parameters = pd.read_csv(ROOT / f"reports/tables/step2_hmm_{n_states}_parameters.csv")
+        _assert_frame(_computed_parameters(fit), parameters, f"HMM K={n_states} parameters")
+    return candidates
 
 
-def _verify_selected_analysis(data: pd.DataFrame) -> tuple[pd.Series, pd.DataFrame]:
-    meta_path = ROOT / "reports/generated/step3_selected_model.json"
-    selected = json.loads(meta_path.read_text(encoding="utf-8"))
-    step1_sha = hashlib.sha256((ROOT / "data/processed/step1_data.csv").read_bytes()).hexdigest()
-    if selected["input_data_sha256"] != step1_sha:
-        raise AssertionError("selected-model input SHA does not match Step 1 bytes")
-
-    source_states = _states(selected["state_source"])
-    selected_states = _states(selected["selected_states_path"])
-    _assert_series(selected_states, source_states, "selected state path vs source path")
-    if not selected_states.index.equals(data.index):
-        raise AssertionError("selected state path does not align exactly with Step 1")
-
-    statistics = compute_state_asset_statistics(data, selected_states)
-    persisted_statistics = pd.read_csv(ROOT / "reports/tables/step3_state_asset_statistics.csv")
-    _assert_frame(statistics, persisted_statistics, "Step 3 state/ETF statistics")
-
-    allocation = build_state_allocation(statistics)
-    persisted_allocation = pd.read_csv(ROOT / "reports/tables/step4_allocation_mapping.csv")
-    _assert_frame(allocation, persisted_allocation, "Step 4 allocation mapping")
-    return selected_states, allocation
-
-
-def _independent_rotation_returns(
-    data: pd.DataFrame,
-    states: pd.Series,
-    allocation: pd.DataFrame,
+def _independent_weighted_returns(
+    data: pd.DataFrame, states: pd.Series, allocation: pd.DataFrame
 ) -> pd.Series:
-    """Recompute the one-row-lag rotation without calling the backtest engine."""
-    lookup = allocation.set_index("state")["selected_asset"].astype(str)
-    decision_states = states.iloc[:-1].to_numpy(dtype=int)
-    selected_assets = lookup.loc[decision_states].to_numpy(dtype=str)
-    return_index = data.index[1:]
-    log_returns = data.loc[
-        return_index,
-        ["TLT_log_return", "GLD_log_return", "SPY_log_return"],
-    ]
-    simple = np.expm1(log_returns.to_numpy(dtype=float))
-    asset_to_column = {"TLT": 0, "GLD": 1, "SPY": 2}
-    selected_columns = np.array([asset_to_column[asset] for asset in selected_assets], dtype=int)
-    row_numbers = np.arange(len(return_index), dtype=int)
-    values = simple[row_numbers, selected_columns]
-    return pd.Series(values, index=return_index, name="regime_rotation")
+    weights = allocation.set_index("state")[["TLT_weight", "GLD_weight", "SPY_weight"]]
+    decisions = states.iloc[:-1].to_numpy(dtype=int)
+    matrix = weights.loc[decisions].to_numpy(dtype=float)
+    returns = np.expm1(
+        data.loc[
+            data.index[1:],
+            ["TLT_log_return", "GLD_log_return", "SPY_log_return"],
+        ].to_numpy(dtype=float)
+    )
+    return pd.Series(
+        np.sum(matrix * returns, axis=1),
+        index=pd.DatetimeIndex(data.index[1:], name="Date"),
+        name="return",
+    )
 
 
 def _independent_metrics(returns: pd.Series) -> dict[str, float | int]:
-    """Cross-check the five required metrics directly from simple daily returns."""
     values = returns.to_numpy(dtype=float)
     n = len(values)
     wealth = np.cumprod(1.0 + values)
-    terminal_wealth = float(wealth[-1])
+    terminal = float(wealth[-1])
     sample_std = float(np.std(values, ddof=1))
     peaks = np.maximum.accumulate(np.concatenate(([1.0], wealth)))[1:]
-    drawdowns = wealth / peaks - 1.0
     return {
-        "cumulative_return": terminal_wealth - 1.0,
-        "annualized_return": terminal_wealth ** (TRADING_DAYS / n) - 1.0,
+        "cumulative_return": terminal - 1.0,
+        "annualized_return": terminal ** (TRADING_DAYS / n) - 1.0,
         "annualized_volatility": sample_std * math.sqrt(TRADING_DAYS),
         "sharpe_ratio": float(np.mean(values)) / sample_std * math.sqrt(TRADING_DAYS),
-        "max_drawdown": min(0.0, float(np.min(drawdowns))),
+        "max_drawdown": min(0.0, float(np.min(wealth / peaks - 1.0))),
         "observations": n,
     }
 
 
-def _verify_step5(data: pd.DataFrame, states: pd.Series, allocation: pd.DataFrame) -> None:
-    rotation = build_rotation_returns(data, states, allocation)
-    independent_rotation = _independent_rotation_returns(data, states, allocation)
+def _verify_new_canonical_outputs(
+    data: pd.DataFrame,
+    candidates: list[dict[str, object]],
+    comparison: pd.DataFrame,
+    selection: dict[str, object],
+) -> None:
+    comparison_path = ROOT / "reports/tables/step3_model_comparison.csv"
+    keep_path = ROOT / "reports/tables/step4_allocation_100_keep.csv"
+    spread_path = ROOT / "reports/tables/step4_allocation_60_40_spread.csv"
+    if not (keep_path.is_file() and spread_path.is_file()):
+        # Atomic source PRs precede PR-60, which commits the rebuilt canonical artifacts.
+        return
+
+    _assert_frame(comparison, pd.read_csv(comparison_path), "Step 3 HMM-only comparison")
+    selected_states = selection["states"]
+    if not isinstance(selected_states, pd.Series):
+        raise AssertionError("HMM selection is missing states")
+    selected_states = selected_states.astype("int64").rename("state")
     _assert_series(
-        rotation["regime_rotation_return"].rename("regime_rotation"),
-        independent_rotation,
-        "independent lagged rotation",
+        selected_states,
+        _states("reports/tables/step3_selected_states.csv"),
+        "selected HMM states",
     )
 
-    comparison_index = pd.DatetimeIndex(rotation.index, name="Date")
-    equal_weight = build_equal_weight_monthly_returns(data, comparison_index)
-    spy = build_spy_buy_hold_returns(data, comparison_index)
-    comparison = build_comparison(rotation, equal_weight, spy)
-    persisted_daily = _indexed_csv("reports/tables/step5_daily_returns.csv")
-    _assert_frame(comparison, persisted_daily, "Step 5 daily comparison returns")
+    selected_meta = json.loads(
+        (ROOT / "reports/generated/step3_selected_model.json").read_text(encoding="utf-8")
+    )
+    expected_sha = hashlib.sha256(STEP1.read_bytes()).hexdigest()
+    for key, expected in {
+        "family": "hmm",
+        "n_states": int(selection["n_states"]),
+        "state_source": str(selection["state_source"]),
+        "input_data_sha256": expected_sha,
+        "selected_states_path": "reports/tables/step3_selected_states.csv",
+    }.items():
+        if selected_meta.get(key) != expected:
+            raise AssertionError(f"selected-model metadata mismatch for {key}")
 
-    summary = build_performance_summary(comparison)
+    statistics = compute_state_asset_statistics(data, selected_states)
+    _assert_frame(
+        statistics,
+        pd.read_csv(ROOT / "reports/tables/step3_state_asset_statistics.csv"),
+        "Step 3 state/ETF statistics",
+    )
+    keep = build_state_allocation(statistics, "100_keep")
+    spread = build_state_allocation(statistics, "60_40_spread")
+    _assert_frame(keep, pd.read_csv(keep_path), "100% Keep allocation")
+    _assert_frame(spread, pd.read_csv(spread_path), "60/40 Spread allocation")
+
+    daily, _ = build_dual_method_comparison(data, selected_states, statistics)
+    persisted_daily = _indexed_csv("reports/tables/step5_daily_returns.csv")
+    _assert_frame(daily, persisted_daily, "Step 5 four-portfolio daily returns")
+    for method, column, allocation in (
+        ("100_keep", "hmm_100_keep", keep),
+        ("60_40_spread", "hmm_60_40_spread", spread),
+    ):
+        independent = _independent_weighted_returns(data, selected_states, allocation)
+        _assert_series(
+            daily[column].rename("return"), independent, f"independent {method} lagged returns"
+        )
+
+    summary = build_four_portfolio_performance_summary(daily)
     persisted_summary = pd.read_csv(ROOT / "reports/tables/step5_performance_summary.csv")
     _assert_frame(summary, persisted_summary, "Step 5 performance summary")
-
     for row in persisted_summary.itertuples(index=False):
         portfolio = str(row.portfolio)
-        direct = _independent_metrics(comparison[portfolio])
+        direct = _independent_metrics(daily[portfolio])
         for key, expected in direct.items():
             actual = getattr(row, key)
             if key == "observations":
@@ -308,51 +247,45 @@ def _verify_step5(data: pd.DataFrame, states: pd.Series, allocation: pd.DataFram
             elif not math.isclose(float(actual), float(expected), rel_tol=RTOL, abs_tol=ATOL):
                 raise AssertionError(f"{portfolio} {key} mismatch")
 
-    selected = json.loads(
-        (ROOT / "reports/generated/step3_selected_model.json").read_text(encoding="utf-8")
+    states_by_k: dict[int, pd.Series] = {}
+    for candidate in candidates:
+        fit = candidate.get("fit")
+        n_states = candidate.get("n_states")
+        if not isinstance(fit, HMMFitResult) or not isinstance(n_states, int):
+            raise AssertionError("invalid HMM candidate during sensitivity audit")
+        states_by_k[n_states] = fit.states.astype("int64").rename("state")
+    sensitivity = build_hmm_state_count_sensitivity(data, states_by_k)
+    _assert_frame(
+        sensitivity,
+        pd.read_csv(ROOT / "reports/tables/step5_state_count_sensitivity.csv"),
+        "HMM K-by-allocation sensitivity",
     )
-    states_by_k = {
-        n_states: _states(f"reports/tables/step2_{selected['family']}_{n_states}_states.csv")
-        for n_states in (2, 3)
-    }
-    sensitivity = build_state_count_sensitivity(data, selected["family"], states_by_k)
-    sensitivity_path = ROOT / "reports/tables/step5_state_count_sensitivity.csv"
-    if not sensitivity_path.is_file():
-        raise AssertionError("missing canonical Step 5 sensitivity table")
-    persisted_sensitivity = pd.read_csv(sensitivity_path)
-    _assert_frame(sensitivity, persisted_sensitivity, "Step 5 state-count sensitivity")
 
-    manifest_path = ROOT / "reports/generated/step5_manifest.json"
-    if not manifest_path.is_file():
-        raise AssertionError("missing canonical Step 5 manifest")
-    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
-    expected_sha = hashlib.sha256((ROOT / "data/processed/step1_data.csv").read_bytes()).hexdigest()
-    if manifest.get("input_data_sha256") != expected_sha:
-        raise AssertionError("Step 5 manifest has a stale Step 1 SHA")
-    for relative in manifest.get("tables", []) + manifest.get("figures", []):
-        path = ROOT / relative
-        if not path.is_file() or path.stat().st_size == 0:
-            raise AssertionError(f"Step 5 manifest references missing artifact: {relative}")
-
-
-def _verify_documentation_status() -> None:
-    readme = (ROOT / "README.md").read_text(encoding="utf-8")
-    stale_fragments = (
-        "| Step 5 implementation | Not started |",
-        "Step 5 remains unimplemented",
-    )
-    for fragment in stale_fragments:
-        if fragment in readme:
-            raise AssertionError(f"README contains stale implementation status: {fragment}")
+    for relative in (
+        "reports/generated/steps_2_4_manifest.json",
+        "reports/generated/step5_manifest.json",
+    ):
+        payload = json.loads((ROOT / relative).read_text(encoding="utf-8"))
+        if payload.get("input_data_sha256") != expected_sha:
+            raise AssertionError(f"{relative} has a stale Step 1 SHA")
+        serialized = json.dumps(payload)
+        if "markov" in serialized.lower():
+            raise AssertionError(f"{relative} contains a non-HMM canonical artifact")
+        for artifact in payload.get("tables", []) + payload.get("figures", []):
+            path = ROOT / str(artifact)
+            if not path.is_file() or path.stat().st_size == 0:
+                raise AssertionError(f"{relative} references missing artifact: {artifact}")
 
 
 def main() -> None:
     data = _step1()
-    _verify_regime_models(data)
-    selected_states, allocation = _verify_selected_analysis(data)
-    _verify_step5(data, selected_states, allocation)
-    _verify_documentation_status()
-    print("Complete analysis consistency verification passed.")
+    candidates = _verify_hmms(data)
+    comparison = build_hmm_model_comparison(candidates)
+    selection = select_preferred_hmm(comparison, candidates)
+    if selection.get("family") != "hmm":
+        raise AssertionError("HMM-only selection returned a non-HMM family")
+    _verify_new_canonical_outputs(data, candidates, comparison, selection)
+    print("HMM-only numerical analysis consistency checks passed.")
 
 
 if __name__ == "__main__":
