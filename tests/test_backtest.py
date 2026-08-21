@@ -4,13 +4,15 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from vix_regime_allocation.allocation import ALLOCATION_COLUMNS
+from vix_regime_allocation.allocation import ALLOCATION_COLUMNS, METHOD_ALLOCATION_COLUMNS
 from vix_regime_allocation.backtest import ROTATION_DETAIL_COLUMNS, build_rotation_returns
 from vix_regime_allocation.transform import OUTPUT_COLUMNS
 
 
 def _data() -> pd.DataFrame:
-    index = pd.DatetimeIndex(["2026-01-02", "2026-01-05", "2026-01-06", "2026-01-07"], name="Date")
+    index = pd.DatetimeIndex(
+        ["2026-01-02", "2026-01-05", "2026-01-06", "2026-01-07"], name="Date"
+    )
     simple = {
         "TLT": np.array([0.00, 0.10, 0.20, 0.30]),
         "GLD": np.array([0.00, 0.01, 0.02, 0.03]),
@@ -55,6 +57,40 @@ def _allocation() -> pd.DataFrame:
     )
 
 
+def _method_allocation(method: str) -> pd.DataFrame:
+    if method == "100_keep":
+        weights = [(0.0, 0.0, 1.0), (1.0, 0.0, 0.0)]
+    else:
+        weights = [(0.0, 0.4, 0.6), (0.6, 0.4, 0.0)]
+    return pd.DataFrame(
+        [
+            {
+                "method": method,
+                "state": 0,
+                "rank_1_asset": "SPY",
+                "rank_2_asset": "GLD",
+                "rank_1_mean_log_return": 0.01,
+                "rank_2_mean_log_return": 0.005,
+                "TLT_weight": weights[0][0],
+                "GLD_weight": weights[0][1],
+                "SPY_weight": weights[0][2],
+            },
+            {
+                "method": method,
+                "state": 1,
+                "rank_1_asset": "TLT",
+                "rank_2_asset": "GLD",
+                "rank_1_mean_log_return": 0.02,
+                "rank_2_mean_log_return": 0.01,
+                "TLT_weight": weights[1][0],
+                "GLD_weight": weights[1][1],
+                "SPY_weight": weights[1][2],
+            },
+        ],
+        columns=list(METHOD_ALLOCATION_COLUMNS),
+    )
+
+
 def test_build_rotation_returns_applies_exact_previous_observed_row_state() -> None:
     data = _data()
     result = build_rotation_returns(data, _states(data), _allocation())
@@ -71,6 +107,27 @@ def test_build_rotation_returns_applies_exact_previous_observed_row_state() -> N
         [1.0, 0.0, 0.0],
     ]
     np.testing.assert_allclose(result["regime_rotation_return"], [-0.05, 0.20, 0.30])
+
+
+def test_method_aware_100_keep_matches_legacy_rotation() -> None:
+    data = _data()
+    legacy = build_rotation_returns(data, _states(data), _allocation())
+    method = build_rotation_returns(data, _states(data), _method_allocation("100_keep"))
+    pd.testing.assert_frame_equal(method, legacy)
+
+
+def test_method_aware_60_40_spread_uses_weighted_simple_returns_and_same_lag() -> None:
+    data = _data()
+    result = build_rotation_returns(data, _states(data), _method_allocation("60_40_spread"))
+
+    expected = [0.6 * -0.05 + 0.4 * 0.01, 0.6 * 0.20 + 0.4 * 0.02, 0.6 * 0.30 + 0.4 * 0.03]
+    np.testing.assert_allclose(result["regime_rotation_return"], expected)
+    assert result["decision_state"].tolist() == [0, 1, 1]
+    assert result[["TLT_weight", "GLD_weight", "SPY_weight"]].values.tolist() == [
+        [0.0, 0.4, 0.6],
+        [0.6, 0.4, 0.0],
+        [0.6, 0.4, 0.0],
+    ]
 
 
 def test_state_change_affects_only_next_trading_row() -> None:
@@ -163,7 +220,7 @@ def test_build_rotation_returns_rejects_invalid_states(case: str) -> None:
         "asset_weight_mismatch",
     ],
 )
-def test_build_rotation_returns_rejects_invalid_allocation(case: str) -> None:
+def test_build_rotation_returns_rejects_invalid_legacy_allocation(case: str) -> None:
     data = _data()
     allocation = _allocation().copy()
     if case == "schema":
@@ -185,6 +242,30 @@ def test_build_rotation_returns_rejects_invalid_allocation(case: str) -> None:
     else:
         allocation.loc[0, "selected_asset"] = "GLD"
 
+    with pytest.raises(ValueError):
+        build_rotation_returns(data, _states(data), allocation)
+
+
+@pytest.mark.parametrize(
+    "case",
+    ["method", "rank_duplicate", "rank_order", "weights", "negative", "nonfinite"],
+)
+def test_build_rotation_returns_rejects_invalid_method_allocation(case: str) -> None:
+    data = _data()
+    allocation = _method_allocation("60_40_spread").copy()
+    if case == "method":
+        allocation["method"] = "70_30"
+    elif case == "rank_duplicate":
+        allocation.loc[0, "rank_2_asset"] = "SPY"
+    elif case == "rank_order":
+        allocation.loc[0, "rank_2_mean_log_return"] = 0.02
+    elif case == "weights":
+        allocation.loc[0, "GLD_weight"] = 0.3
+    elif case == "negative":
+        allocation.loc[0, "GLD_weight"] = -0.4
+        allocation.loc[0, "SPY_weight"] = 1.4
+    else:
+        allocation.loc[0, "rank_1_mean_log_return"] = np.inf
     with pytest.raises(ValueError):
         build_rotation_returns(data, _states(data), allocation)
 
