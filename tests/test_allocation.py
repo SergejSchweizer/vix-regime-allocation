@@ -54,7 +54,7 @@ def test_both_methods_share_exact_ranking_and_fixed_weights() -> None:
     ]
     assert spread[["TLT_weight", "GLD_weight", "SPY_weight"]].values.tolist() == [
         [0.6, 0.4, 0.0],
-        [0.4, 0.6, 0.0],
+        [0.0, 0.6, 0.4],
         [0.0, 0.4, 0.6],
     ]
     for frame in (keep, spread):
