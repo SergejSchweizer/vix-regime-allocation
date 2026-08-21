@@ -7,19 +7,21 @@ import pytest
 from vix_regime_allocation.hmm_model import HMMFitResult
 from vix_regime_allocation.model_selection import (
     COMPARISON_COLUMNS,
+    build_hmm_model_comparison,
     build_model_comparison,
+    select_preferred_hmm,
     select_preferred_model,
 )
 
 
-def _index(periods: int = 20) -> pd.DatetimeIndex:
+def _index(periods: int = 40) -> pd.DatetimeIndex:
     return pd.date_range("2020-01-01", periods=periods, name="Date")
 
 
-def _fit(n_states: int = 2, periods: int = 20) -> HMMFitResult:
+def _fit(n_states: int = 2, periods: int = 40) -> HMMFitResult:
     index = _index(periods)
     labels = [f"state_{state}" for state in range(n_states)]
-    states = [state % n_states for state in range(periods)]
+    states = np.resize(np.arange(n_states, dtype=int), periods)
     return HMMFitResult(
         n_states=n_states,
         seed=42,
@@ -37,35 +39,17 @@ def _fit(n_states: int = 2, periods: int = 20) -> HMMFitResult:
         variances=pd.Series(np.ones(n_states), index=pd.Index(range(n_states), name="state")),
         states=pd.Series(states, index=index, name="state", dtype="int64"),
         probabilities=pd.DataFrame(
-            [[1.0 / n_states] * n_states for _ in range(periods)],
-            index=index,
-            columns=labels,
+            [[1.0 / n_states] * n_states for _ in range(periods)], index=index, columns=labels
         ),
     )
 
 
-def _markov_candidate(n_states: int, bic: float) -> dict[str, object]:
-    states = pd.Series(
-        [state % n_states for state in range(20)],
-        index=_index(),
-        name="state",
-        dtype="int64",
-    )
-    return {
-        "family": "markov",
-        "n_states": n_states,
-        "log_likelihood": -10.0 - n_states,
-        "n_parameters": n_states * (n_states - 1),
-        "n_observations": 19,
-        "aic": 30.0 + n_states,
-        "bic": bic,
-        "converged": True,
-        "states": states,
-    }
-
-
-def _hmm_candidate(
-    n_states: int, bic: float, *, fit: HMMFitResult | None = None, converged: bool = True
+def _candidate(
+    n_states: int,
+    bic: float,
+    *,
+    fit: HMMFitResult | None = None,
+    converged: bool = True,
 ) -> dict[str, object]:
     actual_fit = fit if fit is not None else _fit(n_states)
     return {
@@ -81,172 +65,159 @@ def _hmm_candidate(
     }
 
 
-def _candidates() -> tuple[list[dict[str, object]], list[dict[str, object]]]:
-    markov = [_markov_candidate(2, 20.0), _markov_candidate(3, 18.0)]
-    hmm = [_hmm_candidate(2, 15.0), _hmm_candidate(3, 17.0)]
-    return markov, hmm
+def _candidates() -> list[dict[str, object]]:
+    return [_candidate(2, 15.0), _candidate(3, 17.0)]
 
 
-def test_build_model_comparison_has_exact_order_schema_and_scope() -> None:
-    markov, hmm = _candidates()
-    comparison = build_model_comparison(markov, hmm)
+def test_build_hmm_model_comparison_has_exact_two_row_schema() -> None:
+    comparison = build_hmm_model_comparison(_candidates())
 
     assert tuple(comparison.columns) == COMPARISON_COLUMNS
-    assert list(zip(comparison["family"], comparison["n_states"], strict=True)) == [
-        ("markov", 2),
-        ("markov", 3),
+    assert comparison[["family", "n_states"]].to_records(index=False).tolist() == [
         ("hmm", 2),
         ("hmm", 3),
     ]
-    assert comparison["criterion_scope"].tolist() == ["within_family_only"] * 4
-    assert comparison.loc[0, "bic"] == 20.0
-    assert comparison.loc[2, "aic"] == 52.0
+    assert comparison["valid"].tolist() == [True, True]
+    assert comparison["min_viterbi_occupancy"].min() >= 0.05
 
 
-def test_selects_valid_hmm_using_within_family_bic_only() -> None:
-    markov = [_markov_candidate(2, -1000.0), _markov_candidate(3, -900.0)]
-    hmm = [_hmm_candidate(2, 15.0), _hmm_candidate(3, 17.0)]
-    comparison = build_model_comparison(markov, hmm)
+def test_select_preferred_hmm_uses_valid_candidate_bic_only() -> None:
+    candidates = [_candidate(2, 15.0), _candidate(3, 14.0)]
+    comparison = build_hmm_model_comparison(candidates)
 
-    result = select_preferred_model(comparison, markov, hmm)
+    result = select_preferred_hmm(comparison, candidates)
 
     assert result["family"] == "hmm"
-    assert result["n_states"] == 2
-    assert result["markov_best_n_states"] == 2
-    assert result["hmm_best_n_states"] == 2
-    assert result["state_source"] == "reports/tables/step2_hmm_2_states.csv"
+    assert result["n_states"] == 3
+    assert result["state_source"] == "reports/tables/step2_hmm_3_states.csv"
     assert isinstance(result["states"], pd.Series)
-    assert "all fixed HMM validity diagnostics passed" in str(result["selection_reason"])
+    assert "BIC selected K=3" in str(result["selection_reason"])
 
 
-def test_bic_tie_within_each_family_chooses_lower_k() -> None:
-    markov = [_markov_candidate(2, 10.0), _markov_candidate(3, 10.0 + 5e-13)]
-    hmm = [_hmm_candidate(2, 8.0 + 5e-13), _hmm_candidate(3, 8.0)]
-    comparison = build_model_comparison(markov, hmm)
+def test_bic_tie_chooses_lower_k() -> None:
+    candidates = [_candidate(2, 10.0 + 5e-13), _candidate(3, 10.0)]
+    comparison = build_hmm_model_comparison(candidates)
+    assert select_preferred_hmm(comparison, candidates)["n_states"] == 2
 
-    result = select_preferred_model(comparison, markov, hmm)
 
-    assert result["markov_best_n_states"] == 2
-    assert result["hmm_best_n_states"] == 2
-    assert result["n_states"] == 2
+def test_invalid_low_bic_candidate_is_skipped() -> None:
+    candidates = [_candidate(2, 50.0), _candidate(3, 1.0, converged=False)]
+    comparison = build_hmm_model_comparison(candidates)
+    assert comparison["valid"].tolist() == [True, False]
+    assert select_preferred_hmm(comparison, candidates)["n_states"] == 2
 
 
 def _with_bad_start(fit: HMMFitResult) -> HMMFitResult:
-    return replace(fit, start_probabilities=(0.8, 0.8))
+    return replace(fit, start_probabilities=tuple([0.8] * fit.n_states))
 
 
 def _with_bad_transition(fit: HMMFitResult) -> HMMFitResult:
     transition = fit.transition_matrix.copy()
-    transition.iloc[0, :] = [0.9, 0.9]
+    transition.iloc[0, :] = 0.9
     return replace(fit, transition_matrix=transition)
 
 
 def _with_bad_posterior(fit: HMMFitResult) -> HMMFitResult:
     posterior = fit.probabilities.copy()
-    posterior.iloc[0, :] = [0.9, 0.9]
+    posterior.iloc[0, :] = 0.9
     return replace(fit, probabilities=posterior)
 
 
 def _with_low_occupancy(fit: HMMFitResult) -> HMMFitResult:
-    states = pd.Series([0] * len(fit.states), index=fit.states.index, name="state", dtype="int64")
+    states = fit.states.copy()
+    states[:] = 0
+    states.iloc[-1] = fit.n_states - 1
     return replace(fit, states=states)
 
 
+def _with_unordered_means(fit: HMMFitResult) -> HMMFitResult:
+    means = fit.means.copy()
+    means.iloc[0], means.iloc[1] = 2.0, 1.0
+    return replace(fit, means=means)
+
+
 @pytest.mark.parametrize(
-    ("candidate_transform", "reason"),
+    "transform",
     [
-        (lambda candidate: {**candidate, "converged": False}, "candidate did not converge"),
-        (
-            lambda candidate: {**candidate, "fit": replace(candidate["fit"], converged=False)},
-            "selected HMM fit did not converge",
-        ),
-        (
-            lambda candidate: {
-                **candidate,
-                "fit": replace(candidate["fit"], variances=pd.Series([1.0, 0.0])),
-            },
-            "state variances",
-        ),
-        (
-            lambda candidate: {**candidate, "fit": _with_bad_start(candidate["fit"])},
-            "initial-state probabilities",
-        ),
-        (
-            lambda candidate: {**candidate, "fit": _with_bad_transition(candidate["fit"])},
-            "transition probabilities",
-        ),
-        (
-            lambda candidate: {**candidate, "fit": _with_bad_posterior(candidate["fit"])},
-            "posterior probabilities",
-        ),
-        (
-            lambda candidate: {**candidate, "fit": _with_low_occupancy(candidate["fit"])},
-            "occupancy below 5%",
-        ),
-        (lambda candidate: {**candidate, "fit": "not-a-fit"}, "fit result is missing"),
+        lambda candidate: {**candidate, "converged": False},
+        lambda candidate: {**candidate, "log_likelihood": float("nan")},
+        lambda candidate: {**candidate, "fit": replace(candidate["fit"], converged=False)},
+        lambda candidate: {**candidate, "fit": _with_unordered_means(candidate["fit"])},
+        lambda candidate: {
+            **candidate,
+            "fit": replace(candidate["fit"], variances=pd.Series([1.0, 0.0])),
+        },
+        lambda candidate: {**candidate, "fit": _with_bad_start(candidate["fit"])},
+        lambda candidate: {**candidate, "fit": _with_bad_transition(candidate["fit"])},
+        lambda candidate: {**candidate, "fit": _with_bad_posterior(candidate["fit"])},
+        lambda candidate: {**candidate, "fit": _with_low_occupancy(candidate["fit"])},
+        lambda candidate: {**candidate, "fit": "not-a-fit"},
     ],
 )
-def test_each_hmm_invalidity_falls_back_to_markov(candidate_transform: object, reason: str) -> None:
-    markov = [_markov_candidate(2, 10.0), _markov_candidate(3, 11.0)]
-    hmm = [_hmm_candidate(2, 5.0), _hmm_candidate(3, 7.0)]
-    transform = candidate_transform
+def test_each_validity_failure_is_recorded_without_alternate_family(transform: object) -> None:
+    candidates = _candidates()
     assert callable(transform)
-    hmm[0] = transform(hmm[0])  # type: ignore[operator]
-    comparison = build_model_comparison(markov, hmm)
+    candidates[0] = transform(candidates[0])  # type: ignore[operator]
+    comparison = build_hmm_model_comparison(candidates)
 
-    result = select_preferred_model(comparison, markov, hmm)
+    assert comparison.loc[0, "family"] == "hmm"
+    assert bool(comparison.loc[0, "valid"]) is False
+    result = select_preferred_hmm(comparison, candidates)
+    assert result["family"] == "hmm"
+    assert result["n_states"] == 3
 
-    assert result["family"] == "markov"
-    assert result["n_states"] == 2
-    assert result["state_source"] == "reports/tables/step2_markov_2_states.csv"
-    assert reason in str(result["selection_reason"])
+
+def test_no_valid_hmm_fails_instead_of_falling_back() -> None:
+    candidates = [_candidate(2, 1.0, converged=False), _candidate(3, 2.0, converged=False)]
+    comparison = build_hmm_model_comparison(candidates)
+    with pytest.raises(RuntimeError, match="No valid HMM candidate"):
+        select_preferred_hmm(comparison, candidates)
 
 
-def test_fallback_requires_selected_markov_state_series() -> None:
-    markov = [_markov_candidate(2, 10.0), _markov_candidate(3, 11.0)]
-    markov[0].pop("states")
-    hmm = [_hmm_candidate(2, 5.0, converged=False), _hmm_candidate(3, 7.0)]
-    comparison = build_model_comparison(markov, hmm)
+def test_markov_candidate_is_rejected_by_hmm_public_api() -> None:
+    candidates = _candidates()
+    candidates[0] = {**candidates[0], "family": "markov"}
+    with pytest.raises(ValueError, match="exactly 'hmm'"):
+        build_hmm_model_comparison(candidates)
 
-    with pytest.raises(ValueError, match="canonical state Series"):
-        select_preferred_model(comparison, markov, hmm)
+
+def test_legacy_wrappers_cannot_select_markov() -> None:
+    hmm = _candidates()
+    fake_markov = [{"family": "markov"}]
+    comparison = build_model_comparison(fake_markov, hmm)
+    result = select_preferred_model(comparison, fake_markov, hmm)
+    assert result["family"] == "hmm"
+    assert comparison["family"].tolist() == ["hmm", "hmm"]
 
 
 @pytest.mark.parametrize(
     "mutator",
     [
-        lambda markov, hmm: (markov[:1], hmm),
-        lambda markov, hmm: ([{**markov[0], "family": "wrong"}, markov[1]], hmm),
-        lambda markov, hmm: ([{**markov[0], "n_states": 3}, markov[1]], hmm),
-        lambda markov, hmm: ([{**markov[0], "bic": float("nan")}, markov[1]], hmm),
-        lambda markov, hmm: ([{**markov[0], "n_observations": 0}, markov[1]], hmm),
-        lambda markov, hmm: (markov, [{**hmm[0], "converged": "yes"}, hmm[1]]),
+        lambda candidates: candidates[:1],
+        lambda candidates: [{**candidates[0], "family": "wrong"}, candidates[1]],
+        lambda candidates: [{**candidates[0], "n_states": 3}, candidates[1]],
+        lambda candidates: [{**candidates[0], "n_observations": 0}, candidates[1]],
+        lambda candidates: [{**candidates[0], "converged": "yes"}, candidates[1]],
     ],
 )
 def test_malformed_candidate_sets_fail(mutator: object) -> None:
-    markov, hmm = _candidates()
-    transform = mutator
-    assert callable(transform)
-    bad_markov, bad_hmm = transform(markov, hmm)  # type: ignore[operator]
+    candidates = _candidates()
+    assert callable(mutator)
+    bad = mutator(candidates)  # type: ignore[operator]
     with pytest.raises((TypeError, ValueError)):
-        build_model_comparison(bad_markov, bad_hmm)
+        build_hmm_model_comparison(bad)
 
 
-def test_malformed_comparison_and_scope_fail() -> None:
-    markov, hmm = _candidates()
-    comparison = build_model_comparison(markov, hmm)
-
+def test_malformed_comparison_fails() -> None:
+    candidates = _candidates()
+    comparison = build_hmm_model_comparison(candidates)
     with pytest.raises(TypeError, match="DataFrame"):
-        select_preferred_model("not-a-frame", markov, hmm)  # type: ignore[arg-type]
-
+        select_preferred_hmm("bad", candidates)  # type: ignore[arg-type]
     with pytest.raises(ValueError, match="columns"):
-        select_preferred_model(comparison.drop(columns="aic"), markov, hmm)
-
-    bad_scope = comparison.copy()
-    bad_scope.loc[0, "criterion_scope"] = "cross_family"
-    with pytest.raises(ValueError, match="within model family"):
-        select_preferred_model(bad_scope, markov, hmm)
-
-    bad_rows = comparison.iloc[:3].copy()
-    with pytest.raises(ValueError, match="exactly four"):
-        select_preferred_model(bad_rows, markov, hmm)
+        select_preferred_hmm(comparison.drop(columns="aic"), candidates)
+    with pytest.raises(ValueError, match="exactly two"):
+        select_preferred_hmm(comparison.iloc[:1], candidates)
+    wrong_family = comparison.copy()
+    wrong_family.loc[0, "family"] = "markov"
+    with pytest.raises(ValueError, match="HMM only"):
+        select_preferred_hmm(wrong_family, candidates)
