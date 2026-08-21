@@ -1,18 +1,23 @@
 from __future__ import annotations
 
 import hashlib
+import json
 from pathlib import Path
 
 import nbformat
+import pandas as pd
 from pypdf import PdfReader
 
 ROOT = Path(__file__).resolve().parents[1]
 NOTEBOOK = ROOT / "notebooks/gwp2_vix_regime_allocation.ipynb"
 HTML = ROOT / "reports/gwp2_vix_regime_allocation.html"
 PDF = ROOT / "reports/Stochastic_Modeling_GWP2_Report.pdf"
-STEP5_CALL = "nb.step_5_performance_metrics_and_cumulative_compar_034()"
+STEP5_CALLS = {
+    "nb.step_5_performance_metrics_and_cumulative_compar_034()",
+    "nb.step_5_hmm_dual_method_comparison()",
+}
 SOURCE_DIGEST_KEY = "artifact_source_sha256"
-LEGACY_MARKOV_SENTINEL = ROOT / "src/vix_regime_allocation/markov_states.py"
+MIGRATION_SENTINEL = ROOT / "src/vix_regime_allocation/markov_states.py"
 
 
 def source_paths() -> list[Path]:
@@ -22,6 +27,7 @@ def source_paths() -> list[Path]:
             ROOT / "data/processed/step1_data.csv",
             ROOT / "reports/references.bib",
             ROOT / "scripts/rebuild_analysis_review.py",
+            ROOT / "scripts/check_analysis_consistency.py",
         ]
     )
     missing = [path for path in paths if not path.is_file()]
@@ -57,13 +63,10 @@ def _artifact_source_sha(notebook: nbformat.NotebookNode, expected_source_sha: s
     if actual_source_sha == expected_source_sha:
         return expected_source_sha
 
-    # PR-50..PR-66 intentionally change source contracts before PR-60 rebuilds
-    # the canonical notebook/HTML/PDF. While the legacy Markov runtime still
-    # exists, validate that the three sidecars agree with each other using the
-    # notebook's persisted source digest instead of forcing every atomic source
-    # PR to regenerate multi-megabyte artifacts. PR-67 removes the sentinel and
-    # therefore restores strict source-to-artifact equality automatically.
-    if LEGACY_MARKOV_SENTINEL.is_file():
+    # PR-50..PR-66 intentionally change source contracts before PR-60/PR-61
+    # commit the rebuilt canonical analysis and executed notebook. The migration
+    # sentinel disappears in PR-67, which restores strict equality automatically.
+    if MIGRATION_SENTINEL.is_file():
         return actual_source_sha
 
     raise RuntimeError(
@@ -82,7 +85,7 @@ def validate_notebook() -> tuple[str, str]:
     for index, cell in enumerate(notebook.cells):
         if cell.cell_type != "code":
             continue
-        if _cell_source(cell).strip() == STEP5_CALL:
+        if _cell_source(cell).strip() in STEP5_CALLS:
             step5_matches.append(cell)
         for output in cell.get("outputs", []):
             if output.get("output_type") == "error":
@@ -135,11 +138,42 @@ def validate_pdf(notebook_sha: str) -> None:
         raise RuntimeError("PDF was not built from the canonical executed notebook bytes.")
 
 
+def validate_analysis_manifests() -> None:
+    keep = ROOT / "reports/tables/step4_allocation_100_keep.csv"
+    spread = ROOT / "reports/tables/step4_allocation_60_40_spread.csv"
+    if not (keep.is_file() and spread.is_file()):
+        return
+
+    expected_sha = hashlib.sha256((ROOT / "data/processed/step1_data.csv").read_bytes()).hexdigest()
+    for relative in (
+        "reports/generated/steps_2_4_manifest.json",
+        "reports/generated/step5_manifest.json",
+    ):
+        payload = json.loads((ROOT / relative).read_text(encoding="utf-8"))
+        if payload.get("input_data_sha256") != expected_sha:
+            raise RuntimeError(f"{relative} does not match the current Step 1 bytes.")
+        serialized = json.dumps(payload).lower()
+        if "markov" in serialized:
+            raise RuntimeError(f"{relative} contains a non-HMM canonical path.")
+
+    daily = pd.read_csv(ROOT / "reports/tables/step5_daily_returns.csv")
+    expected_columns = [
+        "Date",
+        "hmm_100_keep",
+        "hmm_60_40_spread",
+        "equal_weight_monthly",
+        "spy_buy_hold",
+    ]
+    if daily.columns.tolist() != expected_columns:
+        raise RuntimeError("Step 5 daily returns do not have the canonical four-portfolio schema.")
+
+
 def main() -> None:
     source_sha, notebook_sha = validate_notebook()
     validate_html(source_sha, notebook_sha)
     validate_pdf(notebook_sha)
-    print("Notebook, HTML, and PDF artifact provenance is consistent.")
+    validate_analysis_manifests()
+    print("Notebook, HTML, PDF, and HMM analysis provenance is consistent.")
 
 
 if __name__ == "__main__":
