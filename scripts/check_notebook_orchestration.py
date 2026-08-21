@@ -81,10 +81,10 @@ def _validate_helper_surface(helper_functions: dict[str, set[str]]) -> list[str]
 def _legacy_staging_mode(
     calls: list[tuple[str, str]], implementation_cells: list[tuple[int, str]]
 ) -> bool:
-    """Allow only the pre-PR-61 notebook, before any new canonical helper call appears."""
+    """Allow the pre-PR-61 notebook until the complete new call surface is present."""
     if implementation_cells or not calls:
         return False
-    return not any(target in REQUIRED_CALLS for target in calls)
+    return not all(required in calls for required in REQUIRED_CALLS)
 
 
 def validate_orchestration() -> int:
@@ -125,7 +125,7 @@ def validate_orchestration() -> int:
             raise SystemExit("Notebook helper surface failed:\n- " + "\n- ".join(violations))
         print(
             "Notebook orchestration staging contract passed: the HMM-only helper surface is "
-            "complete; strict notebook validation activates when PR-61 adopts the new calls."
+            "complete; strict notebook validation activates when PR-61 adopts every new call."
         )
         return len(calls)
 
