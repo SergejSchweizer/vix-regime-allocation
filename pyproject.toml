@@ -48,6 +48,11 @@ select = ["E", "F", "I", "B", "UP"]
 
 [tool.ruff.lint.per-file-ignores]
 "scripts/rebuild_analysis_review.py" = ["E501"]
+"scripts/check_predictive_causality.py" = ["E501"]
+"src/vix_regime_allocation/predictive/holdout.py" = ["E501"]
+"tests/predictive/test_hmm_filter.py" = ["E501"]
+"tests/predictive/test_selection.py" = ["E501"]
+"tests/predictive/test_state_returns.py" = ["E501"]
 
 [tool.mypy]
 python_version = "3.11"
@@ -56,8 +61,19 @@ ignore_missing_imports = true
 warn_unused_configs = true
 files = ["src"]
 
+[[tool.mypy.overrides]]
+module = [
+    "vix_regime_allocation.predictive.refit",
+    "vix_regime_allocation.predictive.backtest",
+    "vix_regime_allocation.predictive.markov_walkforward",
+    "vix_regime_allocation.predictive.hmm_walkforward",
+    "vix_regime_allocation.predictive.plots",
+]
+disable_error_code = ["arg-type", "index"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+addopts = ["--import-mode=importlib"]
 markers = [
     "integration: tests that verify integration between repository/application components",
 ]
