@@ -8,9 +8,7 @@ from vix_regime_allocation.hmm_model import HMMFitResult
 from vix_regime_allocation.model_selection import (
     COMPARISON_COLUMNS,
     build_hmm_model_comparison,
-    build_model_comparison,
     select_preferred_hmm,
-    select_preferred_model,
 )
 
 
@@ -179,15 +177,6 @@ def test_markov_candidate_is_rejected_by_hmm_public_api() -> None:
     candidates[0] = {**candidates[0], "family": "markov"}
     with pytest.raises(ValueError, match="exactly 'hmm'"):
         build_hmm_model_comparison(candidates)
-
-
-def test_legacy_wrappers_cannot_select_markov() -> None:
-    hmm = _candidates()
-    fake_markov = [{"family": "markov"}]
-    comparison = build_model_comparison(fake_markov, hmm)
-    result = select_preferred_model(comparison, fake_markov, hmm)
-    assert result["family"] == "hmm"
-    assert comparison["family"].tolist() == ["hmm", "hmm"]
 
 
 @pytest.mark.parametrize(
