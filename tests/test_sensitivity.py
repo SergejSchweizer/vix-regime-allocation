@@ -190,3 +190,86 @@ def test_sensitivity_rejects_invalid_data(case: str) -> None:
     error = TypeError if case == "type" else ValueError
     with pytest.raises(error):
         build_state_count_sensitivity(data, "markov", {})  # type: ignore[arg-type]
+
+
+def test_hmm_sensitivity_crosses_k_and_both_allocation_methods(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    data = _data()
+    calls: list[tuple[object, ...]] = []
+
+    def fake_stats(_: pd.DataFrame, states: pd.Series) -> pd.DataFrame:
+        k = int(states.nunique())
+        calls.append(("stats", k))
+        return pd.DataFrame({"k": [k]})
+
+    def fake_allocation(stats: pd.DataFrame, method: str) -> pd.DataFrame:
+        k = int(stats.loc[0, "k"])
+        calls.append(("allocation", k, method))
+        return pd.DataFrame({"k": [k], "method": [method]})
+
+    def fake_rotation(_: pd.DataFrame, states: pd.Series, allocation: pd.DataFrame) -> pd.DataFrame:
+        k = int(states.nunique())
+        method = str(allocation.loc[0, "method"])
+        calls.append(("rotation", k, method))
+        index = data.index[1:] if method == "100_keep" else data.index[2:]
+        value = 0.001 * k + (0.0001 if method == "60_40_spread" else 0.0)
+        return pd.DataFrame({"regime_rotation_return": np.full(len(index), value)}, index=index)
+
+    metric_names: list[str] = []
+
+    def fake_metrics(series: pd.Series) -> dict[str, float | int]:
+        metric_names.append(str(series.name))
+        return {
+            "cumulative_return": 1.0,
+            "annualized_return": 2.0,
+            "annualized_volatility": 3.0,
+            "sharpe_ratio": 4.0,
+            "max_drawdown": -0.5,
+            "observations": len(series),
+        }
+
+    monkeypatch.setattr(module, "compute_state_asset_statistics", fake_stats)
+    monkeypatch.setattr(module, "build_state_allocation", fake_allocation)
+    monkeypatch.setattr(module, "build_rotation_returns", fake_rotation)
+    monkeypatch.setattr(module, "performance_metrics", fake_metrics)
+
+    result = module.build_hmm_state_count_sensitivity(data, _states(data))
+
+    assert tuple(result.columns) == module.HMM_SENSITIVITY_COLUMNS
+    assert result[["family", "n_states", "method"]].values.tolist() == [
+        ["hmm", 2, "100_keep"],
+        ["hmm", 2, "60_40_spread"],
+        ["hmm", 3, "100_keep"],
+        ["hmm", 3, "60_40_spread"],
+    ]
+    assert result["observations"].tolist() == [4, 4, 4, 4]
+    assert metric_names == [
+        "hmm_k2_100_keep",
+        "hmm_k2_60_40_spread",
+        "hmm_k3_100_keep",
+        "hmm_k3_60_40_spread",
+    ]
+    assert calls.count(("allocation", 2, "100_keep")) == 1
+    assert calls.count(("allocation", 2, "60_40_spread")) == 1
+    assert calls.count(("allocation", 3, "100_keep")) == 1
+    assert calls.count(("allocation", 3, "60_40_spread")) == 1
+
+
+def test_hmm_sensitivity_rejects_incomplete_state_dictionary() -> None:
+    data = _data()
+    with pytest.raises(ValueError, match="exactly keys 2 and 3"):
+        module.build_hmm_state_count_sensitivity(data, {2: _states(data)[2]})
+
+
+def test_hmm_sensitivity_rejects_unexpected_metric_schema(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    data = _data()
+
+    def malformed(_: pd.Series) -> dict[str, float | int]:
+        return {key: 1.0 for key in PERFORMANCE_KEYS if key != "observations"}
+
+    monkeypatch.setattr(module, "performance_metrics", malformed)
+    with pytest.raises(ValueError, match="unexpected metric schema"):
+        module.build_hmm_state_count_sensitivity(data, _states(data))
