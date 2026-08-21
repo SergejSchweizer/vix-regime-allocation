@@ -46,7 +46,9 @@ class PredictiveAnalysis:
     dominates_all_individual_assets: bool
 
 
-def _hmm_signals(data: pd.DataFrame, decision_dates: pd.DatetimeIndex, n_states: int) -> pd.DataFrame:
+def _hmm_signals(
+    data: pd.DataFrame, decision_dates: pd.DatetimeIndex, n_states: int
+) -> pd.DataFrame:
     return build_hmm_signals(data, decision_dates, n_states)
 
 
@@ -79,7 +81,9 @@ def compute_predictive_analysis(data: pd.DataFrame) -> PredictiveAnalysis:
     family, n_states, hurdle = selected_configuration(validation_summary)
     if family != PREDICTIVE_FAMILY:
         raise RuntimeError("Predictive selection unexpectedly returned a non-HMM family.")
-    selected_validation = validation_summary.loc[validation_summary["selected"].astype(bool)].iloc[0]
+    selected_validation = validation_summary.loc[
+        validation_summary["selected"].astype(bool)
+    ].iloc[0]
 
     test_signals = _hmm_signals(data, test_decisions, n_states)
     holdout: HoldoutResult = run_final_holdout(
