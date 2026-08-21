@@ -2,53 +2,70 @@
 
 Regime-based allocation project for **MScFE 622: Stochastic Modeling — Group Work Project #2**.
 
-The project classifies daily VIX changes into volatility regimes, studies how TLT, GLD, and SPY behaved inside those regimes, converts the preferred regime specification into a deterministic allocation rule, and evaluates that rule against monthly equal-weight and SPY buy-and-hold benchmarks.
+The active assignment analysis uses **Gaussian Hidden Markov Models (HMMs) only**. Daily `VIX_change` is modeled with HMM candidates `K=2` and `K=3`; the preferred valid HMM is selected by BIC, translated into deterministic state-conditional ETF rankings, and evaluated with both required allocation rules: **100% Keep** and **60/40 Spread**.
 
 ## Current repository status
 
 | Area | Status |
 |---|---|
-| Report template | Added and populated with known team names |
-| Canonical implementation backlog | Fully audited in [`BACKLOG.md`](BACKLOG.md), PR-01 through PR-49 |
+| Canonical implementation backlog | `BACKLOG.md`, revision PR-50 through PR-68 |
 | Backlog structural validator | `scripts/check_backlog_contract.py` |
 | Python package | Implemented under `src/vix_regime_allocation` |
-| Push / pull-request quality gates | Configured |
-| Auto-complete after successful Quality Gates | Configured in `.github/workflows/auto-complete.yml` |
+| Assignment regime model | Gaussian HMM only, `K=2` and `K=3` candidates |
+| Selected assignment model | HMM `K=2` |
+| Step 1 | Canonical common-sample dataset is fixed in `data/processed/step1_data.csv` |
+| Step 2 | HMM `K=2`/`K=3` parameters, transitions, Viterbi states, and diagnostics are canonical |
+| Step 3 | HMM-only validity checks and valid-candidate BIC selection are canonical |
+| Step 4 | Both `100_keep` and `60_40_spread` allocations are canonical |
+| Step 5 | Both HMM strategies plus monthly equal-weight and SPY buy-and-hold benchmarks are canonical |
+| Numerical artifact consistency | `scripts/check_analysis_consistency.py` and artifact-provenance checks |
+| Notebook | `notebooks/gwp2_vix_regime_allocation.ipynb`, fully executed with stored outputs |
+| HTML sidecar | `reports/gwp2_vix_regime_allocation.html` |
+| PDF sidecar | `reports/Stochastic_Modeling_GWP2_Report.pdf`, derived from the executed notebook |
+| Scientific references | Canonical registry `reports/references.bib`, MLA 9 |
 | Combined source coverage threshold | 90% |
-| Step 1 implementation | Complete: canonical common-sample dataset, return transformations, figures, notebook output, and scientific references |
-| Step 2 implementation | Complete: Markov K=2/K=3 and Gaussian-HMM K=2/K=3 estimates, state paths, transition outputs, diagnostics, and figures |
-| Step 3 implementation | Complete: within-family AIC/BIC analysis, deterministic preferred-model rule, selected-state provenance, and state-conditional ETF statistics |
-| Step 4 implementation | Complete: deterministic 100% state-to-ETF allocation mapping |
-| Step 5 implementation | Complete: one-observed-row lagged rotation, monthly equal-weight and SPY benchmarks, performance metrics, K=2/K=3 sensitivity, cumulative/drawdown figure, and Step 5 manifest |
-| Numerical artifact consistency | Checked by `scripts/check_analysis_consistency.py` and the `analysis-consistency` quality-gate job |
-| PDF report | Template-based rendering of the complete executed notebook; notebook SHA-256 embedded in PDF metadata |
-| Final submission bundle | Planned in PR-48/PR-49 |
-| `main` branch protection | Repository ruleset still must be enabled in GitHub settings |
 
-The repository does not claim an uncomputed result. Canonical numerical artifacts are now recomputed and cross-checked in CI rather than merely checked for file existence.
+The repository does not claim an uncomputed assignment result. Canonical numerical artifacts are generated from the committed Step 1 dataset and are reconciled by independent consistency/provenance gates.
 
 ## Verified empirical result
 
-The preferred specification remains **Markov K=2**. Within the HMM family, K=3 has the lower BIC, but its least-populated Viterbi state contains 259 of 5,465 observations, or 4.739249771271729%, below the project's fixed 5% minimum-occupancy diagnostic. The fallback is therefore a deterministic project rule for avoiding a very small decoded state; it is not a statistical proof that the HMM is intrinsically invalid.
+The selected assignment specification is **HMM K=2**. HMM `K=3` has the lower raw BIC (`18039.55561963191` versus `18672.251234140676`) but fails the fixed project validity rule because its minimum Viterbi-state occupancy is `0.047392497712717294`, below the required `0.05`. HMM `K=2` is valid and is therefore selected among valid HMM candidates. The 5% occupancy threshold is a project stability rule, not a statistical theorem.
 
-The resulting Step 4 mapping is:
+The resulting state rankings produce these two canonical Step 4 mappings:
 
-| State | Interpretation from daily VIX change | Selected ETF |
-|---|---|---|
-| 0 | Lower daily VIX-change regime | SPY |
-| 1 | Higher daily VIX-change regime | TLT |
+### 100% Keep
 
-The required one-observed-row lagged backtest produces these canonical results over 5,464 comparison observations:
+| State | Rank 1 | Rank 2 | TLT weight | GLD weight | SPY weight |
+|---:|---|---|---:|---:|---:|
+| 0 | SPY | GLD | 0.00 | 0.00 | 1.00 |
+| 1 | TLT | GLD | 1.00 | 0.00 | 0.00 |
+
+### 60/40 Spread
+
+| State | Rank 1 | Rank 2 | TLT weight | GLD weight | SPY weight |
+|---:|---|---|---:|---:|---:|
+| 0 | SPY | GLD | 0.00 | 0.40 | 0.60 |
+| 1 | TLT | GLD | 0.60 | 0.40 | 0.00 |
+
+The required one-observed-row lagged comparison contains exactly 5,464 common return observations:
 
 | Portfolio | Cumulative return | Annualized return | Annualized volatility | Sharpe | Maximum drawdown |
 |---|---:|---:|---:|---:|---:|
-| Regime rotation | 84.9021% | 2.8754% | 16.0369% | 0.2572 | -53.7600% |
-| Equal weight, monthly reset | 542.0849% | 8.9548% | 9.7112% | 0.9319 | -23.0437% |
-| SPY buy and hold | 879.8148% | 11.0994% | 18.8845% | 0.6520 | -55.1894% |
+| `hmm_100_keep` | 4662.9595% | 19.5044% | 14.2125% | 1.3252 | -19.5403% |
+| `hmm_60_40_spread` | 2667.4627% | 16.5491% | 11.9317% | 1.3435 | -16.4250% |
+| `equal_weight_monthly` | 542.0849% | 8.9548% | 9.7112% | 0.9319 | -23.0437% |
+| `spy_buy_hold` | 879.8148% | 11.0994% | 18.8845% | 0.6520 | -55.1894% |
 
-The poor rotation result is **not an arithmetic failure discovered in Step 5**. Independent recomputation reproduces the lagged daily returns and all five performance metrics. The important modeling distinction is that Step 3 measures a **contemporaneous** relation between `VIX_change_t` and ETF return `r_t`, whereas Step 5 must use state `t-1` to select the asset earning return `t`. A strong same-day VIX/ETF association therefore need not contain useful next-observation predictive information.
+The HMM state-count × allocation sensitivity table uses the same 5,464 return dates for all four rows:
 
-The preferred-family state-count sensitivity reinforces rather than reverses the result: Markov K=2 has cumulative return 84.9021% and Sharpe 0.2572, while Markov K=3 has cumulative return 76.2162%, Sharpe 0.2422, and maximum drawdown -65.0533% on the same 5,464 dates.
+| HMM states | Method | Cumulative return | Sharpe | Maximum drawdown |
+|---:|---|---:|---:|---:|
+| 2 | `100_keep` | 4662.9595% | 1.3252 | -19.5403% |
+| 2 | `60_40_spread` | 2667.4627% | 1.3435 | -16.4250% |
+| 3 | `100_keep` | 3589.4722% | 1.1528 | -24.0096% |
+| 3 | `60_40_spread` | 2015.3970% | 1.2235 | -19.6571% |
+
+Sensitivity is diagnostic only. It does not override Step 3 selection and it does not turn the full-sample assignment analysis into a causal trading experiment.
 
 ## Core mathematical conventions
 
@@ -60,31 +77,23 @@ For ETF `i` and observed trading row `t`:
 r[i,t] = ln(P[i,t] / P[i,t-1])
 ```
 
-For the VIX observation used by both model families:
+The HMM observation is:
 
 ```text
 VIX_change[t] = VIX[t] - VIX[t-1]
 ```
 
-The common sample is formed **before** lagged quantities are calculated; there is no forward fill, backward fill, or interpolation.
+The common sample is formed before lagged quantities are calculated; there is no forward fill, backward fill, or interpolation.
 
-### Step 2 — discrete transition probabilities
+### Step 2 — Gaussian Hidden Markov Model
 
-For transition counts `N[i,j]`:
+The latent regime process is first-order Markov. Conditional on state `j`, the observed `VIX_change` is Gaussian with a state-specific mean and variance. The fitted parameter set contains initial-state probabilities, the transition matrix, state means, and state variances.
 
-```text
-P[i,j] = N[i,j] / sum_j N[i,j]
-```
+Expectation-Maximization / Baum-Welch alternates between posterior-responsibility calculation with forward-backward probabilities and parameter re-estimation. Because EM can converge to local optima, the project uses deterministic multi-start fitting with fixed seeds and chooses the greatest converged finite log-likelihood for each `K`.
 
-The stationary row distribution is the normalized non-negative solution of:
+Viterbi decoding returns the most likely **joint state path**. Smoothed posterior probabilities are pointwise full-sample posterior probabilities; they use future observations relative to historical dates and are therefore non-causal.
 
-**Greek letter used below:** π — *pi*, pronounced “pie”.
-
-```text
-π P = π
-```
-
-### Step 3 — information criteria
+### Step 3 — information criteria and validity
 
 For maximized log-likelihood `log L`, free-parameter count `k`, and observation count `n`:
 
@@ -93,22 +102,40 @@ AIC = 2k - 2 log L
 BIC = k ln(n) - 2 log L
 ```
 
-Because the quantile-state Markov likelihood and Gaussian-HMM likelihood are defined on different observation spaces, raw AIC/BIC values are **not** used for cross-family ranking. State count is selected by BIC within each family, after which the fixed HMM-validity/fallback rule is applied.
+For an HMM with `K` states, the project uses:
 
-### Step 4 — allocation rule
+```text
+k = K^2 + 2K - 1
+```
 
-For each selected state, the strategy assigns 100% weight to the ETF with the largest historical state-conditional mean daily log return. Exact ties use the fixed priority `TLT -> GLD -> SPY`. The optional 60/40 rule is not used.
+Only valid HMM candidates participate in selection. A valid candidate must be converged and finite, have finite ordered means, positive finite variances, normalized initial/transition/smoothed probabilities, valid Viterbi labels, and minimum Viterbi occupancy at least 5%. The smallest BIC among valid candidates wins; ties within `1e-12` select the lower `K`.
+
+### Step 4 — allocation rules
+
+Within each selected HMM state, TLT, GLD, and SPY are ranked by descending historical state-conditional mean daily log return. Exact equal means use fixed priority `TLT -> GLD -> SPY`.
+
+```text
+100_keep:
+  rank 1 = 1.00
+  rank 2 = 0.00
+  rank 3 = 0.00
+
+60_40_spread:
+  rank 1 = 0.60
+  rank 2 = 0.40
+  rank 3 = 0.00
+```
 
 ### Step 5 — execution, compounding, and metrics
 
-The decision from observed state `t-1` determines the portfolio weights applied to ETF simple returns at row `t`. Log returns are converted before portfolio arithmetic:
+The state observed on row `t-1` determines weights applied to ETF returns on row `t`. Log returns are converted to simple returns before portfolio arithmetic:
 
 ```text
 simple_return[i,t] = exp(r[i,t]) - 1
 portfolio_return[t] = sum_i weight[i,t-1] * simple_return[i,t]
 ```
 
-Cumulative wealth starts at `W_0 = 1` and compounds simple returns. The project uses 252 trading days and a zero risk-free rate for annualized volatility and Sharpe. Maximum drawdown includes initial wealth in the running peak, so a loss at the first comparison observation cannot be incorrectly treated as zero drawdown.
+Cumulative wealth starts at `W_0 = 1` and compounds simple returns. Metrics use 252 trading days, zero risk-free rate, and sample standard deviation with `ddof=1`.
 
 **Greek letter used below:** σ — *sigma*, pronounced “SIG-muh”.
 
@@ -117,11 +144,13 @@ annualized volatility = σ_daily * sqrt(252)
 Sharpe = mean(daily simple return) / σ_daily * sqrt(252)
 ```
 
-## Why the result must remain qualified
+Maximum drawdown includes the initial wealth point in the running peak.
 
-The required one-row execution lag prevents trading on a state observed on the same return row, but it **does not make this implementation causal or out-of-sample**. Regime thresholds/model parameters, the selected full-sample state path, and the state-conditional means used for the allocation map are estimated from the full historical sample. A genuinely predictive experiment would require rolling or expanding estimation, one-sided state inference, allocation estimates using decision-time information only, and explicit turnover/transaction-cost modeling.
+## Look-ahead limitation
 
-This qualification is central to the interpretation: the current project is a deterministic, reproducible assignment backtest, not evidence of a production-ready trading edge.
+The required one-row execution lag avoids same-row execution, but **does not make the assignment backtest causal or out-of-sample**. HMM parameters are estimated on the full sample, Viterbi decoding and smoothing use the full sequence, and state-conditional ETF rankings use full-sample state assignments. Earlier historical decisions therefore indirectly depend on later observations.
+
+The assignment result is a deterministic, reproducible full-sample backtest. It is not evidence of a live trading edge. Any retained predictive extension is evaluated separately with one-sided/expanding inference and remains HMM-only after the revision.
 
 ## Canonical artifacts
 
@@ -131,32 +160,34 @@ Processed data:
 data/processed/step1_data.csv
 ```
 
-Primary technical notebook:
+Step 2 HMM artifacts:
 
 ```text
-notebooks/gwp2_vix_regime_allocation.ipynb
+reports/tables/step2_hmm_2_parameters.csv
+reports/tables/step2_hmm_3_parameters.csv
+reports/tables/step2_hmm_2_transition.csv
+reports/tables/step2_hmm_3_transition.csv
+reports/tables/step2_hmm_2_states.csv
+reports/tables/step2_hmm_3_states.csv
+reports/figures/step2_hmm_vix_states.png
+reports/figures/step2_hmm_smoothed_probabilities.png
 ```
 
-Executed-notebook duplicate:
+Step 3 selection/statistics:
 
 ```text
-reports/gwp2_vix_regime_allocation.html
-```
-
-Template-based notebook PDF report:
-
-```text
-reports/Stochastic_Modeling_GWP2_Report.pdf
-reports/Template_Stochastic_Modeling_Group_Work_Project.pdf
-```
-
-Selected-state provenance and allocation:
-
-```text
-reports/generated/step3_selected_model.json
+reports/tables/step3_model_comparison.csv
 reports/tables/step3_selected_states.csv
 reports/tables/step3_state_asset_statistics.csv
-reports/tables/step4_allocation_mapping.csv
+reports/figures/step3_state_asset_statistics.png
+reports/generated/step3_selected_model.json
+```
+
+Step 4 allocations:
+
+```text
+reports/tables/step4_allocation_100_keep.csv
+reports/tables/step4_allocation_60_40_spread.csv
 ```
 
 Step 5 outputs:
@@ -169,6 +200,15 @@ reports/figures/step5_cumulative_performance.png
 reports/generated/step5_manifest.json
 ```
 
+Primary technical notebook and sidecars:
+
+```text
+notebooks/gwp2_vix_regime_allocation.ipynb
+reports/gwp2_vix_regime_allocation.html
+reports/Stochastic_Modeling_GWP2_Report.pdf
+reports/Template_Stochastic_Modeling_Group_Work_Project.pdf
+```
+
 Canonical scientific-source registry:
 
 ```text
@@ -177,11 +217,9 @@ reports/references.bib
 
 ## Scientific citation policy
 
-The technical notebook and PDF contain **verifiable scientific source attribution**. `reports/references.bib` is the canonical bibliography registry. The required citation standard is **MLA 9**: in-text citations are adjacent to externally sourced definitions, equations, methodological claims, and interpretations, and the analysis ends with a **Works Cited** section.
+The technical notebook and PDF use **MLA 9** source attribution. `reports/references.bib` is the canonical bibliography registry. In-text citations are placed next to externally sourced definitions, equations, methodological claims, and interpretations, and the analysis ends with a cited-only **Works Cited** section.
 
-Peer-reviewed papers and scholarly books/textbooks support Markov chains, HMM/EM/decoding, information criteria, performance metrics, and backtesting limitations. Official primary sources may additionally document Yahoo/Cboe/index/data definitions, but a bare provider URL does not replace scholarly support for theory or methodology.
-
-Every notebook/PDF citation must resolve to `reports/references.bib`; bibliography entries rendered in an artifact must actually be cited. Duplicate keys, invented metadata, unresolved citations, bibliography-only orphan entries, and URL-only pseudo-citations are invalid.
+Peer-reviewed papers and scholarly books/textbooks support HMM theory, EM/Baum-Welch estimation, Viterbi decoding, information criteria, performance metrics, and backtesting limitations. Every notebook/PDF citation must resolve to `reports/references.bib`; duplicate keys, invented metadata, unresolved citations, orphan bibliography entries, and URL-only pseudo-citations are invalid.
 
 Parity policy:
 
@@ -192,20 +230,22 @@ Notebook <-> standalone PDF: exact rendered-notebook content parity
 Notebook/PDF citations -> reports/references.bib: resolved citation and Works-Cited integrity
 ```
 
-The PDF uses page 1 of the supplied template as the course/group cover and excludes the template instruction page. `scripts/build_pdf_report.py` records the canonical notebook SHA-256 in PDF metadata as `/NotebookSHA256` so stale rendering can be detected.
+The PDF uses page 1 of the supplied template as the course/group cover and excludes the template instruction page. `scripts/build_pdf_report.py` records the canonical notebook SHA-256 in PDF metadata as `/NotebookSHA256`.
 
 ## Complete numerical verification
 
-`scripts/check_analysis_consistency.py` is deliberately broader than the ordinary unit tests. On every quality-gate run it:
+`scripts/check_analysis_consistency.py` independently reconciles the canonical assignment artifacts. The HMM-only audit:
 
-- reconstructs all Step 1 quantities that can be checked from the persisted common sample;
-- recomputes Markov K=2/K=3 state paths, thresholds, transitions, stationary distributions, likelihoods, AIC, and BIC;
-- refits deterministic Gaussian-HMM K=2/K=3 candidates and reconciles persisted Viterbi paths, transitions, parameters, and diagnostics;
-- recomputes Step 3 model selection, state-conditional ETF statistics, and Step 4 allocation;
-- recomputes Step 5 lagged rotation, both benchmarks, performance summary, sensitivity table, and artifact manifest;
-- independently reconstructs the lagged rotation and the five required performance metrics without delegating those checks back to the backtest/summary functions.
+- validates the committed Step 1 input schema and hash;
+- refits deterministic Gaussian HMM `K=2` and `K=3` candidates;
+- reconciles HMM parameters, transitions, Viterbi paths, smoothed probabilities, likelihood diagnostics, AIC, BIC, and validity;
+- verifies HMM-only Step 3 selection and selected-state provenance;
+- recomputes state-conditional ETF statistics and both Step 4 allocation mappings;
+- rebuilds both lagged HMM strategies and both required benchmarks on identical dates;
+- recomputes all five performance metrics and the four-row state-count × allocation sensitivity table;
+- verifies artifact hashes and manifest membership.
 
-This gate is intended to detect stale generated files and numerical drift even when individual source-level unit tests still pass.
+No Markov-family fallback participates in the active assignment analysis.
 
 ## Development setup
 
@@ -226,21 +266,22 @@ Windows PowerShell:
 
 ## Quality gates
 
-`.github/workflows/quality-gates.yml` runs on pushes and pull requests. Independent jobs remain parallel where possible.
+`.github/workflows/quality-gates.yml` runs independent jobs in parallel where possible.
 
 | Gate | Command | Requirement |
 |---|---|---|
 | Lint | `ruff check .` + `ruff format --check src tests scripts` | pass |
 | Type check | `mypy src` | pass |
-| Unit tests (`unit-tests`) | `coverage run -m pytest -m "not integration"` | pass |
-| Integration tests (`integration-tests`) | `coverage run -m pytest -m integration` | pass |
+| Unit tests | `coverage run -m pytest -m "not integration"` | pass |
+| Integration tests | `coverage run -m pytest -m integration` | pass |
 | README sidecar | `python scripts/check_readme_sidecar.py` | pass |
 | Backlog contract | `python scripts/check_backlog_contract.py` | pass |
 | Repository hygiene | `python scripts/check_repository_hygiene.py` | pass |
 | Analysis consistency | `python scripts/check_analysis_consistency.py` | pass |
+| Artifact provenance | `python scripts/check_artifact_provenance.py` | pass |
 | Coverage | combined unit + integration | `>=90%` |
 
-The aggregate `quality-gate` requires every job above. The numerical audit is therefore part of the merge gate rather than an optional review workflow.
+The aggregate `quality-gate` requires every applicable job above.
 
 Local verification:
 
@@ -257,47 +298,32 @@ python scripts/check_readme_sidecar.py
 python scripts/check_backlog_contract.py
 python scripts/check_repository_hygiene.py
 python scripts/check_analysis_consistency.py
+python scripts/check_artifact_provenance.py
 ```
 
 ## Canonical backlog and Git workflow
 
-`BACKLOG.md` is the **single canonical planning source**. It specifies PR dependencies, file ownership, interfaces, schemas, numerical conventions, notebook serialization, sidecar parity, backtesting semantics, citation integrity, final packaging, and Git contracts.
+`BACKLOG.md` is the single canonical planning source. The active revision is PR-50 through PR-68, with explicit dependencies and disjoint file ownership for safe parallel work where possible.
 
-### Git workflow per backlog PR
-
-Each backlog PR declares its branch, clean-tree requirement, and exact commit message. The required check is:
+Each implementation PR uses the declared branch and commit message, starts from current `main` after its dependencies, and modifies only its owned paths. The required clean-tree check is:
 
 ```bash
 git status --short --branch
 ```
 
-For example, PR-01 starts with the exact commit name `PR-01 — Yahoo adjusted-close loader`. Immediately before commit and merge, the declared feature branch must have no staged, modified, or untracked files.
+For example, PR-50 uses branch `pr-50-hmm-only-model-selection` and commit message `PR-50 — HMM-only model selection`.
 
 ## Auto Complete and main-branch rule
 
-`.github/workflows/auto-complete.yml` listens to completed **Quality Gates** runs associated with pull requests. After successful Quality Gates, **Auto Complete** verifies the tested head SHA, rejects draft/stale/wrong-base PRs, updates a branch when `main` advanced, and only then merges the validated PR.
+`.github/workflows/auto-complete.yml` listens to completed **Quality Gates** runs associated with pull requests. After successful Quality Gates, **Auto Complete** validates the tested head SHA and base, updates the branch when necessary, and merges the validated PR.
 
-The intended server-side `main` ruleset is still:
+The intended server-side `main` ruleset is:
 
 - require changes through a pull request;
 - require `quality-gate` before merge;
 - require the PR branch to be up to date with `main`;
-- require zero approving reviews for the automated backlog workflow;
 - block force pushes;
 - block branch deletion.
-
-GitHub repository settings must still enable that ruleset for server-side enforcement; workflow discipline alone does not technically prevent a privileged direct push.
-
-## Final submission package
-
-The planned final package is:
-
-```text
-dist/MScFE_622_GWP2_submission.zip
-reports/generated/submission_manifest.json
-```
-
-The ZIP is intended to contain the executable notebook, its HTML duplicate, README, `pyproject.toml`, `reports/references.bib`, processed Step 1 data, and the local Python package needed for notebook execution. The template-based PDF remains a separate submission artifact.
 
 ## Team
 
