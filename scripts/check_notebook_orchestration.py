@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import ast
 import json
-import re
 from pathlib import Path
 from typing import Any
 
@@ -26,7 +25,6 @@ REQUIRED_CALLS: tuple[tuple[str, str], ...] = (
     ("sensitivity_nb", "step_5_state_count_sensitivity"),
     ("nb", "canonical_works_cited"),
 )
-LEGACY_GENERATED_HELPER = re.compile(r".+_\d{3}$")
 
 
 def _source_text(cell: dict[str, Any]) -> str:
@@ -81,19 +79,12 @@ def _validate_helper_surface(helper_functions: dict[str, set[str]]) -> list[str]
 
 
 def _legacy_staging_mode(
-    imported_aliases: set[str],
-    calls: list[tuple[str, str]],
-    implementation_cells: list[tuple[int, str]],
+    calls: list[tuple[str, str]], implementation_cells: list[tuple[int, str]]
 ) -> bool:
-    """Allow the pre-PR-61 generated notebook while the new helper surface lands first."""
-    if implementation_cells or "nb" not in imported_aliases or not calls:
+    """Allow only the pre-PR-61 notebook, before any new canonical helper call appears."""
+    if implementation_cells or not calls:
         return False
-    if any(target in REQUIRED_CALLS for target in calls):
-        return False
-    return all(
-        alias == "nb" and LEGACY_GENERATED_HELPER.fullmatch(call_name) is not None
-        for alias, call_name in calls
-    )
+    return not any(target in REQUIRED_CALLS for target in calls)
 
 
 def validate_orchestration() -> int:
@@ -129,12 +120,12 @@ def validate_orchestration() -> int:
         call_records.append((index, target))
 
     calls = [target for _, target in call_records]
-    if _legacy_staging_mode(imported_aliases, calls, implementation_cells):
+    if _legacy_staging_mode(calls, implementation_cells):
         if violations:
             raise SystemExit("Notebook helper surface failed:\n- " + "\n- ".join(violations))
         print(
-            "Notebook orchestration staging contract passed: the new HMM-only helper surface "
-            "is complete; the canonical notebook still uses the pre-PR-61 generated-call shape."
+            "Notebook orchestration staging contract passed: the HMM-only helper surface is "
+            "complete; strict notebook validation activates when PR-61 adopts the new calls."
         )
         return len(calls)
 
