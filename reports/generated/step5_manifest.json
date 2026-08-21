@@ -1,17 +1,20 @@
 {
-  "schema_version": 1,
+  "allocation_paths": [
+    "reports/tables/step4_allocation_100_keep.csv",
+    "reports/tables/step4_allocation_60_40_spread.csv"
+  ],
+  "figures": [
+    "reports/figures/step5_cumulative_performance.png"
+  ],
   "input_data_path": "data/processed/step1_data.csv",
   "input_data_sha256": "c6b0e67a145f809313986ca0ef726d1dd42ffdaf57b04f091848ae1b20d261c1",
+  "notebook_path": "notebooks/gwp2_vix_regime_allocation.ipynb",
+  "schema_version": 2,
   "selected_model_path": "reports/generated/step3_selected_model.json",
   "selected_states_path": "reports/tables/step3_selected_states.csv",
-  "allocation_path": "reports/tables/step4_allocation_mapping.csv",
-  "notebook_path": "notebooks/gwp2_vix_regime_allocation.ipynb",
   "tables": [
     "reports/tables/step5_daily_returns.csv",
     "reports/tables/step5_performance_summary.csv",
     "reports/tables/step5_state_count_sensitivity.csv"
-  ],
-  "figures": [
-    "reports/figures/step5_cumulative_performance.png"
   ]
 }
