@@ -77,8 +77,7 @@ def _step1() -> pd.DataFrame:
         raise AssertionError("Step 1 contains non-finite values")
     for asset in ("TLT", "GLD", "SPY"):
         expected = np.log(
-            data[asset].iloc[1:].to_numpy(dtype=float)
-            / data[asset].iloc[:-1].to_numpy(dtype=float)
+            data[asset].iloc[1:].to_numpy(dtype=float) / data[asset].iloc[:-1].to_numpy(dtype=float)
         )
         np.testing.assert_allclose(
             data[f"{asset}_log_return"].iloc[1:].to_numpy(dtype=float),
@@ -88,8 +87,7 @@ def _step1() -> pd.DataFrame:
         )
     np.testing.assert_allclose(
         data["VIX_change"].iloc[1:].to_numpy(dtype=float),
-        data["VIX"].iloc[1:].to_numpy(dtype=float)
-        - data["VIX"].iloc[:-1].to_numpy(dtype=float),
+        data["VIX"].iloc[1:].to_numpy(dtype=float) - data["VIX"].iloc[:-1].to_numpy(dtype=float),
         rtol=RTOL,
         atol=ATOL,
     )
