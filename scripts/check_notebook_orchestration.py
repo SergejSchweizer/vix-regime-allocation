@@ -102,7 +102,8 @@ def validate_orchestration() -> int:
         alias: _helper_functions(path) for alias, (_, path) in HELPERS.items() if path.is_file()
     }
     imported_aliases: set[str] = set()
-    calls: list[tuple[str, str]] = []
+    import_positions: dict[str, int] = {}
+    call_records: list[tuple[int, tuple[str, str]]] = []
     implementation_cells: list[tuple[int, str]] = []
     violations = _validate_helper_surface(helper_functions)
 
@@ -118,14 +119,16 @@ def validate_orchestration() -> int:
             if alias in imported_aliases:
                 violations.append(f"cell {index}: duplicate helper import for {alias!r}")
             imported_aliases.add(alias)
+            import_positions.setdefault(alias, index)
             continue
 
         target = _call_target(source)
         if target is None:
             implementation_cells.append((index, source))
             continue
-        calls.append(target)
+        call_records.append((index, target))
 
+    calls = [target for _, target in call_records]
     if _legacy_staging_mode(imported_aliases, calls, implementation_cells):
         if violations:
             raise SystemExit("Notebook helper surface failed:\n- " + "\n- ".join(violations))
@@ -153,6 +156,14 @@ def validate_orchestration() -> int:
     if duplicate_calls:
         violations.append(f"duplicate helper calls: {duplicate_calls}")
 
+    for index, target in call_records:
+        alias, call_name = target
+        import_index = import_positions.get(alias)
+        if import_index is None or index < import_index:
+            violations.append(f"cell {index}: helper call appears before import for {alias!r}")
+        if call_name not in helper_functions.get(alias, set()):
+            violations.append(f"cell {index}: helper {alias}.{call_name} does not exist")
+
     for required in REQUIRED_CALLS:
         count = calls.count(required)
         if count != 1:
@@ -164,20 +175,6 @@ def validate_orchestration() -> int:
     unexpected = sorted(set(calls) - set(REQUIRED_CALLS))
     if unexpected:
         violations.append(f"unexpected analytical helper calls: {unexpected}")
-
-    for index, source in enumerate(
-        _source_text(cell).strip() for cell in notebook.get("cells", [])
-    ):
-        if not source:
-            continue
-        target = _call_target(source)
-        if target is None:
-            continue
-        alias, call_name = target
-        if alias not in imported_aliases:
-            violations.append(f"cell {index}: helper call appears before import for {alias!r}")
-        if call_name not in helper_functions.get(alias, set()):
-            violations.append(f"cell {index}: helper {alias}.{call_name} does not exist")
 
     if violations:
         raise SystemExit("Notebook orchestration contract failed:\n- " + "\n- ".join(violations))
