@@ -82,7 +82,11 @@ def build_equal_weight_monthly_returns(
         if previous_period is None or period != previous_period:
             weights = np.full(3, 1.0 / 3.0, dtype=float)
         asset_returns = row.to_numpy(dtype=float)
-        portfolio_return = float(np.dot(weights, asset_returns))
+        portfolio_return = (
+            float(np.sum(asset_returns) / len(weights))
+            if previous_period is None or period != previous_period
+            else float(np.dot(weights, asset_returns))
+        )
         if not np.isfinite(portfolio_return) or portfolio_return <= -1.0:
             raise ValueError("equal-weight benchmark return must be finite and greater than -1.")
         portfolio_returns.append(portfolio_return)

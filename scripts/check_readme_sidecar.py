@@ -24,11 +24,11 @@ def _read_csv(path: Path) -> list[dict[str, str]]:
 
 
 def _pct(value: str) -> str:
-    return f"{float(value) * 100:.4f}%"
+    return f"{float(value) * 100:.2f}%"
 
 
 def _four(value: str) -> str:
-    return f"{float(value):.4f}"
+    return f"{float(value):.2f}"
 
 
 def _require_fragments(text: str, fragments: tuple[str, ...], label: str) -> None:
@@ -68,8 +68,8 @@ def _check_artifact_parity(readme_text: str) -> None:
         for row in rows:
             table_row = (
                 f"| {row['state']} | {row['rank_1_asset']} | {row['rank_2_asset']} | "
-                f"{float(row['TLT_weight']):.2f} | {float(row['GLD_weight']):.2f} | "
-                f"{float(row['SPY_weight']):.2f} |"
+                f"{float(row['TLT_weight']):.2%} | {float(row['GLD_weight']):.2%} | "
+                f"{float(row['SPY_weight']):.2%} |"
             )
             if table_row not in readme_text:
                 raise SystemExit(

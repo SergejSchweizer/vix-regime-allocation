@@ -11,7 +11,7 @@ requires-python = ">=3.11"
 dependencies = [
     "hmmlearn>=0.3.3",
     "matplotlib>=3.8",
-    "numpy>=1.26",
+    "numpy>=1.26,<2.4",
     "pandas>=2.2",
     "scipy>=1.13",
     "yfinance>=0.2.40",
@@ -20,6 +20,7 @@ dependencies = [
 [project.optional-dependencies]
 dev = [
     "coverage[toml]>=7.6",
+    "ipykernel>=6.29",
     "mypy>=1.11",
     "nbclient>=0.10",
     "nbconvert>=7.16",
@@ -92,6 +93,13 @@ module = [
     "vix_regime_allocation.predictive.plots",
 ]
 disable_error_code = ["arg-type", "index"]
+
+[[tool.mypy.overrides]]
+module = [
+    "vix_regime_allocation.notebook_helpers",
+    "vix_regime_allocation.notebook_sensitivity",
+]
+disable_error_code = ["arg-type", "no-untyped-call"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

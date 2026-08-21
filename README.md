@@ -6,6 +6,9 @@ The active assignment analysis uses **Gaussian Hidden Markov Models (HMMs) only*
 
 ## Current repository status
 
+**Table 1. Project implementation status.** A concise inventory of the canonical assignment
+artifacts, analysis scope, and quality controls.
+
 | Area | Status |
 |---|---|
 | Canonical implementation backlog | `BACKLOG.md`, revision PR-50 through PR-68 |
@@ -29,41 +32,45 @@ The repository does not claim an uncomputed assignment result. Canonical numeric
 
 ## Verified empirical result
 
-The selected assignment specification is **HMM K=2**. HMM `K=3` has the lower raw BIC (`18039.55561963191` versus `18672.251234140676`) but fails the fixed project validity rule because its minimum Viterbi-state occupancy is `0.047392497712717294`, below the required `0.05`. HMM `K=2` is valid and is therefore selected among valid HMM candidates. The 5% occupancy threshold is a project stability rule, not a statistical theorem.
+The selected assignment specification is **HMM K=2**. HMM `K=3` has the lower raw BIC (`18039.55561963269` versus `18672.251234139057`) but fails the fixed project validity rule because its minimum Viterbi-state occupancy is `0.047392497712717294`, below the required `0.05`. HMM `K=2` is valid and is therefore selected among valid HMM candidates. The 5% occupancy threshold is a project stability rule, not a statistical theorem.
 
 The resulting state rankings produce these two canonical Step 4 mappings:
 
-### 100% Keep
+**Table 2. 100% Keep allocation by HMM state.** Each decoded state is allocated entirely to
+its highest-ranked ETF.
 
 | State | Rank 1 | Rank 2 | TLT weight | GLD weight | SPY weight |
 |---:|---|---|---:|---:|---:|
-| 0 | SPY | GLD | 0.00 | 0.00 | 1.00 |
-| 1 | TLT | GLD | 1.00 | 0.00 | 0.00 |
+| 0 | SPY | GLD | 0.00% | 0.00% | 100.00% |
+| 1 | TLT | GLD | 100.00% | 0.00% | 0.00% |
 
-### 60/40 Spread
+**Table 3. 60/40 Spread allocation by HMM state.** Each state allocates 60% to the top-ranked
+ETF and 40% to the runner-up.
 
 | State | Rank 1 | Rank 2 | TLT weight | GLD weight | SPY weight |
 |---:|---|---|---:|---:|---:|
-| 0 | SPY | GLD | 0.00 | 0.40 | 0.60 |
-| 1 | TLT | GLD | 0.60 | 0.40 | 0.00 |
+| 0 | SPY | GLD | 0.00% | 40.00% | 60.00% |
+| 1 | TLT | GLD | 60.00% | 40.00% | 0.00% |
 
-The required one-observed-row lagged comparison contains exactly 5,464 common return observations:
+**Table 4. Backtest performance of HMM allocations and benchmarks.** Cumulative and annualized
+performance over the 5,464-observation common, one-row-lagged evaluation sample.
 
 | Portfolio | Cumulative return | Annualized return | Annualized volatility | Sharpe | Maximum drawdown |
 |---|---:|---:|---:|---:|---:|
-| `hmm_100_keep` | 4662.9595% | 19.5044% | 14.2125% | 1.3252 | -19.5403% |
-| `hmm_60_40_spread` | 2667.4627% | 16.5491% | 11.9317% | 1.3435 | -16.4250% |
-| `equal_weight_monthly` | 542.0849% | 8.9548% | 9.7112% | 0.9319 | -23.0437% |
-| `spy_buy_hold` | 879.8148% | 11.0994% | 18.8845% | 0.6520 | -55.1894% |
+| `hmm_100_keep` | 4662.96% | 19.50% | 14.21% | 1.33 | -19.54% |
+| `hmm_60_40_spread` | 2667.46% | 16.55% | 11.93% | 1.34 | -16.42% |
+| `equal_weight_monthly` | 542.08% | 8.95% | 9.71% | 0.93 | -23.04% |
+| `spy_buy_hold` | 879.81% | 11.10% | 18.88% | 0.65 | -55.19% |
 
-The HMM state-count × allocation sensitivity table uses the same 5,464 return dates for all four rows:
+**Table 5. HMM state-count and allocation-method sensitivity.** Performance across both
+candidate state counts and both allocation rules on the same 5,464 return dates.
 
 | HMM states | Method | Cumulative return | Sharpe | Maximum drawdown |
 |---:|---|---:|---:|---:|
-| 2 | `100_keep` | 4662.9595% | 1.3252 | -19.5403% |
-| 2 | `60_40_spread` | 2667.4627% | 1.3435 | -16.4250% |
-| 3 | `100_keep` | 3589.4722% | 1.1528 | -24.0096% |
-| 3 | `60_40_spread` | 2015.3970% | 1.2235 | -19.6571% |
+| 2 | `100_keep` | 4662.96% | 1.33 | -19.54% |
+| 2 | `60_40_spread` | 2667.46% | 1.34 | -16.42% |
+| 3 | `100_keep` | 3589.47% | 1.15 | -24.01% |
+| 3 | `60_40_spread` | 2015.40% | 1.22 | -19.66% |
 
 Sensitivity is diagnostic only. It does not override Step 3 selection and it does not turn the full-sample assignment analysis into a causal trading experiment.
 
