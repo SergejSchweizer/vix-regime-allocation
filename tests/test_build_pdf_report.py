@@ -35,7 +35,6 @@ Rabiner, Lawrence R. “A Tutorial on Hidden Markov Models...”
 Viterbi, Andrew J. “Error Bounds for Convolutional Codes...”
 Akaike, Hirotugu. “A New Look at the Statistical Model Identification.”
 Schwarz, Gideon. “Estimating the Dimension of a Model.”
-Canonical bibliography registry: `reports/references.bib`.
 """
     cells = [nbformat.v4.new_markdown_cell(narrative)]
     cells.extend(
@@ -153,6 +152,32 @@ def test_missing_four_portfolio_contract_is_rejected(tmp_path: Path) -> None:
         report._validate_notebook(path)
 
 
+def test_rendered_outputs_participate_in_notebook_content_validation(tmp_path: Path) -> None:
+    notebook = _valid_notebook()
+    portfolio_tokens = (
+        "hmm_100_keep",
+        "hmm_60_40_spread",
+        "equal_weight_monthly",
+        "spy_buy_hold",
+    )
+    for token in portfolio_tokens:
+        notebook.cells[0].source = notebook.cells[0].source.replace(token, "portfolio")
+    target = next(
+        cell
+        for cell in notebook.cells
+        if getattr(cell, "source", "") == "nb.step_5_hmm_dual_method_comparison()"
+    )
+    target.outputs = [
+        nbformat.v4.new_output(
+            "display_data",
+            data={"text/plain": "\n".join(portfolio_tokens)},
+            metadata={},
+        )
+    ]
+    path = _write_notebook(tmp_path / "outputs.ipynb", notebook)
+    assert report._validate_notebook(path) == hashlib.sha256(path.read_bytes()).hexdigest()
+
+
 def test_missing_scholarly_citations_is_rejected(tmp_path: Path) -> None:
     notebook = _valid_notebook()
     for token in report.CITATION_TOKENS:
@@ -162,14 +187,13 @@ def test_missing_scholarly_citations_is_rejected(tmp_path: Path) -> None:
         report._validate_notebook(path)
 
 
-def test_missing_bibliography_registry_is_rejected(tmp_path: Path) -> None:
-    notebook = _valid_notebook()
-    notebook.cells[0].source = notebook.cells[0].source.replace(
-        "reports/references.bib", "bibliography"
-    )
-    path = _write_notebook(tmp_path / "bibliography.ipynb", notebook)
+def test_missing_bibliography_registry_is_rejected(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    notebook = _write_notebook(tmp_path / "bibliography.ipynb")
+    monkeypatch.setattr(report, "BIBLIOGRAPHY", tmp_path / "missing-references.bib")
     with pytest.raises(RuntimeError, match="bibliography registry"):
-        report._validate_notebook(path)
+        report._validate_notebook(notebook)
 
 
 def test_missing_required_helper_call_is_rejected(tmp_path: Path) -> None:
