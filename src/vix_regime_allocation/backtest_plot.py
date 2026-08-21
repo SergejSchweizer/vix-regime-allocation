@@ -1,4 +1,4 @@
-"""Step 5 cumulative-performance, drawdown, and terminal-outcome comparison figure."""
+"""Step 5 cumulative-performance figures for legacy and HMM dual-method comparisons."""
 
 from __future__ import annotations
 
@@ -13,6 +13,7 @@ from pandas.api.types import is_numeric_dtype
 
 from .performance import cumulative_wealth
 from .state_statistics import ASSET_ORDER
+from .strategy_comparison import COMPARISON_COLUMNS as DUAL_COMPARISON_COLUMNS
 
 COMPARISON_COLUMNS: tuple[str, ...] = (
     "regime_rotation",
@@ -46,7 +47,7 @@ def _validate_comparison(comparison: pd.DataFrame) -> None:
     if not isinstance(comparison, pd.DataFrame):
         raise TypeError("comparison must be a pandas DataFrame.")
     if tuple(comparison.columns) != COMPARISON_COLUMNS:
-        raise ValueError("comparison columns must match the canonical Step 5 order exactly.")
+        raise ValueError("comparison columns must match the legacy Step 5 order exactly.")
     if not isinstance(comparison.index, pd.DatetimeIndex):
         raise ValueError("comparison index must be a pandas DatetimeIndex.")
     if comparison.index.name != "Date" or comparison.index.tz is not None:
@@ -118,14 +119,7 @@ def plot_cumulative_performance(
     output_path: Path,
     instrument_returns: pd.DataFrame | None = None,
 ) -> None:
-    """Plot strategy, benchmarks, and every investable instrument on common dates.
-
-    The canonical Step 5 comparison remains the three required portfolio series. For
-    the user-facing cumulative figure, TLT, GLD, and SPY buy-and-hold returns are shown
-    together with regime rotation and the equal-weight benchmark. When instrument
-    returns are not supplied explicitly, they are reconstructed from the canonical
-    Step 1 data beside the report artifacts.
-    """
+    """Temporary legacy all-instruments figure retained until the canonical rebuild."""
     _validate_comparison(comparison)
     if not isinstance(output_path, Path):
         raise TypeError("output_path must be a pathlib.Path.")
@@ -152,12 +146,7 @@ def plot_cumulative_performance(
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
     figure = plt.figure(figsize=(14.5, 9.0), constrained_layout=True)
-    grid = figure.add_gridspec(
-        2,
-        2,
-        height_ratios=(2.2, 1.0),
-        width_ratios=(2.2, 1.0),
-    )
+    grid = figure.add_gridspec(2, 2, height_ratios=(2.2, 1.0), width_ratios=(2.2, 1.0))
     cumulative_axis = figure.add_subplot(grid[0, :])
     drawdown_axis = figure.add_subplot(grid[1, 0], sharex=cumulative_axis)
     terminal_axis = figure.add_subplot(grid[1, 1])
@@ -169,12 +158,8 @@ def plot_cumulative_performance(
             label = DISPLAY_LABELS[column]
             cumulative_return = wealth - 1.0
             terminal_returns[column] = float(cumulative_return.iloc[-1])
-
             line = cumulative_axis.plot(
-                comparison_index,
-                cumulative_return,
-                label=label,
-                linewidth=1.45,
+                comparison_index, cumulative_return, label=label, linewidth=1.45
             )[0]
             drawdown_axis.plot(
                 comparison_index,
@@ -207,18 +192,13 @@ def plot_cumulative_performance(
         drawdown_axis.set_title("Drawdown history")
         drawdown_axis.yaxis.set_major_formatter(PercentFormatter(xmax=1.0))
         drawdown_axis.grid(True, alpha=0.22)
-
-        locator = mdates.AutoDateLocator(  # type: ignore[no-untyped-call]
-            minticks=3,
-            maxticks=9,
-        )
+        locator = mdates.AutoDateLocator(minticks=3, maxticks=9)  # type: ignore[no-untyped-call]
         drawdown_axis.xaxis.set_major_locator(locator)
         formatter = mdates.ConciseDateFormatter(locator)  # type: ignore[no-untyped-call]
         drawdown_axis.xaxis.set_major_formatter(formatter)
 
         terminal_values = np.array(
-            [terminal_returns[column] for column in PLOT_COLUMNS],
-            dtype=float,
+            [terminal_returns[column] for column in PLOT_COLUMNS], dtype=float
         )
         terminal_labels = [DISPLAY_LABELS[column] for column in PLOT_COLUMNS]
         positions = np.arange(len(PLOT_COLUMNS), dtype=float)
@@ -238,7 +218,51 @@ def plot_cumulative_performance(
                 va="center",
                 fontsize=8.5,
             )
+        figure.savefig(output_path, dpi=190, bbox_inches="tight")
+    finally:
+        plt.close(figure)
 
+
+def _validate_dual_comparison(comparison: pd.DataFrame) -> pd.DatetimeIndex:
+    if not isinstance(comparison, pd.DataFrame):
+        raise TypeError("comparison must be a pandas DataFrame.")
+    if tuple(comparison.columns) != DUAL_COMPARISON_COLUMNS:
+        raise ValueError("comparison must contain exactly the four HMM/benchmark series in order.")
+    if not isinstance(comparison.index, pd.DatetimeIndex):
+        raise ValueError("comparison index must be a pandas DatetimeIndex.")
+    if comparison.index.name != "Date" or comparison.index.tz is not None:
+        raise ValueError("comparison index must be timezone-naive and named 'Date'.")
+    if len(comparison) == 0 or comparison.index.has_duplicates:
+        raise ValueError("comparison dates must be non-empty and unique.")
+    if not comparison.index.is_monotonic_increasing:
+        raise ValueError("comparison dates must be sorted ascending.")
+    for column in DUAL_COMPARISON_COLUMNS:
+        if not is_numeric_dtype(comparison[column].dtype):
+            raise ValueError(f"comparison column {column!r} must be numeric.")
+    values = comparison.to_numpy(dtype=float)
+    if np.any(~np.isfinite(values)) or np.any(values <= -1.0):
+        raise ValueError("comparison simple returns must be finite and greater than -1.")
+    return pd.DatetimeIndex(comparison.index, name="Date")
+
+
+def plot_four_portfolio_cumulative_performance(comparison: pd.DataFrame, output_path: Path) -> None:
+    """Plot exactly the two HMM allocation methods and the two required benchmarks."""
+    index = _validate_dual_comparison(comparison)
+    if not isinstance(output_path, Path):
+        raise TypeError("output_path must be a pathlib.Path.")
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    figure, axis = plt.subplots(figsize=(12.0, 6.5))
+    try:
+        for column in DUAL_COMPARISON_COLUMNS:
+            cumulative_return = cumulative_wealth(comparison[column]) - 1.0
+            axis.plot(index, cumulative_return, label=column, linewidth=1.5)
+        axis.axhline(0.0, linewidth=0.8)
+        axis.set_title("Step 5 Cumulative Performance — HMM Allocation Comparison")
+        axis.set_xlabel("Date")
+        axis.set_ylabel("Cumulative return")
+        axis.yaxis.set_major_formatter(PercentFormatter(xmax=1.0))
+        axis.legend()
+        axis.grid(True, alpha=0.22)
         figure.savefig(output_path, dpi=190, bbox_inches="tight")
     finally:
         plt.close(figure)
