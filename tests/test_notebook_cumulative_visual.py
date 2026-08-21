@@ -8,7 +8,7 @@ from typing import Any
 
 ROOT = Path(__file__).resolve().parents[1]
 NOTEBOOK = ROOT / "notebooks" / "gwp2_vix_regime_allocation.ipynb"
-STEP5_CALL = "nb.step_5_performance_metrics_and_cumulative_compar_034()"
+STEP5_CALL = "nb.step_5_hmm_dual_method_comparison()"
 
 
 def _source_text(cell: dict[str, Any]) -> str:
