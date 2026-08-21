@@ -183,7 +183,8 @@ def _validate_hmm_comparison(comparison: pd.DataFrame) -> None:
         raise ValueError("comparison family must be HMM only.")
     if comparison["n_states"].astype(int).tolist() != [2, 3]:
         raise ValueError("comparison rows must be ordered HMM K=2 then HMM K=3.")
-    if comparison["valid"].map(type).ne(bool).any():
+    valid_values: list[object] = comparison["valid"].tolist()
+    if not all(isinstance(value, bool) for value in valid_values):
         raise ValueError("comparison valid column must contain Boolean values.")
 
 
