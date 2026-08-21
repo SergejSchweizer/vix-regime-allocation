@@ -7,7 +7,10 @@ from pathlib import Path
 import pandas as pd
 import pytest
 
-from vix_regime_allocation.predictive.artifacts import PredictiveAnalysis, write_predictive_artifacts
+from vix_regime_allocation.predictive.artifacts import (
+    PredictiveAnalysis,
+    write_predictive_artifacts,
+)
 
 
 def _analysis(family: str = "hmm") -> PredictiveAnalysis:
