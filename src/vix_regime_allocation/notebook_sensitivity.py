@@ -3,13 +3,12 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
 
 
-def step_5_state_count_sensitivity() -> Any:  # pragma: no cover - notebook presentation
+def step_5_state_count_sensitivity() -> None:  # pragma: no cover - notebook presentation
     """Recompute and display HMM K=2/K=3 crossed with both allocation methods."""
     import pandas as pd
-    from IPython.display import Markdown, display
+    from IPython.display import HTML, Markdown, display
 
     from vix_regime_allocation.sensitivity import build_hmm_state_count_sensitivity
 
@@ -51,5 +50,43 @@ def step_5_state_count_sensitivity() -> Any:  # pragma: no cover - notebook pres
             atol=1e-11,
         )
     display(Markdown("### Step 5 — HMM state-count and allocation-method sensitivity"))
-    display(sensitivity)
-    return sensitivity
+    display(
+        HTML(
+            '<p style="margin: 1em 0 0.25em; font-size: 0.9em; line-height: 1.35;">'
+            "<strong>Table 14. HMM state-count and allocation-method sensitivity.</strong> "
+            "Performance across the two candidate HMM state counts and the two required "
+            "allocation rules on the common evaluation sample.</p>"
+        )
+    )
+    display(
+        HTML(
+            sensitivity.style.format(
+                {
+                    "cumulative_return": "{:.2%}",
+                    "annualized_return": "{:.2%}",
+                    "annualized_volatility": "{:.2%}",
+                    "sharpe_ratio": "{:.2f}",
+                    "max_drawdown": "{:.2%}",
+                },
+                na_rep="—",
+            )
+            .set_table_styles(
+                [
+                    {
+                        "selector": "",
+                        "props": [("width", "100%"), ("table-layout", "fixed")],
+                    },
+                    {
+                        "selector": "th, td",
+                        "props": [
+                            ("font-size", "8px"),
+                            ("line-height", "1.2"),
+                            ("overflow-wrap", "anywhere"),
+                            ("padding", "3px"),
+                        ],
+                    },
+                ]
+            )
+            .to_html()
+        )
+    )

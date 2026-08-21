@@ -10,6 +10,7 @@ from io import BytesIO
 from pathlib import Path
 
 import nbformat
+import pymupdf
 from nbconvert import HTMLExporter
 from pypdf import PdfReader, PdfWriter
 from reportlab.pdfgen import canvas
@@ -20,12 +21,10 @@ TEMPLATE = ROOT / "reports" / "Template_Stochastic_Modeling_Group_Work_Project.p
 OUTPUT = ROOT / "reports" / "Stochastic_Modeling_GWP2_Report.pdf"
 BIBLIOGRAPHY = ROOT / "reports" / "references.bib"
 
-GROUP_NUMBER = "739"
-GROUP_MEMBERS = (
-    "Umuhoza Denyse Graine",
-    "Opeyemi Waliyilah Oladipupo",
-    "Sergej Schweizer",
-)
+GROUP_WORK_PROJECT_NUMBER = "2"
+GROUP_NUMBER = "16855"
+REMOVED_MEMBER = "Umuhoza Denyse Graine"
+REMAINING_MEMBERS = ("Opeyemi Waliyilah Oladipupo", "Sergej Schweizer")
 
 REQUIRED_CODE_CALLS = (
     "nb.step_1_data_overview()",
@@ -148,6 +147,18 @@ def _export_notebook_html(notebook_path: Path, html_path: Path) -> None:
     exporter.exclude_input = False
     exporter.exclude_output = False
     body, _ = exporter.from_filename(str(notebook_path))
+    print_styles = """
+<style>
+@media print {
+  .jp-RenderedHTMLCommon p { text-align: justify; hyphens: auto; }
+  .jp-RenderedHTMLCommon h1, .jp-RenderedHTMLCommon h2,
+  .jp-RenderedHTMLCommon h3 { text-align: center; }
+  .jp-RenderedHTMLCommon img { display: block; margin-left: auto; margin-right: auto; }
+  .jp-RenderedHTMLCommon table { margin-left: auto; margin-right: auto; }
+}
+</style>
+"""
+    body = body.replace("</head>", print_styles + "</head>", 1)
     html_path.write_text(body, encoding="utf-8")
 
 
@@ -191,7 +202,25 @@ def _print_html_to_pdf(html_path: Path, pdf_path: Path) -> None:
 
 
 def _template_cover(template_path: Path) -> object:
-    reader = PdfReader(str(template_path))
+    template = pymupdf.open(template_path)
+    try:
+        if not template.page_count:
+            raise RuntimeError("The supplied PDF template has no pages.")
+        template_cover = template[0]
+        for member in (REMOVED_MEMBER, *REMAINING_MEMBERS):
+            matches = template_cover.search_for(member)
+            if matches and len(matches) != 2:
+                raise RuntimeError(
+                    f"Expected {member!r} to appear exactly twice on the template cover."
+                )
+            for match in matches:
+                template_cover.add_redact_annot(match, fill=(1, 1, 1))
+        template_cover.apply_redactions()
+        sanitized_template = template.tobytes(garbage=4, deflate=True)
+    finally:
+        template.close()
+
+    reader = PdfReader(BytesIO(sanitized_template))
     if not reader.pages:
         raise RuntimeError("The supplied PDF template has no pages.")
 
@@ -204,21 +233,15 @@ def _template_cover(template_path: Path) -> object:
     overlay_bytes = BytesIO()
     overlay = canvas.Canvas(overlay_bytes, pagesize=(width, height))
 
-    lower_area_height = height * 0.40
-    overlay.setFillColorRGB(1, 1, 1)
-    overlay.rect(0, 0, width, lower_area_height, stroke=0, fill=1)
-
-    left = width * 0.16
-    y = height * 0.33
     overlay.setFillColorRGB(0, 0, 0)
     overlay.setFont("Helvetica-Bold", 12)
-    overlay.drawString(left, y, f"Group #: {GROUP_NUMBER}")
-    y -= 30
-    overlay.drawString(left, y, "Group Members:")
-    overlay.setFont("Helvetica", 11)
-    for member in GROUP_MEMBERS:
-        y -= 22
-        overlay.drawString(left + 18, y, member)
+    overlay.drawString(width * 0.38, height * 0.945, GROUP_WORK_PROJECT_NUMBER)
+    overlay.drawString(width * 0.33, height * 0.925, GROUP_NUMBER)
+    overlay.setFont("Helvetica", 10)
+    overlay.drawString(76, 646.5, REMAINING_MEMBERS[0])
+    overlay.drawString(76, 622.5, REMAINING_MEMBERS[1])
+    overlay.drawString(179, 483, REMAINING_MEMBERS[0])
+    overlay.drawString(179, 457, REMAINING_MEMBERS[1])
 
     overlay.save()
     overlay_bytes.seek(0)

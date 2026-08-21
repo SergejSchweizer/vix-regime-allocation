@@ -4,6 +4,9 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import matplotlib
+
+matplotlib.use("Agg")
 import matplotlib.dates as mdates
 import matplotlib.pyplot as plt
 import numpy as np
@@ -254,13 +257,12 @@ def plot_four_portfolio_cumulative_performance(comparison: pd.DataFrame, output_
     figure, axis = plt.subplots(figsize=(12.0, 6.5))
     try:
         for column in DUAL_COMPARISON_COLUMNS:
-            cumulative_return = cumulative_wealth(comparison[column]) - 1.0
-            axis.plot(index, cumulative_return, label=column, linewidth=1.5)
-        axis.axhline(0.0, linewidth=0.8)
+            wealth = cumulative_wealth(comparison[column])
+            axis.plot(index, wealth, label=column, linewidth=1.5)
+        axis.axhline(1.0, linewidth=0.8)
         axis.set_title("Step 5 Cumulative Performance — HMM Allocation Comparison")
         axis.set_xlabel("Date")
-        axis.set_ylabel("Cumulative return")
-        axis.yaxis.set_major_formatter(PercentFormatter(xmax=1.0))
+        axis.set_ylabel("Growth of $1")
         axis.legend()
         axis.grid(True, alpha=0.22)
         figure.savefig(output_path, dpi=190, bbox_inches="tight")
