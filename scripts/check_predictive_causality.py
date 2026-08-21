@@ -5,7 +5,12 @@ from pathlib import Path
 
 import pandas as pd
 
-from vix_regime_allocation.predictive.config import TEST_START, VALIDATION_END, VALIDATION_START
+from vix_regime_allocation.predictive.config import (
+    PREDICTIVE_FAMILY,
+    TEST_START,
+    VALIDATION_END,
+    VALIDATION_START,
+)
 from vix_regime_allocation.predictive.selection import candidate_grid
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -19,8 +24,11 @@ def validate_predictive_causality(
 ) -> None:
     """Independently reject time leakage, candidate drift, or post-validation mutation."""
 
-    if len(validation) != 16:
-        raise RuntimeError("Predictive validation must contain exactly 16 candidates.")
+    expected_grid = set(candidate_grid())
+    if len(validation) != len(expected_grid):
+        raise RuntimeError(
+            f"Predictive validation must contain exactly {len(expected_grid)} candidates."
+        )
     required_validation = {"family", "n_states", "switch_hurdle_bps", "selected"}
     if not required_validation.issubset(validation.columns):
         raise RuntimeError("Predictive validation summary is missing required columns.")
@@ -28,8 +36,10 @@ def validate_predictive_causality(
         (str(row.family), int(row.n_states), float(row.switch_hurdle_bps))
         for row in validation.itertuples(index=False)
     }
-    if actual_grid != set(candidate_grid()):
+    if actual_grid != expected_grid:
         raise RuntimeError("Predictive validation candidate grid differs from the pre-registered grid.")
+    if not (validation["family"].astype(str) == PREDICTIVE_FAMILY).all():
+        raise RuntimeError("Predictive validation must contain HMM candidates only.")
     winners = validation.loc[validation["selected"].astype(bool)]
     if len(winners) != 1:
         raise RuntimeError("Predictive validation must contain exactly one selected candidate.")
@@ -46,6 +56,8 @@ def validate_predictive_causality(
     )
     if actual != expected:
         raise RuntimeError("Selected strategy JSON does not match the validation winner.")
+    if actual[0] != PREDICTIVE_FAMILY:
+        raise RuntimeError("Selected predictive strategy must use the HMM family.")
     if str(selected.get("validation_start")) != VALIDATION_START.date().isoformat():
         raise RuntimeError("Selected strategy validation_start is not the fixed pre-registered date.")
     if str(selected.get("validation_end")) != VALIDATION_END.date().isoformat():

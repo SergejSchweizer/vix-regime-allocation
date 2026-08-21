@@ -39,7 +39,7 @@ def _data() -> pd.DataFrame:
 
 def _summary() -> pd.DataFrame:
     return pd.DataFrame(
-        [{"family": "markov", "n_states": 2, "switch_hurdle_bps": 0.0, "selected": True}]
+        [{"family": "hmm", "n_states": 2, "switch_hurdle_bps": 0.0, "selected": True}]
     )
 
 
@@ -48,7 +48,7 @@ def _signals() -> pd.DataFrame:
         {
             "decision_date": pd.to_datetime(["2021-01-04", "2021-01-05", "2021-01-06"]),
             "return_date": pd.to_datetime(["2021-01-05", "2021-01-06", "2021-01-07"]),
-            "family": ["markov"] * 3,
+            "family": ["hmm"] * 3,
             "n_states": [2] * 3,
             "expected_TLT": [0.0, 0.0, 0.0],
             "expected_GLD": [0.0, 0.0, 0.0],
@@ -58,7 +58,7 @@ def _signals() -> pd.DataFrame:
 
 
 def test_holdout_freezes_selected_configuration() -> None:
-    result = run_final_holdout(_data(), _summary(), {("markov", 2): _signals()})
+    result = run_final_holdout(_data(), _summary(), {("hmm", 2): _signals()})
     assert set(result.performance["portfolio"]) == {
         "selected_predictive_gross",
         "selected_predictive_net",
@@ -76,5 +76,5 @@ def test_holdout_rejects_extra_model() -> None:
         run_final_holdout(
             _data(),
             _summary(),
-            {("markov", 2): _signals(), ("markov", 3): _signals()},
+            {("hmm", 2): _signals(), ("hmm", 3): _signals()},
         )

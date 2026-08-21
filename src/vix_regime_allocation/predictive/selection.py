@@ -1,4 +1,4 @@
-"""Validation-only candidate grid and deterministic predictive-strategy selection."""
+"""Validation-only HMM candidate grid and deterministic predictive-strategy selection."""
 
 from __future__ import annotations
 
@@ -9,7 +9,7 @@ from vix_regime_allocation.performance import performance_metrics
 
 from .backtest import run_candidate_backtest
 from .config import (
-    FAMILY_PRIORITY,
+    PREDICTIVE_FAMILY,
     SELECTION_TOL,
     SUPPORTED_STATE_COUNTS,
     SWITCH_HURDLES_BPS,
@@ -35,11 +35,9 @@ VALIDATION_COLUMNS: tuple[str, ...] = (
 
 
 def candidate_grid() -> tuple[tuple[str, int, float], ...]:
-    """Return the exact pre-registered 16-candidate validation grid."""
-
+    """Return the exact HMM-only 8-candidate validation grid."""
     return tuple(
-        (family, n_states, hurdle)
-        for family in FAMILY_PRIORITY
+        (PREDICTIVE_FAMILY, n_states, hurdle)
         for n_states in SUPPORTED_STATE_COUNTS
         for hurdle in SWITCH_HURDLES_BPS
     )
@@ -54,6 +52,8 @@ def _switch_count(selected_assets: pd.Series) -> int:
 
 def _select_index(summary: pd.DataFrame) -> int:
     candidates = summary.copy()
+    if not (candidates["family"].astype(str) == PREDICTIVE_FAMILY).all():
+        raise ValueError("Predictive validation supports HMM candidates only.")
     best_growth = float(candidates["mean_log_growth"].max())
     candidates = candidates.loc[
         candidates["mean_log_growth"].astype(float).sub(best_growth).abs() <= SELECTION_TOL
@@ -64,11 +64,6 @@ def _select_index(summary: pd.DataFrame) -> int:
     ]
     minimum_states = int(candidates["n_states"].min())
     candidates = candidates.loc[candidates["n_states"].astype(int) == minimum_states]
-    family_rank = {family: rank for rank, family in enumerate(FAMILY_PRIORITY)}
-    best_family_rank = min(family_rank[str(value)] for value in candidates["family"])
-    candidates = candidates.loc[
-        candidates["family"].map(lambda value: family_rank[str(value)]) == best_family_rank
-    ]
     minimum_hurdle = float(candidates["switch_hurdle_bps"].min())
     candidates = candidates.loc[
         candidates["switch_hurdle_bps"].astype(float) == minimum_hurdle
@@ -80,16 +75,20 @@ def build_validation_summary(
     signals_by_model: dict[tuple[str, int], pd.DataFrame],
     asset_returns: pd.DataFrame,
 ) -> pd.DataFrame:
-    """Evaluate all fixed candidates on validation returns only and select one winner."""
-
-    expected_model_keys = {
-        (family, n_states) for family in FAMILY_PRIORITY for n_states in SUPPORTED_STATE_COUNTS
-    }
+    """Evaluate the fixed HMM K=2/K=3 candidates on validation returns only."""
+    expected_model_keys = {(PREDICTIVE_FAMILY, n_states) for n_states in SUPPORTED_STATE_COUNTS}
     if set(signals_by_model) != expected_model_keys:
-        raise ValueError("signals_by_model must contain markov/hmm K=2/K=3 exactly.")
+        raise ValueError("signals_by_model must contain HMM K=2 and HMM K=3 exactly.")
+
     rows: list[dict[str, object]] = []
     for family, n_states, hurdle in candidate_grid():
         signals = signals_by_model[(family, n_states)]
+        if "family" not in signals.columns or not (signals["family"].astype(str) == "hmm").all():
+            raise ValueError("Predictive signal frames must contain family='hmm' only.")
+        if "n_states" not in signals.columns or not (
+            signals["n_states"].astype(int) == n_states
+        ).all():
+            raise ValueError("Predictive signal state count does not match its model key.")
         return_dates = pd.DatetimeIndex(pd.to_datetime(signals["return_date"]))
         if len(return_dates) < 2:
             raise ValueError("each validation candidate requires at least two return rows.")
@@ -105,7 +104,7 @@ def build_validation_summary(
         mean_log_growth = float(np.log1p(net.to_numpy(dtype=float)).mean())
         rows.append(
             {
-                "family": family,
+                "family": PREDICTIVE_FAMILY,
                 "n_states": n_states,
                 "switch_hurdle_bps": hurdle,
                 "mean_log_growth": mean_log_growth,
@@ -121,8 +120,8 @@ def build_validation_summary(
             }
         )
     summary = pd.DataFrame(rows, columns=list(VALIDATION_COLUMNS))
-    if len(summary) != 16:
-        raise RuntimeError("validation candidate grid must contain exactly 16 rows.")
+    if len(summary) != len(SUPPORTED_STATE_COUNTS) * len(SWITCH_HURDLES_BPS):
+        raise RuntimeError("HMM-only validation candidate grid must contain exactly 8 rows.")
     winner = _select_index(summary)
     summary.loc[winner, "selected"] = True
     if int(summary["selected"].sum()) != 1:
@@ -131,12 +130,15 @@ def build_validation_summary(
 
 
 def selected_configuration(summary: pd.DataFrame) -> tuple[str, int, float]:
-    """Return the single frozen validation winner."""
-
+    """Return the single frozen HMM validation winner."""
     if not isinstance(summary, pd.DataFrame) or "selected" not in summary.columns:
         raise ValueError("summary must contain a selected column.")
+    if "family" not in summary.columns or not (
+        summary["family"].astype(str) == PREDICTIVE_FAMILY
+    ).all():
+        raise ValueError("summary must contain HMM candidates only.")
     selected = summary.loc[summary["selected"].astype(bool)]
     if len(selected) != 1:
         raise ValueError("summary must contain exactly one selected candidate.")
     row = selected.iloc[0]
-    return str(row["family"]), int(row["n_states"]), float(row["switch_hurdle_bps"])
+    return PREDICTIVE_FAMILY, int(row["n_states"]), float(row["switch_hurdle_bps"])
