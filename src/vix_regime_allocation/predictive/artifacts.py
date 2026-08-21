@@ -1,4 +1,4 @@
-"""Canonical predictive-analysis computation and deterministic artifact writing."""
+"""Canonical HMM-only predictive analysis and deterministic artifact writing."""
 
 from __future__ import annotations
 
@@ -9,10 +9,16 @@ from pathlib import Path
 
 import pandas as pd
 
-from .config import ONE_WAY_COST_BPS, TEST_START, VALIDATION_END, VALIDATION_START
+from .config import (
+    ONE_WAY_COST_BPS,
+    PREDICTIVE_FAMILY,
+    SUPPORTED_STATE_COUNTS,
+    TEST_START,
+    VALIDATION_END,
+    VALIDATION_START,
+)
 from .hmm_walkforward import build_hmm_signals
 from .holdout import HoldoutResult, run_final_holdout
-from .markov_walkforward import build_markov_signals
 from .returns import asset_simple_returns
 from .selection import build_validation_summary, selected_configuration
 from .split import split_periods
@@ -29,7 +35,7 @@ MANIFEST_FILENAME = "predictive_manifest.json"
 
 @dataclass(frozen=True)
 class PredictiveAnalysis:
-    """All canonical in-memory outputs required by the predictive extension."""
+    """All canonical in-memory outputs required by the HMM-only predictive extension."""
 
     validation_summary: pd.DataFrame
     selected_test_daily: pd.DataFrame
@@ -40,33 +46,22 @@ class PredictiveAnalysis:
     dominates_all_individual_assets: bool
 
 
-def _signals_for_family(
-    data: pd.DataFrame, decision_dates: pd.DatetimeIndex, family: str, n_states: int
-) -> pd.DataFrame:
-    if family == "markov":
-        return build_markov_signals(data, decision_dates, n_states)
-    if family == "hmm":
-        return build_hmm_signals(data, decision_dates, n_states)
-    raise ValueError("family must be markov or hmm.")
+def _hmm_signals(data: pd.DataFrame, decision_dates: pd.DatetimeIndex, n_states: int) -> pd.DataFrame:
+    return build_hmm_signals(data, decision_dates, n_states)
 
 
 def _merge_signal_provenance(signals: pd.DataFrame, daily: pd.DataFrame) -> pd.DataFrame:
     keys = ["decision_date", "return_date", "family", "n_states"]
-    merged = signals.merge(
-        daily,
-        on=keys,
-        how="inner",
-        validate="one_to_one",
-        sort=False,
-    )
+    merged = signals.merge(daily, on=keys, how="inner", validate="one_to_one", sort=False)
     if len(merged) != len(signals) or len(merged) != len(daily):
         raise RuntimeError("test signal provenance and realized backtest rows are misaligned.")
+    if not (merged["family"].astype(str) == PREDICTIVE_FAMILY).all():
+        raise RuntimeError("Predictive provenance must be HMM-only.")
     return merged
 
 
 def compute_predictive_analysis(data: pd.DataFrame) -> PredictiveAnalysis:
-    """Run the pre-registered validation selection and one frozen final holdout."""
-
+    """Run HMM-only validation selection and one frozen final holdout."""
     periods = split_periods(data)
     validation_decisions = periods.validation[:-1]
     test_decisions = periods.test[:-1]
@@ -74,29 +69,26 @@ def compute_predictive_analysis(data: pd.DataFrame) -> PredictiveAnalysis:
         raise ValueError("validation and test each require at least two predictive decisions.")
 
     validation_signals: dict[tuple[str, int], pd.DataFrame] = {}
-    for family in ("markov", "hmm"):
-        for n_states in (2, 3):
-            validation_signals[(family, n_states)] = _signals_for_family(
-                data, validation_decisions, family, n_states
-            )
+    for n_states in SUPPORTED_STATE_COUNTS:
+        validation_signals[(PREDICTIVE_FAMILY, n_states)] = _hmm_signals(
+            data, validation_decisions, n_states
+        )
 
     asset_returns = asset_simple_returns(data)
     validation_summary = build_validation_summary(validation_signals, asset_returns)
     family, n_states, hurdle = selected_configuration(validation_summary)
-    selected_validation = validation_summary.loc[
-        validation_summary["selected"].astype(bool)
-    ].iloc[0]
+    if family != PREDICTIVE_FAMILY:
+        raise RuntimeError("Predictive selection unexpectedly returned a non-HMM family.")
+    selected_validation = validation_summary.loc[validation_summary["selected"].astype(bool)].iloc[0]
 
-    test_signals = _signals_for_family(data, test_decisions, family, n_states)
+    test_signals = _hmm_signals(data, test_decisions, n_states)
     holdout: HoldoutResult = run_final_holdout(
-        data,
-        validation_summary,
-        {(family, n_states): test_signals},
+        data, validation_summary, {(PREDICTIVE_FAMILY, n_states): test_signals}
     )
     selected_test_daily = _merge_signal_provenance(test_signals, holdout.daily)
 
     selected_strategy: dict[str, object] = {
-        "family": family,
+        "family": PREDICTIVE_FAMILY,
         "n_states": n_states,
         "switch_hurdle_bps": hurdle,
         "transaction_cost_bps": ONE_WAY_COST_BPS,
@@ -120,17 +112,25 @@ def compute_predictive_analysis(data: pd.DataFrame) -> PredictiveAnalysis:
     )
 
 
+def _validate_hmm_only_analysis(analysis: PredictiveAnalysis) -> None:
+    if analysis.selected_strategy.get("family") != PREDICTIVE_FAMILY:
+        raise ValueError("selected_strategy family must be exactly 'hmm'.")
+    for name, frame in (
+        ("validation_summary", analysis.validation_summary),
+        ("selected_test_daily", analysis.selected_test_daily),
+    ):
+        if "family" not in frame.columns or len(frame) == 0:
+            raise ValueError(f"{name} must contain a non-empty family column.")
+        if not (frame["family"].astype(str) == PREDICTIVE_FAMILY).all():
+            raise ValueError(f"{name} must contain HMM rows only.")
+
+
 def _sha256(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
-def write_predictive_manifest(
-    root: Path,
-    *,
-    figure_paths: tuple[str, ...] = (),
-) -> Path:
+def write_predictive_manifest(root: Path, *, figure_paths: tuple[str, ...] = ()) -> Path:
     """Write a deterministic hash manifest for the canonical predictive artifacts."""
-
     root = Path(root)
     generated_dir = root / "reports/predictive/generated"
     table_paths = tuple(f"reports/predictive/tables/{name}" for name in TABLE_FILENAMES)
@@ -142,6 +142,9 @@ def write_predictive_manifest(
     input_path = root / "data/processed/step1_data.csv"
     if not input_path.is_file():
         raise RuntimeError("Canonical Step 1 dataset is missing.")
+    selected = json.loads((root / selected_path).read_text(encoding="utf-8"))
+    if selected.get("family") != PREDICTIVE_FAMILY:
+        raise RuntimeError("Predictive manifest cannot reference a non-HMM selected strategy.")
     hashes = {relative: _sha256(root / relative) for relative in sorted(required)}
     manifest = {
         "schema_version": 1,
@@ -159,8 +162,8 @@ def write_predictive_manifest(
 
 
 def write_predictive_artifacts(root: Path, analysis: PredictiveAnalysis) -> dict[str, Path]:
-    """Persist the canonical tables, selected configuration, and base manifest."""
-
+    """Persist canonical predictive artifacts after enforcing the HMM-only family lock."""
+    _validate_hmm_only_analysis(analysis)
     root = Path(root)
     table_dir = root / "reports/predictive/tables"
     generated_dir = root / "reports/predictive/generated"
@@ -181,8 +184,7 @@ def write_predictive_artifacts(root: Path, analysis: PredictiveAnalysis) -> dict
 
     selected_path = generated_dir / SELECTED_STRATEGY_FILENAME
     selected_path.write_text(
-        json.dumps(analysis.selected_strategy, indent=2, sort_keys=True) + "\n",
-        encoding="utf-8",
+        json.dumps(analysis.selected_strategy, indent=2, sort_keys=True) + "\n", encoding="utf-8"
     )
     outputs["selected_strategy"] = selected_path
     outputs["manifest"] = write_predictive_manifest(root)
@@ -191,7 +193,6 @@ def write_predictive_artifacts(root: Path, analysis: PredictiveAnalysis) -> dict
 
 def load_step1_data(path: Path) -> pd.DataFrame:
     """Load the canonical persisted Step 1 dataset with its exact Date index."""
-
     frame = pd.read_csv(path, parse_dates=["Date"]).set_index("Date")
     frame.index = pd.DatetimeIndex(frame.index, name="Date")
     return frame
@@ -203,7 +204,7 @@ def main() -> None:
     analysis = compute_predictive_analysis(data)
     write_predictive_artifacts(root, analysis)
     print(
-        "Predictive analysis artifacts written; "
+        "HMM-only predictive analysis artifacts written; "
         f"dominates_all_individual_assets={analysis.dominates_all_individual_assets}, "
         f"cagr_dominance_margin={analysis.cagr_dominance_margin:.12f}."
     )
