@@ -6,7 +6,7 @@ import numpy as np
 import pandas as pd
 from pandas.api.types import is_datetime64_any_dtype, is_integer_dtype, is_numeric_dtype
 
-from .allocation import ALLOCATION_COLUMNS
+from .allocation import ALLOCATION_COLUMNS, METHOD_ALLOCATION_COLUMNS
 from .state_statistics import ASSET_ORDER
 from .transform import OUTPUT_COLUMNS
 
@@ -56,40 +56,101 @@ def _validate_states(states: pd.Series, index: pd.DatetimeIndex) -> int:
     return int(len(unique))
 
 
-def _validate_allocation(allocation: pd.DataFrame, n_states: int) -> pd.DataFrame:
-    if not isinstance(allocation, pd.DataFrame):
-        raise TypeError("allocation must be a pandas DataFrame.")
-    if tuple(allocation.columns) != ALLOCATION_COLUMNS:
-        raise ValueError("allocation columns must match the canonical Step 4 schema exactly.")
-    if len(allocation) != n_states:
+def _validate_state_order(frame: pd.DataFrame, n_states: int) -> pd.DataFrame:
+    if len(frame) != n_states:
         raise ValueError("allocation must contain exactly one row for each state.")
-    if not is_integer_dtype(allocation["state"].dtype):
+    if not is_integer_dtype(frame["state"].dtype):
         raise ValueError("allocation state must use an integer dtype.")
-    ordered = allocation.sort_values("state").reset_index(drop=True)
+    ordered = frame.sort_values("state").reset_index(drop=True)
     if not np.array_equal(ordered["state"].to_numpy(dtype=int), np.arange(n_states)):
         raise ValueError("allocation states must be contiguous labels 0..K-1.")
-    if not ordered["selected_asset"].isin(ASSET_ORDER).all():
-        raise ValueError("selected_asset must be TLT, GLD, or SPY.")
-    for column in ("selection_mean_log_return", "TLT_weight", "GLD_weight", "SPY_weight"):
+    return ordered
+
+
+def _validate_weight_matrix(ordered: pd.DataFrame) -> np.ndarray:
+    for column in ("TLT_weight", "GLD_weight", "SPY_weight"):
         if not is_numeric_dtype(ordered[column].dtype):
             raise ValueError(f"allocation column {column!r} must be numeric.")
-    numeric = ordered[
-        ["selection_mean_log_return", "TLT_weight", "GLD_weight", "SPY_weight"]
-    ].to_numpy(dtype=float)
-    if np.any(~np.isfinite(numeric)):
-        raise ValueError("allocation numeric values must be finite.")
     weights = ordered[["TLT_weight", "GLD_weight", "SPY_weight"]].to_numpy(dtype=float)
-    if np.any((weights != 0.0) & (weights != 1.0)) or not np.allclose(
-        weights.sum(axis=1), 1.0, rtol=0.0, atol=0.0
-    ):
-        raise ValueError("allocation weights must be one-hot and sum exactly to one.")
+    if np.any(~np.isfinite(weights)) or np.any(weights < 0.0):
+        raise ValueError("allocation weights must be finite and non-negative.")
+    if not np.allclose(weights.sum(axis=1), 1.0, rtol=0.0, atol=1e-12):
+        raise ValueError("allocation weights must sum to one within 1e-12.")
+    return weights
+
+
+def _validate_legacy_allocation(allocation: pd.DataFrame, n_states: int) -> pd.DataFrame:
+    ordered = _validate_state_order(allocation, n_states)
+    if not ordered["selected_asset"].isin(ASSET_ORDER).all():
+        raise ValueError("selected_asset must be TLT, GLD, or SPY.")
+    if not is_numeric_dtype(ordered["selection_mean_log_return"].dtype):
+        raise ValueError("selection_mean_log_return must be numeric.")
+    if not np.isfinite(ordered["selection_mean_log_return"].to_numpy(dtype=float)).all():
+        raise ValueError("selection_mean_log_return must be finite.")
+    weights = _validate_weight_matrix(ordered)
+    if np.any((weights != 0.0) & (weights != 1.0)):
+        raise ValueError("legacy allocation weights must remain one-hot.")
     for row in ordered.itertuples(index=False):
         selected = str(row.selected_asset)
         expected = np.array([1.0 if asset == selected else 0.0 for asset in ASSET_ORDER])
         actual = np.array([row.TLT_weight, row.GLD_weight, row.SPY_weight], dtype=float)
         if not np.array_equal(actual, expected):
-            raise ValueError("selected_asset must agree with the one-hot allocation weights.")
+            raise ValueError("selected_asset must agree with legacy one-hot allocation weights.")
     return ordered
+
+
+def _validate_method_allocation(allocation: pd.DataFrame, n_states: int) -> pd.DataFrame:
+    ordered = _validate_state_order(allocation, n_states)
+    methods = ordered["method"].astype(str).unique().tolist()
+    if len(methods) != 1 or methods[0] not in ("100_keep", "60_40_spread"):
+        raise ValueError("method-aware allocation must contain one supported method only.")
+    method = methods[0]
+    for column in ("rank_1_asset", "rank_2_asset"):
+        if not ordered[column].isin(ASSET_ORDER).all():
+            raise ValueError(f"{column} must contain TLT, GLD, or SPY.")
+    if (ordered["rank_1_asset"] == ordered["rank_2_asset"]).any():
+        raise ValueError("rank_1_asset and rank_2_asset must differ in every state.")
+    for column in ("rank_1_mean_log_return", "rank_2_mean_log_return"):
+        if not is_numeric_dtype(ordered[column].dtype):
+            raise ValueError(f"{column} must be numeric.")
+        if not np.isfinite(ordered[column].to_numpy(dtype=float)).all():
+            raise ValueError(f"{column} must be finite.")
+    if (ordered["rank_1_mean_log_return"] < ordered["rank_2_mean_log_return"]).any():
+        raise ValueError("rank_1_mean_log_return must be at least rank_2_mean_log_return.")
+    weights = _validate_weight_matrix(ordered)
+    expected_top = 1.0 if method == "100_keep" else 0.6
+    expected_second = 0.0 if method == "100_keep" else 0.4
+    for position, row in enumerate(ordered.itertuples(index=False)):
+        actual = {asset: float(weights[position, index]) for index, asset in enumerate(ASSET_ORDER)}
+        if not np.isclose(actual[str(row.rank_1_asset)], expected_top, atol=1e-12, rtol=0.0):
+            raise ValueError("rank-1 weight does not match the allocation method.")
+        if not np.isclose(actual[str(row.rank_2_asset)], expected_second, atol=1e-12, rtol=0.0):
+            raise ValueError("rank-2 weight does not match the allocation method.")
+        remaining = set(ASSET_ORDER) - {str(row.rank_1_asset), str(row.rank_2_asset)}
+        if any(not np.isclose(actual[asset], 0.0, atol=1e-12, rtol=0.0) for asset in remaining):
+            raise ValueError("unranked asset weight must be zero.")
+    normalized = pd.DataFrame(
+        {
+            "state": ordered["state"].astype(int),
+            "selected_asset": ordered["rank_1_asset"].astype(str),
+            "selection_mean_log_return": ordered["rank_1_mean_log_return"].astype(float),
+            "TLT_weight": ordered["TLT_weight"].astype(float),
+            "GLD_weight": ordered["GLD_weight"].astype(float),
+            "SPY_weight": ordered["SPY_weight"].astype(float),
+        },
+        columns=list(ALLOCATION_COLUMNS),
+    )
+    return normalized
+
+
+def _validate_allocation(allocation: pd.DataFrame, n_states: int) -> pd.DataFrame:
+    if not isinstance(allocation, pd.DataFrame):
+        raise TypeError("allocation must be a pandas DataFrame.")
+    if tuple(allocation.columns) == ALLOCATION_COLUMNS:
+        return _validate_legacy_allocation(allocation, n_states)
+    if tuple(allocation.columns) == METHOD_ALLOCATION_COLUMNS:
+        return _validate_method_allocation(allocation, n_states)
+    raise ValueError("allocation columns must match a supported Step 4 schema exactly.")
 
 
 def build_rotation_returns(
@@ -99,6 +160,8 @@ def build_rotation_returns(
 
     ETF log returns are converted to simple returns before portfolio arithmetic. The
     first data row is excluded because it has no previous observed trading-row state.
+    Both 100% Keep and 60/40 Spread method-aware allocations are supported by the same
+    lagged portfolio arithmetic.
     """
     _validate_data(data)
     date_index = pd.DatetimeIndex(data.index, name="Date")

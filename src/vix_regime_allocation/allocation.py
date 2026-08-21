@@ -1,6 +1,8 @@
-"""Deterministic Step 4 mapping from regime statistics to 100% ETF allocations."""
+"""Deterministic Step 4 ranking for 100% Keep and 60/40 Spread allocations."""
 
 from __future__ import annotations
+
+from typing import Final, cast
 
 import numpy as np
 import pandas as pd
@@ -8,6 +10,7 @@ from pandas.api.types import is_integer_dtype, is_numeric_dtype
 
 from .state_statistics import ASSET_ORDER, STATISTICS_COLUMNS
 
+# Transitional legacy schema used by old one-hot callers until the Step 5 engine is upgraded.
 ALLOCATION_COLUMNS: tuple[str, ...] = (
     "state",
     "selected_asset",
@@ -16,6 +19,20 @@ ALLOCATION_COLUMNS: tuple[str, ...] = (
     "GLD_weight",
     "SPY_weight",
 )
+
+METHOD_ALLOCATION_COLUMNS: tuple[str, ...] = (
+    "method",
+    "state",
+    "rank_1_asset",
+    "rank_2_asset",
+    "rank_1_mean_log_return",
+    "rank_2_mean_log_return",
+    "TLT_weight",
+    "GLD_weight",
+    "SPY_weight",
+)
+SUPPORTED_ALLOCATION_METHODS: tuple[str, str] = ("100_keep", "60_40_spread")
+_LEGACY_DEFAULT: Final[object] = object()
 
 
 def _validate_statistics(statistics: pd.DataFrame) -> int:
@@ -54,31 +71,90 @@ def _validate_statistics(statistics: pd.DataFrame) -> int:
     return len(states)
 
 
-def build_state_allocation(statistics: pd.DataFrame) -> pd.DataFrame:
-    """Choose the maximum conditional-mean ETF per state with fixed tie priority.
+def _rank_state(statistics: pd.DataFrame, state: int) -> list[tuple[str, float]]:
+    state_rows = statistics.loc[statistics["state"] == state].set_index("asset")
+    means = {
+        asset: float(cast(float, state_rows.loc[asset, "mean_log_return"])) for asset in ASSET_ORDER
+    }
+    priority = {asset: rank for rank, asset in enumerate(ASSET_ORDER)}
+    return sorted(means.items(), key=lambda item: (-item[1], priority[item[0]]))
 
-    The assignment implementation uses a 100% allocation to the selected ETF. Exact
-    equal means are resolved deterministically by the fixed priority TLT -> GLD -> SPY.
-    """
+
+def _weights(method: str, rank_1: str, rank_2: str) -> dict[str, float]:
+    if method == "100_keep":
+        target = {rank_1: 1.0, rank_2: 0.0}
+    elif method == "60_40_spread":
+        target = {rank_1: 0.6, rank_2: 0.4}
+    else:
+        raise ValueError(f"method must be one of {SUPPORTED_ALLOCATION_METHODS}.")
+    weights = {asset: float(target.get(asset, 0.0)) for asset in ASSET_ORDER}
+    values = np.asarray([weights[asset] for asset in ASSET_ORDER], dtype=float)
+    if np.any(~np.isfinite(values)) or np.any(values < 0.0):
+        raise RuntimeError("allocation weights must be finite and non-negative.")
+    if not np.isclose(values.sum(), 1.0, atol=1e-12, rtol=0.0):
+        raise RuntimeError("allocation weights must sum to one within 1e-12.")
+    return weights
+
+
+def _method_allocation(statistics: pd.DataFrame, method: str) -> pd.DataFrame:
     n_states = _validate_statistics(statistics)
+    if method not in SUPPORTED_ALLOCATION_METHODS:
+        raise ValueError(f"method must be one of {SUPPORTED_ALLOCATION_METHODS}.")
     rows: list[dict[str, object]] = []
-
     for state in range(n_states):
-        state_rows = statistics.loc[statistics["state"] == state].set_index("asset")
-        assets = state_rows.index.astype(str).tolist()
-        values = state_rows["mean_log_return"].to_numpy(dtype=float)
-        means = {asset: float(value) for asset, value in zip(assets, values, strict=True)}
-        best_mean = max(means.values())
-        selected_asset = next(asset for asset in ASSET_ORDER if means[asset] == best_mean)
+        ranking = _rank_state(statistics, state)
+        rank_1_asset, rank_1_mean = ranking[0]
+        rank_2_asset, rank_2_mean = ranking[1]
+        weights = _weights(method, rank_1_asset, rank_2_asset)
         rows.append(
             {
+                "method": method,
                 "state": state,
-                "selected_asset": selected_asset,
-                "selection_mean_log_return": best_mean,
-                "TLT_weight": 1.0 if selected_asset == "TLT" else 0.0,
-                "GLD_weight": 1.0 if selected_asset == "GLD" else 0.0,
-                "SPY_weight": 1.0 if selected_asset == "SPY" else 0.0,
+                "rank_1_asset": rank_1_asset,
+                "rank_2_asset": rank_2_asset,
+                "rank_1_mean_log_return": rank_1_mean,
+                "rank_2_mean_log_return": rank_2_mean,
+                "TLT_weight": weights["TLT"],
+                "GLD_weight": weights["GLD"],
+                "SPY_weight": weights["SPY"],
             }
         )
+    result = pd.DataFrame(rows, columns=list(METHOD_ALLOCATION_COLUMNS))
+    sums = result[["TLT_weight", "GLD_weight", "SPY_weight"]].sum(axis=1).to_numpy(dtype=float)
+    if not np.allclose(sums, 1.0, atol=1e-12, rtol=0.0):
+        raise RuntimeError("generated allocation rows must sum to one.")
+    return result
 
-    return pd.DataFrame(rows, columns=list(ALLOCATION_COLUMNS))
+
+def _legacy_100_keep(method_allocation: pd.DataFrame) -> pd.DataFrame:
+    """Translate explicit 100% Keep rows to the historical one-hot schema."""
+    if not (method_allocation["method"] == "100_keep").all():
+        raise ValueError("legacy allocation translation supports 100_keep only.")
+    return pd.DataFrame(
+        {
+            "state": method_allocation["state"].astype(int),
+            "selected_asset": method_allocation["rank_1_asset"].astype(str),
+            "selection_mean_log_return": method_allocation["rank_1_mean_log_return"].astype(float),
+            "TLT_weight": method_allocation["TLT_weight"].astype(float),
+            "GLD_weight": method_allocation["GLD_weight"].astype(float),
+            "SPY_weight": method_allocation["SPY_weight"].astype(float),
+        },
+        columns=list(ALLOCATION_COLUMNS),
+    )
+
+
+def build_state_allocation(
+    statistics: pd.DataFrame, method: str | object = _LEGACY_DEFAULT
+) -> pd.DataFrame:
+    """Rank state-conditional ETF means and build one of the two mandatory allocations.
+
+    Explicit ``method='100_keep'`` and ``method='60_40_spread'`` calls return the new
+    method-aware canonical schema. A temporarily supported omitted-method call returns
+    the historical 100% Keep schema so pre-revision callers remain green until their
+    dedicated backlog PR migrates them.
+    """
+    if method is _LEGACY_DEFAULT:
+        return _legacy_100_keep(_method_allocation(statistics, "100_keep"))
+    if not isinstance(method, str):
+        raise TypeError("method must be a string.")
+    return _method_allocation(statistics, method)
