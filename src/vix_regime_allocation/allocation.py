@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Final
+from typing import Final, cast
 
 import numpy as np
 import pandas as pd
@@ -73,7 +73,9 @@ def _validate_statistics(statistics: pd.DataFrame) -> int:
 
 def _rank_state(statistics: pd.DataFrame, state: int) -> list[tuple[str, float]]:
     state_rows = statistics.loc[statistics["state"] == state].set_index("asset")
-    means = {asset: float(state_rows.loc[asset, "mean_log_return"]) for asset in ASSET_ORDER}
+    means = {
+        asset: float(cast(float, state_rows.loc[asset, "mean_log_return"])) for asset in ASSET_ORDER
+    }
     priority = {asset: rank for rank, asset in enumerate(ASSET_ORDER)}
     return sorted(means.items(), key=lambda item: (-item[1], priority[item[0]]))
 
