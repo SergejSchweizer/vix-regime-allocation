@@ -201,10 +201,14 @@ def _validate_pdf_metadata(pdf_path: Path, notebook_sha: str, expected_body_page
         raise RuntimeError("Generated report is empty.")
     reader = PdfReader(str(pdf_path))
     if len(reader.pages) != expected_body_pages + 1:
-        raise RuntimeError("Generated report must contain one template cover plus notebook pages only.")
+        raise RuntimeError(
+            "Generated report must contain one template cover plus notebook pages only."
+        )
     metadata = reader.metadata or {}
     if metadata.get("/NotebookSHA256") != notebook_sha:
-        raise RuntimeError("Generated report notebook SHA-256 metadata does not match source bytes.")
+        raise RuntimeError(
+            "Generated report notebook SHA-256 metadata does not match source bytes."
+        )
     if metadata.get("/ArtifactRole") != "notebook-sidecar":
         raise RuntimeError("Generated report is missing notebook-sidecar metadata.")
     if metadata.get("/SourceOfTruth") != "notebooks/gwp2_vix_regime_allocation.ipynb":
