@@ -81,3 +81,5 @@ def test_selected_configuration_rejects_markov_summary() -> None:
     )
     with pytest.raises(ValueError, match="HMM candidates only"):
         selected_configuration(summary)
+
+# Synchronize PR quality gates against the current staged-rebuild base.
