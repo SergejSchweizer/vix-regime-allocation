@@ -2,10 +2,11 @@
   "figures": [
     "reports/figures/step2_hmm_smoothed_probabilities.png",
     "reports/figures/step2_hmm_vix_states.png",
+    "reports/figures/step3_hmm_3_state_asset_statistics.png",
     "reports/figures/step3_state_asset_statistics.png"
   ],
   "input_data_path": "data/processed/step1_data.csv",
-  "input_data_sha256": "c6b0e67a145f809313986ca0ef726d1dd42ffdaf57b04f091848ae1b20d261c1",
+  "input_data_sha256": "554df7352a6cbd61c063f4bca8f6b0666307c45f73abb269479adf129f380bbb",
   "notebook_path": "notebooks/gwp2_vix_regime_allocation.ipynb",
   "schema_version": 2,
   "selected_model_path": "reports/generated/step3_selected_model.json",
@@ -16,6 +17,7 @@
     "reports/tables/step2_hmm_3_parameters.csv",
     "reports/tables/step2_hmm_3_states.csv",
     "reports/tables/step2_hmm_3_transition.csv",
+    "reports/tables/step3_hmm_3_state_asset_statistics.csv",
     "reports/tables/step3_model_comparison.csv",
     "reports/tables/step3_selected_states.csv",
     "reports/tables/step3_state_asset_statistics.csv",
