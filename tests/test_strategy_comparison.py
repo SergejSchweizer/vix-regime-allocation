@@ -12,9 +12,7 @@ from vix_regime_allocation.transform import OUTPUT_COLUMNS
 
 
 def _data() -> pd.DataFrame:
-    index = pd.DatetimeIndex(
-        ["2026-01-30", "2026-02-02", "2026-02-03", "2026-02-04"], name="Date"
-    )
+    index = pd.DatetimeIndex(["2026-01-30", "2026-02-02", "2026-02-03", "2026-02-04"], name="Date")
     simple = {
         "TLT": [0.0, 0.10, 0.20, 0.30],
         "GLD": [0.0, 0.01, 0.02, 0.03],
