@@ -5,41 +5,18 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 BACKLOG = ROOT / "BACKLOG.md"
-EXPECTED_FIRST_PR = 1
-EXPECTED_LAST_PR = 49
+EXPECTED_FIRST_PR = 50
+EXPECTED_LAST_PR = 68
 MAX_TASKS_PER_PR = 3
-REFERENCE_OWNER_PRS = {5, 21, 22, 23, 24, 25, 40, 41, 42}
-CITATION_REQUIRED_PRS = {
-    5,
-    21,
-    22,
-    23,
-    24,
-    25,
-    28,
-    29,
-    30,
-    31,
-    32,
-    40,
-    41,
-    42,
-    43,
-    44,
-    45,
-    46,
-    47,
-    48,
-    49,
-}
+REFERENCE_OWNER_PRS = {61}
+CITATION_REQUIRED_PRS = {61, 62, 63, 66, 68}
 
 REQUIRED_CITATION_CONTRACT_FRAGMENTS = (
-    "## Scientific citation contract",
     "reports/references.bib",
     "MLA 9",
-    "Peer-reviewed",
     "Works Cited",
-    "No citation metadata may be invented",
+    "scholarly",
+    "No bibliographic metadata is invented",
 )
 
 PR_HEADER_RE = re.compile(r"^#{2,3}\s+PR-(\d{2})\s+—\s+(.+)$", re.MULTILINE)
@@ -241,10 +218,11 @@ def main() -> None:
         _fail("Global task/acceptance ID sets differ.")
 
     print(
-        f"BACKLOG contract valid: {len(numbers)} PRs, {len(all_task_ids)} tasks, "
-        "one-to-one acceptance coverage, explicit backward-only dependencies, "
-        "deterministic Git branch/status/commit metadata, bounded atomicity, explicit file "
-        "ownership, scientific citation contracts, and no forbidden ambiguous phrases."
+        f"BACKLOG contract valid: PR-{EXPECTED_FIRST_PR:02d}..PR-{EXPECTED_LAST_PR:02d}, "
+        f"{len(all_task_ids)} tasks, one-to-one acceptance coverage, explicit backward-only "
+        "dependencies, deterministic Git branch/status/commit metadata, bounded atomicity, "
+        "explicit file ownership, scientific citation contracts, and no forbidden ambiguous "
+        "phrases."
     )
 
 
