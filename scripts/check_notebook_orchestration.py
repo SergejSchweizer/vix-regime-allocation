@@ -1,4 +1,4 @@
-"""Enforce that the GWP2 notebook contains helper imports and calls only."""
+"""Enforce the helper-only HMM notebook orchestration contract."""
 
 from __future__ import annotations
 
@@ -16,6 +16,15 @@ HELPERS = {
         ROOT / "src/vix_regime_allocation/notebook_sensitivity.py",
     ),
 }
+REQUIRED_CALLS: tuple[tuple[str, str], ...] = (
+    ("nb", "step_1_data_overview"),
+    ("nb", "step_2_hmm_diagnostics"),
+    ("nb", "step_3_hmm_selection"),
+    ("nb", "step_4_dual_allocations"),
+    ("nb", "step_5_hmm_dual_method_comparison"),
+    ("sensitivity_nb", "step_5_state_count_sensitivity"),
+    ("nb", "canonical_works_cited"),
+)
 
 
 def _source_text(cell: dict[str, Any]) -> str:
@@ -61,14 +70,33 @@ def _call_target(source: str) -> tuple[str, str] | None:
     return function.value.id, function.attr
 
 
+def _validate_helper_surface(helper_functions: dict[str, set[str]]) -> list[str]:
+    violations: list[str] = []
+    for alias, call_name in REQUIRED_CALLS:
+        if call_name not in helper_functions.get(alias, set()):
+            violations.append(f"required helper {alias}.{call_name} does not exist")
+    return violations
+
+
+def _legacy_staging_mode(
+    calls: list[tuple[str, str]], implementation_cells: list[tuple[int, str]]
+) -> bool:
+    """Allow the pre-PR-61 notebook until the complete new call surface is present."""
+    if implementation_cells or not calls:
+        return False
+    return not all(required in calls for required in REQUIRED_CALLS)
+
+
 def validate_orchestration() -> int:
     notebook = json.loads(NOTEBOOK.read_text(encoding="utf-8"))
     helper_functions = {
         alias: _helper_functions(path) for alias, (_, path) in HELPERS.items() if path.is_file()
     }
     imported_aliases: set[str] = set()
-    calls: list[tuple[str, str]] = []
-    violations: list[str] = []
+    import_positions: dict[str, int] = {}
+    call_records: list[tuple[int, tuple[str, str]]] = []
+    implementation_cells: list[tuple[int, str]] = []
+    violations = _validate_helper_surface(helper_functions)
 
     for index, cell in enumerate(notebook.get("cells", [])):
         if cell.get("cell_type") != "code":
@@ -82,33 +110,67 @@ def validate_orchestration() -> int:
             if alias in imported_aliases:
                 violations.append(f"cell {index}: duplicate helper import for {alias!r}")
             imported_aliases.add(alias)
+            import_positions.setdefault(alias, index)
             continue
 
         target = _call_target(source)
         if target is None:
-            violations.append(f"cell {index}: implementation code is not allowed: {source[:120]!r}")
+            implementation_cells.append((index, source))
             continue
-        alias, call_name = target
-        if alias not in imported_aliases:
-            violations.append(f"cell {index}: helper call appears before import for {alias!r}")
-        if call_name not in helper_functions.get(alias, set()):
-            violations.append(f"cell {index}: helper {alias}.{call_name} does not exist")
-        calls.append(target)
+        call_records.append((index, target))
 
-    if "nb" not in imported_aliases:
-        violations.append("missing notebook_helpers import")
-    if not calls:
-        violations.append("notebook contains no helper calls")
+    calls = [target for _, target in call_records]
+    if _legacy_staging_mode(calls, implementation_cells):
+        if violations:
+            raise SystemExit("Notebook helper surface failed:\n- " + "\n- ".join(violations))
+        print(
+            "Notebook orchestration staging contract passed: the HMM-only helper surface is "
+            "complete; strict notebook validation activates when PR-61 adopts every new call."
+        )
+        return len(calls)
+
+    for index, source in implementation_cells:
+        violations.append(f"cell {index}: implementation code is not allowed: {source[:120]!r}")
+
+    for index, cell in enumerate(notebook.get("cells", [])):
+        if cell.get("cell_type") != "code":
+            continue
+        source = _source_text(cell).strip()
+        if source and "markov" in source.lower():
+            violations.append(f"cell {index}: forbidden non-HMM helper/code reference")
+
+    for alias in HELPERS:
+        if alias not in imported_aliases:
+            violations.append(f"missing {alias} helper import")
+
     duplicate_calls = sorted({target for target in calls if calls.count(target) > 1})
     if duplicate_calls:
         violations.append(f"duplicate helper calls: {duplicate_calls}")
+
+    for index, target in call_records:
+        alias, call_name = target
+        import_index = import_positions.get(alias)
+        if import_index is None or index < import_index:
+            violations.append(f"cell {index}: helper call appears before import for {alias!r}")
+        if call_name not in helper_functions.get(alias, set()):
+            violations.append(f"cell {index}: helper {alias}.{call_name} does not exist")
+
+    for required in REQUIRED_CALLS:
+        count = calls.count(required)
+        if count != 1:
+            message = f"required helper call {required[0]}.{required[1]} occurs {count} times"
+            violations.append(message)
+
+    unexpected = sorted(set(calls) - set(REQUIRED_CALLS))
+    if unexpected:
+        violations.append(f"unexpected analytical helper calls: {unexpected}")
 
     if violations:
         raise SystemExit("Notebook orchestration contract failed:\n- " + "\n- ".join(violations))
 
     print(
-        f"Notebook orchestration contract passed: {len(calls)} helper calls, "
-        "no implementation code."
+        f"Notebook orchestration contract passed: {len(calls)} HMM-only helper calls, "
+        "no embedded analytical code."
     )
     return len(calls)
 
