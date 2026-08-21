@@ -130,7 +130,9 @@ def _validate_notebook(path: Path) -> str:
     if not any(token in content for token in CITATION_TOKENS):
         failures.append("notebook is missing scholarly in-text citation content")
     if not BIBLIOGRAPHY.is_file() or BIBLIOGRAPHY.stat().st_size == 0:
-        failures.append("canonical bibliography registry reports/references.bib is missing or empty")
+        failures.append(
+            "canonical bibliography registry reports/references.bib is missing or empty"
+        )
 
     for pattern in FORBIDDEN_MARKOV_RESULT_PATTERNS:
         if pattern.search(content):
