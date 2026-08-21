@@ -6,7 +6,10 @@ from pathlib import Path
 
 import pandas as pd
 
-from vix_regime_allocation.predictive.artifacts import PredictiveAnalysis, write_predictive_artifacts
+from vix_regime_allocation.predictive.artifacts import (
+    PredictiveAnalysis,
+    write_predictive_artifacts,
+)
 
 
 def _analysis() -> PredictiveAnalysis:
