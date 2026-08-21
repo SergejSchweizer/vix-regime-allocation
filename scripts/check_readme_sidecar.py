@@ -87,7 +87,8 @@ def _check_artifact_parity(readme_text: str) -> None:
         raise SystemExit("Performance artifact does not have the canonical four-portfolio order.")
     if len({row["observations"] for row in performance_rows}) != 1:
         raise SystemExit("Canonical performance portfolios do not share one observation count.")
-    if performance_rows[0]["observations"] not in readme_text:
+    observation_count = f"{int(performance_rows[0]['observations']):,}"
+    if observation_count not in readme_text:
         raise SystemExit("README performance observation count is stale.")
 
     for row in performance_rows:
@@ -121,8 +122,7 @@ def _check_artifact_parity(readme_text: str) -> None:
         )
         if table_row not in readme_text:
             raise SystemExit(
-                "README sensitivity row is stale for "
-                f"K={row['n_states']} {row['method']}."
+                f"README sensitivity row is stale for K={row['n_states']} {row['method']}."
             )
 
 
