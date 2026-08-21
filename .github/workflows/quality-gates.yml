@@ -140,7 +140,7 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-      - name: Reject temporary build and diagnostic files
+      - name: Reject temporary and active legacy files
         run: python scripts/check_repository_hygiene.py
 
   analysis-consistency:
@@ -162,6 +162,65 @@ jobs:
         env:
           MPLBACKEND: Agg
         run: python scripts/check_analysis_consistency.py
+      - name: Enforce HMM-only canonical artifact contract
+        run: |
+          python - <<'PY'
+          import csv
+          import json
+          from pathlib import Path
+
+          required = (
+              "reports/tables/step4_allocation_100_keep.csv",
+              "reports/tables/step4_allocation_60_40_spread.csv",
+              "reports/tables/step5_performance_summary.csv",
+              "reports/tables/step5_state_count_sensitivity.csv",
+              "reports/generated/step3_selected_model.json",
+              "reports/generated/steps_2_4_manifest.json",
+              "reports/generated/step5_manifest.json",
+              "notebooks/gwp2_vix_regime_allocation.ipynb",
+              "reports/gwp2_vix_regime_allocation.html",
+              "reports/Stochastic_Modeling_GWP2_Report.pdf",
+              "reports/references.bib",
+          )
+          for name in required:
+              path = Path(name)
+              assert path.is_file() and path.stat().st_size > 0, name
+
+          with Path("reports/tables/step5_performance_summary.csv").open(
+              encoding="utf-8", newline=""
+          ) as handle:
+              portfolios = [row["portfolio"] for row in csv.DictReader(handle)]
+          assert portfolios == [
+              "hmm_100_keep",
+              "hmm_60_40_spread",
+              "equal_weight_monthly",
+              "spy_buy_hold",
+          ], portfolios
+
+          selected = json.loads(
+              Path("reports/generated/step3_selected_model.json").read_text(encoding="utf-8")
+          )
+          assert selected["family"] == "hmm", selected
+
+          for name in (
+              "reports/generated/step3_selected_model.json",
+              "reports/generated/steps_2_4_manifest.json",
+              "reports/generated/step5_manifest.json",
+          ):
+              text = Path(name).read_text(encoding="utf-8").lower()
+              assert "step2_markov_" not in text, name
+              assert "step4_allocation_mapping.csv" not in text, name
+
+          notebook = json.loads(
+              Path("notebooks/gwp2_vix_regime_allocation.ipynb").read_text(encoding="utf-8")
+          )
+          notebook_text = json.dumps(notebook, ensure_ascii=False)
+          bibliography = Path("reports/references.bib").read_text(encoding="utf-8")
+          for author in ("Baum", "Rabiner", "Viterbi", "Akaike", "Schwarz"):
+              assert author in notebook_text, f"notebook citation missing: {author}"
+              assert author.lower() in bibliography.lower(), f"bibliography entry missing: {author}"
+          assert "Works Cited" in notebook_text
+          PY
 
   artifact-provenance:
     name: artifact-provenance
